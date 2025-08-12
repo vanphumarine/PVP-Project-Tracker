@@ -301,7 +301,7 @@
   		storageBucket: "pvp-project-tracker.firebasestorage.app",
   		messagingSenderId: "399186770907",
   		appId: "1:399186770907:web:dfcf167526d2d0014d05fe",
-  		measurementId: "G-SW4ZCDVDGK"
+  		measurementId: "G-SW4ZCDVDGK",
         };
         // =====================================================================================
         // END FIREBASE CONFIGURATION
@@ -415,11 +415,8 @@
         async function initializeFirebase() {
             try {
                 // Check if Firebase config is complete
-                const isConfigDefault = Object.values(firebaseConfig).some(val => 
-                    typeof val === 'string' && (val.includes("YOUR_") || val === "navcom-project-tracker" || val.includes("firebaseapp.com") || val.includes("appspot.com"))
-                );
-                
-                if (isConfigDefault) {
+                // Loại bỏ kiểm tra quá chặt chẽ, chỉ đảm bảo apiKey đã được điền.
+                if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_")) {
                     showModal("Firebase configuration is missing or incomplete. Please update the firebaseConfig object in index.html with your project information.");
                     showLoginScreen();
                     return;
@@ -1683,7 +1680,7 @@
                 });
                 showModal(`Người dùng ${memberIdToRemove} đã bị xóa khỏi dự án.`);
             } catch (error) {
-                console.error("Error removing member:", error);
+                    console.error("Error removing member:", error);
                 showModal("Xóa thành viên thất bại.");
             }
         }
