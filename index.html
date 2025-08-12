@@ -857,13 +857,16 @@
 
             renderComments(task.comments || []); // Render existing comments
 
-            // Both admin and viewer can comment
-            newCommentInput.disabled = false;
-            addCommentBtn.disabled = false;
-            newCommentInput.placeholder = "Thêm bình luận...";
+            // NEW: Chỉ cho phép nhập và thêm bình luận nếu người dùng đã đăng nhập (có userId)
+            const canComment = !!userId; // Kiểm tra nếu userId tồn tại (không null/undefined/empty string)
+            newCommentInput.disabled = !canComment;
+            addCommentBtn.disabled = !canComment;
+            newCommentInput.placeholder = canComment ? "Thêm bình luận..." : "Bạn phải đăng nhập để thêm bình luận.";
 
             taskDetailsModal.classList.remove('hidden');
-            newCommentInput.focus();
+            if (canComment) {
+                newCommentInput.focus();
+            }
         }
 
         /**
@@ -925,7 +928,8 @@
                 showModal("Bạn phải đăng nhập để thêm bình luận.");
                 return;
             }
-
+            // Đã loại bỏ kiểm tra isCurrentUserProjectMember() ở đây để tài khoản khách có thể bình luận
+            
             try {
                 const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
                 const newComment = {
