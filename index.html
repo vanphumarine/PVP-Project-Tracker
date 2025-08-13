@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanban Task Tracker (Realtime Sync)</title>
+    <title>Project Tracker Realtime</title>
     <!-- Tailwind CSS CDN để sử dụng các lớp tiện ích -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter cho giao diện hiện đại -->
@@ -114,7 +114,7 @@
     <!-- Login Screen -->
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
         <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-            <h2 class="text-3xl font-bold mb-6 text-gray-900">Welcome to Kanban Task Tracker</h2>
+            <h2 class="text-3xl font-bold mb-6 text-gray-900">Welcome to Project Tracker Realtime</h2>
             <p class="text-gray-600 mb-6">Choose how you want to access the application.</p>
             
             <div class="mb-6">
@@ -133,24 +133,29 @@
 
     <!-- Main Kanban App (initially hidden) -->
     <div id="app" class="p-4 md:p-8 min-h-screen hidden">
-        <header class="text-center mb-8 flex flex-col items-center">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Kanban Task Tracker (Realtime Sync)</h1>
-            <p class="text-lg text-gray-600 mt-2">Organize your work with real-time updates and role-based access.</p>
-            <!-- Hiển thị thông tin người dùng -->
-            <div id="auth-info" class="mt-4 text-sm text-gray-500 flex flex-col items-center gap-2">
-                <p>User ID: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
-                <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
-                <button id="logout-btn" class="bg-red-500 text-white text-sm px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
-            </div>
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Project Tracker Realtime</h1>
         </header>
 
-        <!-- Project Selection and Creation -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <select id="project-select" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition max-w-xs w-full">
-                <option value="">Select a Project</option>
-            </select>
-            <button id="create-project-btn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Create New Project</button>
+        <!-- Project Selection, Creation, and Auth Info -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 max-w-5xl mx-auto">
+            <!-- Project Selection and Label -->
+            <div class="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                <label for="project-select" class="text-lg font-medium text-gray-700 whitespace-nowrap">Chọn dự án:</label>
+                <select id="project-select" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition max-w-xs w-full sm:w-auto">
+                    <option value="">Select a Project</option>
+                </select>
+                <button id="create-project-btn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Tạo dự án mới</button>
+            </div>
+            
+            <!-- Auth Info & Logout Button -->
+            <div id="auth-info" class="text-sm text-gray-500 flex flex-row items-center gap-4 flex-wrap justify-center sm:justify-end mt-4 sm:mt-0">
+                <p>User ID: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
+                <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
+                <button id="logout-btn" class="bg-red-500 text-white text-sm px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Đăng xuất</button>
+            </div>
         </div>
+
 
         <!-- Current Project Details Display -->
         <div id="current-project-details" class="max-w-3xl mx-auto mb-8 bg-blue-100 p-6 rounded-lg shadow-md hidden text-left border-l-4 border-blue-500">
