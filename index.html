@@ -338,7 +338,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
@@ -764,20 +764,24 @@
                 // Check for new comments and show toast notification
                 newTasks.forEach(newTask => {
                     const oldTask = tasks.find(t => t.id === newTask.id);
-                    // Check if oldTask exists, has comments, newTask has comments, and comment count increased, AND task details modal is NOT open for this task
-                    if (oldTask && oldTask.comments && newTask.comments &&
-                        newTask.comments.length > oldTask.comments.length &&
-                        newTask.id !== currentOpenTaskDetailsId) {
+                    const oldCommentCount = oldTask ? (oldTask.comments ? oldTask.comments.length : 0) : 0;
+                    const newCommentCount = newTask.comments ? newTask.comments.length : 0;
+
+                    // Debugging log for comment notification
+                    console.log(`Task "${newTask.text}" (ID: ${newTask.id}) - Old comments: ${oldCommentCount}, New comments: ${newCommentCount}`);
+                    console.log(`Is modal open for this task? ${newTask.id === currentOpenTaskDetailsId}`);
+
+                    if (newCommentCount > oldCommentCount && newTask.id !== currentOpenTaskDetailsId) {
                         showCommentToast(newTask.text);
+                        console.log(`Triggering toast for new comment on task: "${newTask.text}"`);
                     }
                 });
                 // Update previousTasksComments for the next snapshot
-                previousTasksComments = newTasks.reduce((acc, task) => {
-                    acc[task.id] = task.comments ? task.comments.length : 0;
-                    return acc;
-                }, {});
-
-
+                // This approach of updating `tasks` and then using `tasks.find` is fine,
+                // but for clarity, `previousTasksComments` could also be maintained separately.
+                // However, given `tasks` is updated with `newTasks` each snapshot, the `oldTask`
+                // found from `tasks` refers to the state *before* `tasks` was updated for the current snapshot.
+                // So the logic is actually correct for detecting *changes* in the current snapshot compared to the previous state.
                 tasks = newTasks; // Update global tasks array
                 renderTasks(); // Render tasks every time data changes
                 // After tasks are rendered, calculate and render the Burndown chart
@@ -1665,20 +1669,33 @@
          * @param {string} projectId - The ID of the project to delete.
          */
         async function executeProjectDeletion(projectId) {
+            console.log(`Attempting to delete project: ${projectId}`);
             try {
                 // First, delete all tasks associated with the project
-                const tasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`));
+                console.log(`Querying tasks for project: ${projectId}`);
+                const tasksQueryRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
+                const tasksSnapshot = await getDocs(tasksQueryRef); // Use getDocs here
+
+                console.log(`Found ${tasksSnapshot.docs.length} tasks to delete.`);
                 const deleteTasksPromises = tasksSnapshot.docs.map(taskDoc => deleteDoc(taskDoc.ref));
                 await Promise.all(deleteTasksPromises);
+                console.log("All tasks deleted successfully.");
 
                 // Then, delete the project document itself
+                console.log(`Deleting project document: ${projectId}`);
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, projectId));
+                console.log("Project document deleted successfully.");
+                
                 showModal("Dự án đã được xóa.");
                 currentProjectId = null; // Clear current project
                 // The project listener will automatically update the UI
             } catch (error) {
                 console.error("Error deleting project:", error);
-                showModal("Xóa dự án thất bại.");
+                if (error.code === 'permission-denied') {
+                    showModal("Lỗi quyền: Bạn không có quyền xóa dự án này. Vui lòng kiểm tra vai trò admin của bạn và quy tắc bảo mật Firestore.");
+                } else {
+                    showModal(`Xóa dự án thất bại: ${error.message}`);
+                }
             }
         }
 
