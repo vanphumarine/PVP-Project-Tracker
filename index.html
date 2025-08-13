@@ -210,6 +210,14 @@
                 <option value="Completed">Completed</option>
                 <option value="Archived">Archived</option>
             </select>
+
+            <!-- NEW: Option to copy tasks from another project -->
+            <label for="copy-tasks-from-project-select" class="block text-sm font-medium text-gray-700 mb-1">Copy "To Do" Tasks From (Optional)</label>
+            <select id="copy-tasks-from-project-select" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-6">
+                <option value="">Do Not Copy Tasks</option>
+                <!-- Project options will be dynamically loaded here -->
+            </select>
+            
             <!-- Thêm input ẩn để lưu ID dự án khi chỉnh sửa -->
             <input type="hidden" id="editing-project-id">
 
@@ -284,7 +292,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
@@ -301,7 +309,7 @@
   		storageBucket: "pvp-project-tracker.firebasestorage.app",
   		messagingSenderId: "399186770907",
   		appId: "1:399186770907:web:dfcf167526d2d0014d05fe",
-  		measurementId: "G-SW4ZCDVDGK",
+  		measurementId: "G-SW4ZCDVDGK"
         };
         // =====================================================================================
         // END FIREBASE CONFIGURATION
@@ -357,6 +365,7 @@
         const confirmCreateProjectBtn = document.getElementById('confirm-create-project-btn');
         const cancelCreateProjectBtn = document.getElementById('cancel-create-project-btn');
         const editingProjectIdInput = document.getElementById('editing-project-id');
+        const copyTasksFromProjectSelect = document.getElementById('copy-tasks-from-project-select'); // NEW
 
         const displayProjectName = document.getElementById('display-project-name');
         const displayProjectDescription = document.getElementById('display-project-description');
@@ -599,21 +608,30 @@
 
         /**
          * Sets up a real-time listener for the list of projects from Firestore.
+         * This listener also populates the "Copy tasks from" dropdown in the project creation modal.
          */
         function setupProjectsListener() {
             if (unsubscribeFromProjects) unsubscribeFromProjects(); // Unsubscribe from old listener
             unsubscribeFromProjects = onSnapshot(projectsCollectionRef, (snapshot) => {
                 projectSelect.innerHTML = '<option value="">Select a Project</option>'; // Clear old options
+                copyTasksFromProjectSelect.innerHTML = '<option value="">Do Not Copy Tasks</option>'; // Clear copy options
                 projectsData = {}; // Reset stored project data
                 let firstProjectId = null;
                 
                 snapshot.docs.forEach(projectDoc => {
                     const project = { id: projectDoc.id, ...projectDoc.data() };
                     projectsData[project.id] = project; // Store project data in projectsData variable
+                    
                     const option = document.createElement('option');
                     option.value = project.id;
                     option.textContent = project.name;
                     projectSelect.appendChild(option);
+
+                    // Add to "Copy tasks from" dropdown as well
+                    const copyOption = document.createElement('option');
+                    copyOption.value = project.id;
+                    copyOption.textContent = project.name;
+                    copyTasksFromProjectSelect.appendChild(copyOption);
 
                     if (!firstProjectId) {
                         firstProjectId = project.id;
@@ -857,16 +875,13 @@
 
             renderComments(task.comments || []); // Render existing comments
 
-            // NEW: Chỉ cho phép nhập và thêm bình luận nếu người dùng đã đăng nhập (có userId)
-            const canComment = !!userId; // Kiểm tra nếu userId tồn tại (không null/undefined/empty string)
-            newCommentInput.disabled = !canComment;
-            addCommentBtn.disabled = !canComment;
-            newCommentInput.placeholder = canComment ? "Thêm bình luận..." : "Bạn phải đăng nhập để thêm bình luận.";
+            // Both admin and viewer can comment
+            newCommentInput.disabled = false;
+            addCommentBtn.disabled = false;
+            newCommentInput.placeholder = "Thêm bình luận...";
 
             taskDetailsModal.classList.remove('hidden');
-            if (canComment) {
-                newCommentInput.focus();
-            }
+            newCommentInput.focus();
         }
 
         /**
@@ -928,8 +943,7 @@
                 showModal("Bạn phải đăng nhập để thêm bình luận.");
                 return;
             }
-            // Đã loại bỏ kiểm tra isCurrentUserProjectMember() ở đây để tài khoản khách có thể bình luận
-            
+
             try {
                 const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
                 const newComment = {
@@ -1285,6 +1299,7 @@
             projectStatusSelect.value = 'Active'; // Set default status
             confirmCreateProjectBtn.textContent = "Create Project"; // Reset button text
             editingProjectIdInput.value = ''; // Clear editing project ID
+            copyTasksFromProjectSelect.value = ''; // NEW: Reset copy from project selection
 
             createProjectModal.classList.remove('hidden'); // Show create project modal
             newProjectNameInput.focus();
@@ -1310,6 +1325,7 @@
                 projectStatusSelect.value = projectToEdit.status || 'Active';
                 confirmCreateProjectBtn.textContent = "Save Changes"; // Change button text to "Save Changes"
                 editingProjectIdInput.value = projectToEdit.id; // Store editing project ID in hidden input
+                copyTasksFromProjectSelect.value = ''; // NEW: Ensure this is reset as we are editing, not copying
 
                 createProjectModal.classList.remove('hidden'); // Show modal
                 newProjectNameInput.focus();
@@ -1331,6 +1347,12 @@
             // Using a simple confirm here, consider replacing with a custom modal for better UX
             if (confirm("Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.")) {
                 try {
+                    // First, delete all tasks associated with the project
+                    const tasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`));
+                    const deleteTasksPromises = tasksSnapshot.docs.map(taskDoc => deleteDoc(taskDoc.ref));
+                    await Promise.all(deleteTasksPromises);
+
+                    // Then, delete the project document itself
                     await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, currentProjectId));
                     showModal("Dự án đã được xóa.");
                     currentProjectId = null; // Clear current project
@@ -1350,6 +1372,7 @@
             const projectEndDate = projectEndDateInput.value;
             const projectStatus = projectStatusSelect.value;
             const projectIdToModify = editingProjectIdInput.value;
+            const sourceProjectIdToCopy = copyTasksFromProjectSelect.value; // NEW: Get source project ID for copying tasks
 
             if (!isCurrentUserAdmin) {
                 showModal("Bạn không có quyền lưu dự án.");
@@ -1379,9 +1402,16 @@
                         projectData.createdAt = new Date().toISOString();
                         projectData.members = [userId]; // Creator is automatically the first member
                         const docRef = await addDoc(projectsCollectionRef, projectData);
-                        currentProjectId = docRef.id; // Set new project as current
-                        projectSelect.value = currentProjectId; // Select new project in dropdown
+                        const newProjectId = docRef.id; // Get the ID of the newly created project
+                        currentProjectId = newProjectId; // Set new project as current
+                        projectSelect.value = newProjectId; // Select new project in dropdown
                         showModal("Dự án đã được tạo thành công!");
+
+                        // NEW: Copy "To Do" tasks if a source project was selected
+                        if (sourceProjectIdToCopy) {
+                            await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
+                            showModal("Dự án đã được tạo và tác vụ 'To Do' đã được sao chép thành công!");
+                        }
                     }
                     createProjectModal.classList.add('hidden');
                     // UI will be updated by project listener
@@ -1393,6 +1423,42 @@
                 showModal("Tên dự án, Ngày bắt đầu và Ngày kết thúc là bắt buộc.");
             }
         });
+
+        // NEW: Function to copy "To Do" tasks from a source project to a destination project
+        async function copyTodoTasks(sourceProjectId, destinationProjectId) {
+            try {
+                const sourceTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${sourceProjectId}/tasks`);
+                const sourceTasksSnapshot = await getDocs(sourceTasksCollectionRef);
+                
+                const todoTasksToCopy = sourceTasksSnapshot.docs
+                    .filter(doc => doc.data().status === 'todo') // Only copy "To Do" tasks
+                    .map(doc => {
+                        const taskData = doc.data();
+                        // Create a new task object, resetting status to 'todo' and clearing comments/completion data
+                        return {
+                            text: taskData.text,
+                            status: 'todo',
+                            createdAt: new Date().toISOString(), // New creation timestamp
+                            subtasks: taskData.subtasks.map(sub => ({ // Reset subtask completion status
+                                text: sub.text,
+                                isCompleted: false,
+                                note: sub.note || ''
+                            })),
+                            comments: [] // Start with no comments in the copied task
+                        };
+                    });
+
+                const destinationTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${destinationProjectId}/tasks`);
+                const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
+                
+                await Promise.all(addTasksPromises);
+                console.log(`Copied ${todoTasksToCopy.length} 'To Do' tasks from ${sourceProjectId} to ${destinationProjectId}`);
+            } catch (error) {
+                console.error("Error copying tasks:", error);
+                showModal("Lỗi khi sao chép tác vụ 'To Do'.");
+            }
+        }
+
 
         cancelCreateProjectBtn.addEventListener('click', () => {
             createProjectModal.classList.add('hidden'); // Hide create/edit project modal
@@ -1674,25 +1740,26 @@
                 return;
             }
             if (memberIdToRemove === userId) {
-                showModal("Bạn không thể tự xóa mình khỏi dự án thông qua giao diện này.");
+                showModal("You cannot remove yourself from the project via this interface.");
                 return;
             }
             try {
                 const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, projectId);
                 await updateDoc(projectRef, {
-                    members: arrayRemove(memberIdToRemove)
+                    members: arrayRemove(memberIdToRemove) // Xóa thành viên khỏi mảng
                 });
-                showModal(`Người dùng ${memberIdToRemove} đã bị xóa khỏi dự án.`);
+                showModal(`User ${memberIdToRemove} removed from the project.`);
             } catch (error) {
-                    console.error("Error removing member:", error);
-                showModal("Xóa thành viên thất bại.");
+                console.error("Error removing member:", error);
+                showModal("Failed to remove member.");
             }
         }
 
-        // Add task form listener
+
+        // Thêm listener sự kiện cho việc gửi form thêm tác vụ
         taskForm.addEventListener('submit', handleAddTask);
         
-        // Login button listeners
+        // Listener cho các nút đăng nhập
         adminLoginBtn.addEventListener('click', () => {
             const email = adminEmailInput.value.trim();
             const password = adminPasswordInput.value.trim();
@@ -1719,7 +1786,7 @@
             }
         });
 
-        // Initialize the app when the script loads
+        // Khởi tạo ứng dụng khi script được tải
         initializeFirebase();
     </script>
 </body>
