@@ -141,14 +141,6 @@
             </div>
         </div>
 
-        <!-- Burndown Chart Section -->
-        <div id="burndown-chart-section" class="max-w-4xl mx-auto mb-8 bg-white p-6 rounded-lg shadow-md hidden">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project Burndown Chart</h2>
-            <div class="relative h-96">
-                <canvas id="burndownChart"></canvas>
-            </div>
-        </div>
-
         <!-- Form để thêm tác vụ mới -->
         <div id="add-task-container" class="max-w-xl mx-auto mb-8 bg-white p-6 rounded-lg shadow-md">
             <h2 class="text-2xl font-semibold mb-4">Add a New Task</h2>
@@ -159,7 +151,7 @@
         </div>
 
         <!-- Bố cục chính của bảng Kanban -->
-        <main class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
+        <main class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 w-full mx-auto">
             <!-- Cột To Do -->
             <div id="todo" data-status="todo" class="kanban-column bg-white/50 backdrop-blur-sm rounded-xl shadow-lg p-4">
                 <h3 class="text-xl font-bold text-gray-700 mb-4 border-b-4 border-red-400 pb-2">To Do</h3>
@@ -176,6 +168,14 @@
                 <div id="done-tasks" class="task-list space-y-4 min-h-[200px]"></div>
             </div>
         </main>
+
+        <!-- Burndown Chart Section -->
+        <div id="burndown-chart-section" class="max-w-4xl mx-auto my-8 bg-white p-6 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project Burndown Chart</h2>
+            <div class="relative h-96">
+                <canvas id="burndownChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <!-- Container pháo hoa cho animation khi tác vụ hoàn thành -->
@@ -724,7 +724,7 @@
 
         /**
          * Creates a DOM element for a task.
-         * Adds drag-and-drop and delete functionality if the user is an admin or project member.
+         * Adds drag-and-drop, delete, and copy functionality if the user is an admin or project member.
          * @param {Object} task - The task object from Firestore.
          * @returns {HTMLElement} The created task DOM element.
          */
@@ -747,14 +747,33 @@
                 div.addEventListener('dragstart', handleDragStart);
                 div.addEventListener('dragend', handleDragEnd);
 
+                // Container for action buttons (delete, copy)
+                const actionButtonsContainer = document.createElement('div');
+                actionButtonsContainer.className = 'float-right flex gap-1';
+
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = '×';
-                deleteButton.className = 'float-right font-bold text-red-500 hover:text-red-700 text-xl leading-none px-2 rounded-full';
+                deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-2 rounded-full';
                 deleteButton.onclick = (e) => {
                     e.stopPropagation(); // Prevent drag/modal event from triggering
                     handleDeleteTask(task.id);
                 };
-                div.appendChild(deleteButton);
+                actionButtonsContainer.appendChild(deleteButton);
+
+                // NEW: Copy button, only for "To Do" tasks
+                if (task.status === 'todo') {
+                    const copyButton = document.createElement('button');
+                    copyButton.textContent = '📋'; // Clipboard emoji for copy
+                    copyButton.className = 'font-bold text-gray-500 hover:text-gray-700 text-xl leading-none px-2 rounded-full';
+                    copyButton.title = 'Copy Task';
+                    copyButton.onclick = (e) => {
+                        e.stopPropagation(); // Prevent drag/modal event from triggering
+                        handleCopyTask(task.id);
+                    };
+                    actionButtonsContainer.appendChild(copyButton);
+                }
+                
+                div.appendChild(actionButtonsContainer); // Add the container to the task card
             }
 
             const text = document.createElement('p');
@@ -849,6 +868,13 @@
                 newSubtaskInput.type = 'text';
                 newSubtaskInput.placeholder = 'Add subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
+                // NEW: Add event listener for "Enter" keypress
+                newSubtaskInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // Prevent default form submission
+                        handleAddSubtask(task.id, newSubtaskInput.value);
+                    }
+                });
 
                 const addSubtaskButton = document.createElement('button');
                 addSubtaskButton.textContent = '+';
@@ -1214,7 +1240,7 @@
 
         /**
          * Prevents default behavior for dragover to allow dropping.
-         * @param {Event} e - The dragover event.
+         * @param {Event} |e - The dragover event.
          */
         function handleDragOver(e) {
             e.preventDefault(); // Essential to allow dropping
@@ -1410,7 +1436,7 @@
                         // NEW: Copy "To Do" tasks if a source project was selected
                         if (sourceProjectIdToCopy) {
                             await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
-                            showModal("Dự án đã được tạo và tác vụ 'To Do' đã được sao chép thành công!");
+                            // showModal("Dự án đã được tạo và tác vụ 'To Do' đã được sao chép thành công!"); // Modal already shown above
                         }
                     }
                     createProjectModal.classList.add('hidden');
@@ -1425,6 +1451,42 @@
         });
 
         // NEW: Function to copy "To Do" tasks from a source project to a destination project
+        async function handleCopyTask(taskId) {
+            if (!isCurrentUserProjectMember() || !currentProjectId) {
+                showModal("Bạn không có quyền sao chép tác vụ.");
+                return;
+            }
+
+            try {
+                const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+                const taskDoc = await getDoc(taskRef);
+
+                if (taskDoc.exists()) {
+                    const originalTaskData = taskDoc.data();
+                    const copiedTaskData = {
+                        text: `Copy of ${originalTaskData.text}`, // Add "Copy of" prefix
+                        status: 'todo', // Always copy as "To Do"
+                        createdAt: new Date().toISOString(), // New creation timestamp
+                        subtasks: originalTaskData.subtasks.map(sub => ({ // Reset subtask completion status
+                            text: sub.text,
+                            isCompleted: false,
+                            note: sub.note || ''
+                        })),
+                        comments: [] // Start with no comments in the copied task
+                    };
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
+                    showModal("Tác vụ đã được sao chép thành công!");
+                } else {
+                    showModal("Không tìm thấy tác vụ để sao chép.");
+                }
+            } catch (error) {
+                console.error("Error copying task:", error);
+                showModal("Lỗi khi sao chép tác vụ.");
+            }
+        }
+
+
+        // NEW: Function to copy "To Do" tasks from a source project to a destination project (used in create project modal)
         async function copyTodoTasks(sourceProjectId, destinationProjectId) {
             try {
                 const sourceTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${sourceProjectId}/tasks`);
