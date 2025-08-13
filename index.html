@@ -36,6 +36,16 @@
             opacity: 0.5; /* Làm mờ */
             transform: rotate(3deg); /* Xoay nhẹ */
         }
+        /* Highlight vị trí thả khi kéo/thả task */
+        .task-card.drag-over-target {
+            border: 2px dashed #6366f1; /* Viền nét đứt màu tím */
+            padding-top: 2rem; /* Tạo khoảng trống ở trên để chỉ vị trí chèn */
+            padding-bottom: 2rem; /* Tạo khoảng trống ở dưới */
+        }
+        .kanban-column.drag-over-empty {
+            border: 2px dashed #6366f1; /* Viền nét đứt cho cột rỗng */
+        }
+
         /* Container cho hiệu ứng pháo hoa ăn mừng */
         #confetti-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -77,6 +87,25 @@
         }
         .modal-button:hover {
             background-color: #4338ca; /* Tối hơn khi di chuột */
+        }
+        /* Notification Toast */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+            z-index: 11000; /* Higher than modals */
+        }
+        .toast-notification.show {
+            opacity: 1;
+            visibility: visible;
         }
     </style>
 </head>
@@ -170,7 +199,7 @@
         </main>
 
         <!-- Burndown Chart Section -->
-        <div id="burndown-chart-section" class="max-w-4xl mx-auto my-8 bg-white p-6 rounded-lg shadow-md hidden">
+        <div id="burndown-chart-section" class="w-full mx-auto my-8 bg-white p-6 rounded-lg shadow-md hidden">
             <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project Burndown Chart</h2>
             <div class="relative h-96">
                 <canvas id="burndownChart"></canvas>
@@ -287,12 +316,17 @@
             </div>
         </div>
     </div>
+    
+    <!-- Toast Notification for New Comments -->
+    <div id="comment-toast" class="toast-notification">
+        Bình luận mới trên tác vụ: <span id="toast-task-name" class="font-semibold"></span>
+    </div>
 
 
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
@@ -319,7 +353,7 @@
         const appId = firebaseConfig.projectId;
         
         let app, db, auth, userId;
-        let projectsCollectionRef, tasksCollectionRef, adminConfigRef;
+        let projectsCollectionRef, adminConfigRef;
         let unsubscribeFromTasks; // To unsubscribe from real-time task listener
         let unsubscribeFromProjects; // To unsubscribe from real-time project listener
         let isCurrentUserAdmin = false; // Flag to determine user role (Super Admin of the application)
@@ -327,6 +361,7 @@
         let projectsData = {}; // Stores all fetched project data, by ID
         let currentProjectMembers = []; // Stores the list of members for the current project
         let userRole = 'Guest'; // Current user's role (Guest/Admin)
+        let currentOpenTaskDetailsId = null; // NEW: To track which task detail modal is open
 
         // Variable to store the Burndown chart instance
         let burndownChartInstance = null;
@@ -393,9 +428,14 @@
         const addCommentBtn = document.getElementById('add-comment-btn');
         const taskIdForComments = document.getElementById('task-id-for-comments');
         const closeTaskDetailsModalBtn = document.getElementById('close-task-details-modal-btn');
+        const commentToast = document.getElementById('comment-toast'); // NEW
+        const toastTaskName = document.getElementById('toast-task-name'); // NEW
 
 
         let tasks = []; // Array to hold task data
+        let draggedTaskId = null; // NEW: Stores the ID of the task being dragged for reordering
+        let draggedTaskStatus = null; // NEW: Stores the status of the task being dragged
+        let draggedTaskOriginalPosition = null; // NEW: Stores the original position of the task being dragged
 
         /**
          * Shows the login screen.
@@ -452,13 +492,14 @@
                 if (user) {
                     userId = user.uid; // Get the current user's ID
                     // Define Firestore references after successful authentication
-                    projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); // Collection for projects
+                    // Projects collection will now be ordered by creation date
+                    projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); 
                     adminConfigRef = doc(db, `artifacts/${appId}/public/data/config`, 'admin');
                     
                     await checkAdminStatus(); // Check if the current user is an admin
                     updateUIAfterAuth(); // Update UI based on the determined role
 
-                    // Set up the listener for projects
+                    // Set up the listener for projects (now includes ordering)
                     setupProjectsListener();
                     showKanbanBoard(); // Show the Kanban application
                 } else {
@@ -612,7 +653,11 @@
          */
         function setupProjectsListener() {
             if (unsubscribeFromProjects) unsubscribeFromProjects(); // Unsubscribe from old listener
-            unsubscribeFromProjects = onSnapshot(projectsCollectionRef, (snapshot) => {
+
+            // NEW: Order projects by createdAt in descending order (newest first)
+            const projectsQuery = query(projectsCollectionRef, orderBy('createdAt', 'desc'));
+
+            unsubscribeFromProjects = onSnapshot(projectsQuery, (snapshot) => {
                 projectSelect.innerHTML = '<option value="">Select a Project</option>'; // Clear old options
                 copyTasksFromProjectSelect.innerHTML = '<option value="">Do Not Copy Tasks</option>'; // Clear copy options
                 projectsData = {}; // Reset stored project data
@@ -687,9 +732,32 @@
          */
         function setupRealtimeListener(projectId) {
             if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe from old listener
-            tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
-            unsubscribeFromTasks = onSnapshot(tasksCollectionRef, (snapshot) => {
-                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // NEW: Order tasks by 'position' for reordering within columns
+            const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
+            const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
+
+            let previousTasksComments = {}; // Store comment counts for notification
+
+            unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
+                const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // NEW: Check for new comments and show toast notification
+                newTasks.forEach(newTask => {
+                    const oldTask = tasks.find(t => t.id === newTask.id);
+                    if (oldTask && newTask.comments && oldTask.comments &&
+                        newTask.comments.length > oldTask.comments.length &&
+                        newTask.id !== currentOpenTaskDetailsId) { // Only show if modal is not open for this task
+                        showCommentToast(newTask.text);
+                    }
+                });
+                previousTasksComments = newTasks.reduce((acc, task) => {
+                    acc[task.id] = task.comments ? task.comments.length : 0;
+                    return acc;
+                }, {});
+
+
+                tasks = newTasks; // Update global tasks array
                 renderTasks(); // Render tasks every time data changes
                 // After tasks are rendered, calculate and render the Burndown chart
                 const project = projectsData[currentProjectId];
@@ -735,6 +803,20 @@
             const canModifyTask = isCurrentUserProjectMember();
             div.className = `task-card bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-400 cursor-pointer ${canModifyTask ? 'is-admin' : ''}`; 
             div.setAttribute('data-id', task.id);
+            div.setAttribute('data-position', task.position); // Store position on element
+            div.setAttribute('data-status', task.status); // Store status on element
+
+            // NEW: Drag and Drop reordering within column
+            if (canModifyTask) {
+                div.setAttribute('draggable', 'true');
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragend', handleDragEnd);
+                div.addEventListener('dragenter', handleDragEnter); // For highlighting drop target
+                div.addEventListener('dragleave', handleDragLeave); // For clearing highlight
+                div.addEventListener('dragover', handleDragOverTask); // Prevent default for dropping on task
+                div.addEventListener('drop', handleDropTask); // Handle drop on specific task
+            }
+
             div.addEventListener('click', (e) => {
                 // Ensure not to trigger when clicking on child buttons
                 if (!e.target.closest('button') && !e.target.closest('input')) {
@@ -743,10 +825,6 @@
             });
 
             if (canModifyTask) {
-                div.setAttribute('draggable', 'true'); // Make task draggable
-                div.addEventListener('dragstart', handleDragStart);
-                div.addEventListener('dragend', handleDragEnd);
-
                 // Container for action buttons (delete, copy)
                 const actionButtonsContainer = document.createElement('div');
                 actionButtonsContainer.className = 'float-right flex gap-1';
@@ -760,7 +838,7 @@
                 };
                 actionButtonsContainer.appendChild(deleteButton);
 
-                // NEW: Copy button, only for "To Do" tasks
+                // Copy button, only for "To Do" tasks
                 if (task.status === 'todo') {
                     const copyButton = document.createElement('button');
                     copyButton.textContent = '📋'; // Clipboard emoji for copy
@@ -785,7 +863,7 @@
             if (task.comments && task.comments.length > 0) {
                 const commentsCount = document.createElement('p');
                 commentsCount.className = 'text-xs text-gray-500 italic mt-1';
-                commentsCount.textContent = `💬 ${task.comments.length} comments`;
+                commentsCount.textContent = `💬 ${task.comments.length} comments`; // Show count
                 div.appendChild(commentsCount);
             }
 
@@ -823,7 +901,7 @@
 
                     // --- Note Button for Subtask ---
                     if (canModifyTask) { // Only project member can manage notes/delete subtasks
-                        const subtaskActionsDiv = document.createElement('div'); // Declare subtasksActionsDiv
+                        const subtaskActionsDiv = document.createElement('div'); 
                         subtaskActionsDiv.className = 'flex items-center gap-1';
 
                         const noteButton = document.createElement('button');
@@ -834,7 +912,7 @@
                             e.stopPropagation();
                             openSubtaskNoteModal(task.id, index, subtask.note || '');
                         };
-                        subtaskActionsDiv.appendChild(noteButton); // Corrected variable name
+                        subtaskActionsDiv.appendChild(noteButton); 
 
                         // Delete subtask button
                         const deleteSubtaskButton = document.createElement('button');
@@ -844,7 +922,7 @@
                             e.stopPropagation();
                             handleDeleteSubtask(task.id, index);
                         };
-                        subtaskActionsDiv.appendChild(deleteSubtaskButton); // Corrected variable name
+                        subtaskActionsDiv.appendChild(deleteSubtaskButton); 
 
                         subtaskItem.appendChild(subtaskActionsDiv);
                     }
@@ -896,6 +974,7 @@
          * @param {Object} task - The task object to display/comment on.
          */
         function openTaskDetailsModal(task) {
+            currentOpenTaskDetailsId = task.id; // NEW: Set current open task ID
             taskDetailsTextDisplay.textContent = task.text || '';
             taskIdForComments.value = task.id; // Store task ID for commenting
 
@@ -990,6 +1069,7 @@
 
         closeTaskDetailsModalBtn.addEventListener('click', () => {
             taskDetailsModal.classList.add('hidden'); // Hide task details modal
+            currentOpenTaskDetailsId = null; // NEW: Clear current open task ID
         });
 
 
@@ -1007,13 +1087,16 @@
             const taskText = taskInput.value.trim();
             if (taskText) {
                 try {
-                    // Add new task with 'todo' status, createdAt and empty subtasks array to Firestore
+                    // NEW: Assign a position to the new task (e.g., current timestamp)
+                    // This position will be used for ordering tasks within columns.
+                    const newTaskPosition = Date.now(); 
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), { 
                         text: taskText, 
                         status: 'todo',
                         createdAt: new Date().toISOString(), // Add task creation time
+                        position: newTaskPosition, // NEW: Add position for ordering
                         subtasks: [], // Initialize empty subtasks array
-                        comments: [] // NEW: Initialize empty comments array
+                        comments: [] 
                     });
                     taskInput.value = ''; // Clear input field
                 } catch (error) {
@@ -1171,8 +1254,9 @@
          * Triggers confetti if the task is moved to 'done'.
          * @param {string} taskId - The ID of the task to update.
          * @param {string} newStatus - The new status ('todo', 'inprogress', 'done').
+         * @param {number} [newPosition] - Optional: the new position for reordering within the column.
          */
-        async function handleUpdateTaskStatus(taskId, newStatus) {
+        async function handleUpdateTaskStatus(taskId, newStatus, newPosition = null) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("Bạn không có quyền di chuyển tác vụ.");
                 return;
@@ -1185,6 +1269,9 @@
                     triggerConfetti(); // Celebrate when task is completed
                 } else {
                     updateData.completedAt = null; // Clear completion time if not "done"
+                }
+                if (newPosition !== null) { // Update position if provided
+                    updateData.position = newPosition;
                 }
                 await updateDoc(taskRef, updateData);
             } catch (error) {
@@ -1211,65 +1298,204 @@
             }
         }
 
-        // --- Drag and Drop Logic ---
-        let draggedItemId = null; // Stores the ID of the task being dragged
-
+        // --- Drag and Drop Logic (for status change & reordering) ---
+        // draggedTaskId, draggedTaskStatus, draggedTaskOriginalPosition are global
+        
         /**
-         * Handles the start of a drag operation.
-         * Stores the ID of the dragged task and applies dragging styles.
+         * Handles the start of a drag operation for a task.
          * @param {Event} e - The dragstart event.
          */
         function handleDragStart(e) {
-            if (!isCurrentUserProjectMember()) { // Prevent drag if not project member
+            if (!isCurrentUserProjectMember()) {
                 e.preventDefault();
                 return;
             }
-            draggedItemId = e.target.getAttribute('data-id');
-            e.target.classList.add('dragging'); // Add dragging class for visual feedback
+            draggedTaskId = e.target.getAttribute('data-id');
+            draggedTaskStatus = e.target.getAttribute('data-status');
+            draggedTaskOriginalPosition = parseFloat(e.target.getAttribute('data-position'));
+            e.target.classList.add('dragging');
+            // Allow copy operation when dragging (for potential copy to new project feature, or just visual feedback)
+            e.dataTransfer.effectAllowed = 'move'; // Can be 'copyMove' for cross-project
         }
 
         /**
          * Handles the end of a drag operation.
-         * Removes dragging styles.
          * @param {Event} e - The dragend event.
          */
         function handleDragEnd(e) {
-            e.target.classList.remove('dragging'); // Remove dragging class
-            draggedItemId = null; // Clear dragged item ID
+            e.target.classList.remove('dragging');
+            // Remove all drag-over-target classes from tasks and columns
+            document.querySelectorAll('.task-card.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
+            document.querySelectorAll('.kanban-column.drag-over-empty').forEach(el => el.classList.remove('drag-over-empty'));
+            draggedTaskId = null;
+            draggedTaskStatus = null;
+            draggedTaskOriginalPosition = null;
         }
 
         /**
-         * Prevents default behavior for dragover to allow dropping.
-         * @param {Event} |e - The dragover event.
+         * Handles dragover event on Kanban columns (for status change).
+         * @param {Event} e - The dragover event.
          */
-        function handleDragOver(e) {
+        function handleDragOverColumn(e) {
             e.preventDefault(); // Essential to allow dropping
+            if (!isCurrentUserProjectMember()) return;
+            const column = e.currentTarget;
+            const taskList = column.querySelector('.task-list');
+            if (taskList && taskList.children.length === 0) {
+                column.classList.add('drag-over-empty'); // Highlight empty column
+            } else {
+                column.classList.remove('drag-over-empty');
+            }
+            e.dataTransfer.dropEffect = 'move';
         }
 
         /**
-         * Handles dropping a task into a column.
-         * Updates the task status in Firestore.
+         * Handles drop event on Kanban columns (for status change).
          * @param {Event} e - The drop event.
          */
-        function handleDrop(e) {
+        async function handleDropColumn(e) {
             e.preventDefault();
-            if (!isCurrentUserProjectMember()) { // Prevent drop if not project member
+            if (!isCurrentUserProjectMember()) return;
+            if (!draggedTaskId || !currentProjectId) return;
+
+            const targetColumn = e.currentTarget;
+            const newStatus = targetColumn.getAttribute('data-status');
+
+            // Only update if status is actually changing or if dropping within the same column
+            if (newStatus !== draggedTaskStatus) {
+                try {
+                    // When changing status, reset position to make it the last in the new column
+                    // or a high number to place it at the end.
+                    const tasksInNewColumn = tasks.filter(t => t.status === newStatus);
+                    const newPosition = tasksInNewColumn.length > 0 ? 
+                                        Math.max(...tasksInNewColumn.map(t => t.position)) + 1 : 
+                                        Date.now();
+                    await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
+                } catch (error) {
+                    console.error("Error changing task status:", error);
+                    showModal("Không thể thay đổi trạng thái tác vụ.");
+                }
+            }
+            // Remove highlight
+            targetColumn.classList.remove('drag-over-empty');
+        }
+
+        /**
+         * Handles dragenter event on a task card (for reordering highlight).
+         * @param {Event} e - The dragenter event.
+         */
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (!isCurrentUserProjectMember() || e.target.getAttribute('data-id') === draggedTaskId) return;
+
+            const targetTask = e.target.closest('.task-card');
+            if (targetTask && targetTask.getAttribute('data-status') === draggedTaskStatus) {
+                targetTask.classList.add('drag-over-target');
+            }
+        }
+
+        /**
+         * Handles dragleave event on a task card (for reordering highlight).
+         * @param {Event} e - The dragleave event.
+         */
+        function handleDragLeave(e) {
+            if (e.target.getAttribute('data-id') === draggedTaskId) return;
+            e.target.closest('.task-card')?.classList.remove('drag-over-target');
+        }
+
+        /**
+         * Handles dragover event on a task card (for reordering).
+         * @param {Event} e - The dragover event.
+         */
+        function handleDragOverTask(e) {
+            e.preventDefault(); // Essential to allow dropping
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        /**
+         * Handles drop event on a task card (for reordering within a column).
+         * @param {Event} e - The drop event.
+         */
+        async function handleDropTask(e) {
+            e.preventDefault();
+            if (!isCurrentUserProjectMember() || !draggedTaskId || !currentProjectId) return;
+
+            const targetTaskElement = e.target.closest('.task-card');
+            if (!targetTaskElement || targetTaskElement.getAttribute('data-id') === draggedTaskId) {
+                return; // Dropped on self or non-task area
+            }
+
+            const targetTaskId = targetTaskElement.getAttribute('data-id');
+            const targetTaskStatus = targetTaskElement.getAttribute('data-status');
+            
+            // If dropping on a task in a different column, defer to column drop logic
+            if (targetTaskStatus !== draggedTaskStatus) {
+                // This scenario should be handled by handleDropColumn, but as a fallback
+                // we can explicitly call it or prevent this drop. For simplicity, just return.
+                return; 
+            }
+
+            // --- Logic for reordering within the same column ---
+            const targetTask = tasks.find(t => t.id === targetTaskId);
+            const draggedTask = tasks.find(t => t.id === draggedTaskId);
+
+            if (!targetTask || !draggedTask) {
+                showModal("Lỗi: Không tìm thấy tác vụ kéo hoặc tác vụ đích.");
                 return;
             }
-            if (!draggedItemId || !currentProjectId) return;
 
-            const targetColumn = e.target.closest('.kanban-column');
-            if (targetColumn) {
-                const newStatus = targetColumn.getAttribute('data-status'); // Get status of the target column
-                handleUpdateTaskStatus(draggedItemId, newStatus); // Update task status
+            // Get all tasks in the same column, sorted by position
+            const siblingTasks = tasks
+                .filter(t => t.status === draggedTaskStatus && t.id !== draggedTaskId)
+                .sort((a, b) => a.position - b.position);
+
+            const targetIndex = siblingTasks.findIndex(t => t.id === targetTaskId);
+
+            let newPosition;
+            const taskRect = targetTaskElement.getBoundingClientRect();
+            const mouseRelativeY = e.clientY - taskRect.top;
+
+            if (siblingTasks.length === 0) { // Should not happen if dropping on a task
+                newPosition = Date.now();
+            } else if (mouseRelativeY < taskRect.height / 2) { // Dropped on upper half, insert before target
+                const prevTask = siblingTasks[targetIndex - 1];
+                if (prevTask) {
+                    newPosition = (prevTask.position + targetTask.position) / 2;
+                } else { // Dropped at the very beginning
+                    newPosition = targetTask.position / 2;
+                }
+            } else { // Dropped on lower half, insert after target
+                const nextTask = siblingTasks[targetIndex + 1];
+                if (nextTask) {
+                    newPosition = (targetTask.position + nextTask.position) / 2;
+                } else { // Dropped at the very end
+                    newPosition = targetTask.position + 1; // Or targetTask.position + Date.now() / 1000000;
+                }
             }
+            
+            // Ensure position is distinct and large enough for future inserts
+            if (newPosition === draggedTaskOriginalPosition) { // No actual position change
+                targetTaskElement.classList.remove('drag-over-target');
+                return;
+            }
+
+            // Make sure newPosition is always different from existing ones (small adjustment)
+            const existingPositions = tasks.filter(t => t.status === draggedTaskStatus).map(t => t.position);
+            while (existingPositions.includes(newPosition)) {
+                newPosition += 0.000001; // Small increment to make it unique
+            }
+
+            await handleUpdateTaskStatus(draggedTaskId, draggedTaskStatus, newPosition);
+            targetTaskElement.classList.remove('drag-over-target');
         }
 
         // Add drag-and-drop event listeners to each Kanban column
         columns.forEach(column => {
-            column.addEventListener('dragover', handleDragOver);
-            column.addEventListener('drop', handleDrop);
+            column.addEventListener('dragover', handleDragOverColumn); // For column-level drops
+            column.addEventListener('drop', handleDropColumn); // For column-level drops
+            // No need for dragenter/dragleave on column itself for empty state as it's handled in dragover
         });
+
 
         // --- Confetti Animation ---
         /**
@@ -1308,6 +1534,15 @@
 
         // Event listener to close the modal
         modalCloseBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+        // --- Comment Notification Toast ---
+        function showCommentToast(taskName) {
+            toastTaskName.textContent = taskName;
+            commentToast.classList.add('show');
+            setTimeout(() => {
+                commentToast.classList.remove('show');
+            }, 5000); // Hide after 5 seconds
+        }
 
         // --- Project Management Logic ---
         // "Create New Project" button
@@ -1398,7 +1633,7 @@
             const projectEndDate = projectEndDateInput.value;
             const projectStatus = projectStatusSelect.value;
             const projectIdToModify = editingProjectIdInput.value;
-            const sourceProjectIdToCopy = copyTasksFromProjectSelect.value; // NEW: Get source project ID for copying tasks
+            const sourceProjectIdToCopy = copyTasksFromProjectSelect.value; // Get source project ID for copying tasks
 
             if (!isCurrentUserAdmin) {
                 showModal("Bạn không có quyền lưu dự án.");
@@ -1433,10 +1668,9 @@
                         projectSelect.value = newProjectId; // Select new project in dropdown
                         showModal("Dự án đã được tạo thành công!");
 
-                        // NEW: Copy "To Do" tasks if a source project was selected
+                        // Copy "To Do" tasks if a source project was selected
                         if (sourceProjectIdToCopy) {
                             await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
-                            // showModal("Dự án đã được tạo và tác vụ 'To Do' đã được sao chép thành công!"); // Modal already shown above
                         }
                     }
                     createProjectModal.classList.add('hidden');
@@ -1450,7 +1684,7 @@
             }
         });
 
-        // NEW: Function to copy "To Do" tasks from a source project to a destination project
+        // Function to copy a single task to the current project
         async function handleCopyTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("Bạn không có quyền sao chép tác vụ.");
@@ -1467,6 +1701,7 @@
                         text: `Copy of ${originalTaskData.text}`, // Add "Copy of" prefix
                         status: 'todo', // Always copy as "To Do"
                         createdAt: new Date().toISOString(), // New creation timestamp
+                        position: Date.now(), // New position for the copied task
                         subtasks: originalTaskData.subtasks.map(sub => ({ // Reset subtask completion status
                             text: sub.text,
                             isCompleted: false,
@@ -1486,11 +1721,11 @@
         }
 
 
-        // NEW: Function to copy "To Do" tasks from a source project to a destination project (used in create project modal)
+        // Function to copy "To Do" tasks from a source project to a destination project (used in create project modal)
         async function copyTodoTasks(sourceProjectId, destinationProjectId) {
             try {
                 const sourceTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${sourceProjectId}/tasks`);
-                const sourceTasksSnapshot = await getDocs(sourceTasksCollectionRef);
+                const sourceTasksSnapshot = await getDocs(sourceTasksCollectionRef); // Use getDocs to fetch tasks once
                 
                 const todoTasksToCopy = sourceTasksSnapshot.docs
                     .filter(doc => doc.data().status === 'todo') // Only copy "To Do" tasks
@@ -1501,6 +1736,7 @@
                             text: taskData.text,
                             status: 'todo',
                             createdAt: new Date().toISOString(), // New creation timestamp
+                            position: Date.now() + Math.random(), // Assign a unique position
                             subtasks: taskData.subtasks.map(sub => ({ // Reset subtask completion status
                                 text: sub.text,
                                 isCompleted: false,
