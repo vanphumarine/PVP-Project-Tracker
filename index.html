@@ -216,6 +216,18 @@
             <button id="modal-close-btn" class="modal-button">OK</button>
         </div>
     </div>
+
+    <!-- NEW: Modal để xác nhận xóa dự án -->
+    <div id="delete-project-confirm-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <p id="delete-confirm-message" class="mb-4"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-delete-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Yes, Delete</button>
+                <button id="confirm-delete-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">No, Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal để nhập tên dự án mới và các thông tin chi tiết -->
     <div id="create-project-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
@@ -361,7 +373,7 @@
         let projectsData = {}; // Stores all fetched project data, by ID
         let currentProjectMembers = []; // Stores the list of members for the current project
         let userRole = 'Guest'; // Current user's role (Guest/Admin)
-        let currentOpenTaskDetailsId = null; // NEW: To track which task detail modal is open
+        let currentOpenTaskDetailsId = null; // To track which task detail modal is open
 
         // Variable to store the Burndown chart instance
         let burndownChartInstance = null;
@@ -400,7 +412,7 @@
         const confirmCreateProjectBtn = document.getElementById('confirm-create-project-btn');
         const cancelCreateProjectBtn = document.getElementById('cancel-create-project-btn');
         const editingProjectIdInput = document.getElementById('editing-project-id');
-        const copyTasksFromProjectSelect = document.getElementById('copy-tasks-from-project-select'); // NEW
+        const copyTasksFromProjectSelect = document.getElementById('copy-tasks-from-project-select'); 
 
         const displayProjectName = document.getElementById('display-project-name');
         const displayProjectDescription = document.getElementById('display-project-description');
@@ -428,14 +440,21 @@
         const addCommentBtn = document.getElementById('add-comment-btn');
         const taskIdForComments = document.getElementById('task-id-for-comments');
         const closeTaskDetailsModalBtn = document.getElementById('close-task-details-modal-btn');
-        const commentToast = document.getElementById('comment-toast'); // NEW
-        const toastTaskName = document.getElementById('toast-task-name'); // NEW
+        const commentToast = document.getElementById('comment-toast'); 
+        const toastTaskName = document.getElementById('toast-task-name'); 
+
+        // NEW: Elements for Delete Project Confirmation Modal
+        const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
+        const deleteConfirmMessage = document.getElementById('delete-confirm-message');
+        const confirmDeleteYesBtn = document.getElementById('confirm-delete-yes-btn');
+        const confirmDeleteNoBtn = document.getElementById('confirm-delete-no-btn');
+        let projectIdToDelete = null; // Store project ID for confirmation
 
 
         let tasks = []; // Array to hold task data
-        let draggedTaskId = null; // NEW: Stores the ID of the task being dragged for reordering
-        let draggedTaskStatus = null; // NEW: Stores the status of the task being dragged
-        let draggedTaskOriginalPosition = null; // NEW: Stores the original position of the task being dragged
+        let draggedTaskId = null; // Stores the ID of the task being dragged for reordering
+        let draggedTaskStatus = null; // Stores the status of the task being dragged
+        let draggedTaskOriginalPosition = null; // Stores the original position of the task being dragged
 
         /**
          * Shows the login screen.
@@ -654,7 +673,7 @@
         function setupProjectsListener() {
             if (unsubscribeFromProjects) unsubscribeFromProjects(); // Unsubscribe from old listener
 
-            // NEW: Order projects by createdAt in descending order (newest first)
+            // Order projects by createdAt in descending order (newest first)
             const projectsQuery = query(projectsCollectionRef, orderBy('createdAt', 'desc'));
 
             unsubscribeFromProjects = onSnapshot(projectsQuery, (snapshot) => {
@@ -733,7 +752,7 @@
         function setupRealtimeListener(projectId) {
             if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe from old listener
             
-            // NEW: Order tasks by 'position' for reordering within columns
+            // Order tasks by 'position' for reordering within columns
             const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
             const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
 
@@ -742,15 +761,17 @@
             unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
                 const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // NEW: Check for new comments and show toast notification
+                // Check for new comments and show toast notification
                 newTasks.forEach(newTask => {
                     const oldTask = tasks.find(t => t.id === newTask.id);
-                    if (oldTask && newTask.comments && oldTask.comments &&
+                    // Check if oldTask exists, has comments, newTask has comments, and comment count increased, AND task details modal is NOT open for this task
+                    if (oldTask && oldTask.comments && newTask.comments &&
                         newTask.comments.length > oldTask.comments.length &&
-                        newTask.id !== currentOpenTaskDetailsId) { // Only show if modal is not open for this task
+                        newTask.id !== currentOpenTaskDetailsId) {
                         showCommentToast(newTask.text);
                     }
                 });
+                // Update previousTasksComments for the next snapshot
                 previousTasksComments = newTasks.reduce((acc, task) => {
                     acc[task.id] = task.comments ? task.comments.length : 0;
                     return acc;
@@ -806,7 +827,7 @@
             div.setAttribute('data-position', task.position); // Store position on element
             div.setAttribute('data-status', task.status); // Store status on element
 
-            // NEW: Drag and Drop reordering within column
+            // Drag and Drop reordering within column
             if (canModifyTask) {
                 div.setAttribute('draggable', 'true');
                 div.addEventListener('dragstart', handleDragStart);
@@ -946,7 +967,7 @@
                 newSubtaskInput.type = 'text';
                 newSubtaskInput.placeholder = 'Add subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
-                // NEW: Add event listener for "Enter" keypress
+                // Add event listener for "Enter" keypress
                 newSubtaskInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault(); // Prevent default form submission
@@ -974,7 +995,7 @@
          * @param {Object} task - The task object to display/comment on.
          */
         function openTaskDetailsModal(task) {
-            currentOpenTaskDetailsId = task.id; // NEW: Set current open task ID
+            currentOpenTaskDetailsId = task.id; // Set current open task ID
             taskDetailsTextDisplay.textContent = task.text || '';
             taskIdForComments.value = task.id; // Store task ID for commenting
 
@@ -1069,7 +1090,7 @@
 
         closeTaskDetailsModalBtn.addEventListener('click', () => {
             taskDetailsModal.classList.add('hidden'); // Hide task details modal
-            currentOpenTaskDetailsId = null; // NEW: Clear current open task ID
+            currentOpenTaskDetailsId = null; // Clear current open task ID
         });
 
 
@@ -1087,14 +1108,14 @@
             const taskText = taskInput.value.trim();
             if (taskText) {
                 try {
-                    // NEW: Assign a position to the new task (e.g., current timestamp)
+                    // Assign a position to the new task (e.g., current timestamp)
                     // This position will be used for ordering tasks within columns.
                     const newTaskPosition = Date.now(); 
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), { 
                         text: taskText, 
                         status: 'todo',
                         createdAt: new Date().toISOString(), // Add task creation time
-                        position: newTaskPosition, // NEW: Add position for ordering
+                        position: newTaskPosition, // Add position for ordering
                         subtasks: [], // Initialize empty subtasks array
                         comments: [] 
                     });
@@ -1537,6 +1558,7 @@
 
         // --- Comment Notification Toast ---
         function showCommentToast(taskName) {
+            console.log(`Showing comment toast for task: ${taskName}`); // For debugging: Check if this logs
             toastTaskName.textContent = taskName;
             commentToast.classList.add('show');
             setTimeout(() => {
@@ -1560,7 +1582,7 @@
             projectStatusSelect.value = 'Active'; // Set default status
             confirmCreateProjectBtn.textContent = "Create Project"; // Reset button text
             editingProjectIdInput.value = ''; // Clear editing project ID
-            copyTasksFromProjectSelect.value = ''; // NEW: Reset copy from project selection
+            copyTasksFromProjectSelect.value = ''; // Reset copy from project selection
 
             createProjectModal.classList.remove('hidden'); // Show create project modal
             newProjectNameInput.focus();
@@ -1586,7 +1608,7 @@
                 projectStatusSelect.value = projectToEdit.status || 'Active';
                 confirmCreateProjectBtn.textContent = "Save Changes"; // Change button text to "Save Changes"
                 editingProjectIdInput.value = projectToEdit.id; // Store editing project ID in hidden input
-                copyTasksFromProjectSelect.value = ''; // NEW: Ensure this is reset as we are editing, not copying
+                copyTasksFromProjectSelect.value = ''; // Ensure this is reset as we are editing, not copying
 
                 createProjectModal.classList.remove('hidden'); // Show modal
                 newProjectNameInput.focus();
@@ -1595,7 +1617,7 @@
             }
         });
 
-        // "Delete Project" button
+        // "Delete Project" button now uses custom modal
         deleteProjectBtn.addEventListener('click', async () => {
             if (!isCurrentUserAdmin) {
                 showModal("Bạn không có quyền xóa dự án.");
@@ -1605,25 +1627,60 @@
                 showModal("Vui lòng chọn một dự án để xóa.");
                 return;
             }
-            // Using a simple confirm here, consider replacing with a custom modal for better UX
-            if (confirm("Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.")) {
-                try {
-                    // First, delete all tasks associated with the project
-                    const tasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`));
-                    const deleteTasksPromises = tasksSnapshot.docs.map(taskDoc => deleteDoc(taskDoc.ref));
-                    await Promise.all(deleteTasksPromises);
-
-                    // Then, delete the project document itself
-                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, currentProjectId));
-                    showModal("Dự án đã được xóa.");
-                    currentProjectId = null; // Clear current project
-                    // The project listener will automatically update the UI
-                } catch (error) {
-                    console.error("Error deleting project:", error);
-                    showModal("Xóa dự án thất bại.");
-                }
+            const project = projectsData[currentProjectId];
+            if (project) {
+                promptDeleteConfirmation(currentProjectId, project.name);
+            } else {
+                showModal("Lỗi: Không tìm thấy dữ liệu dự án để xóa.");
             }
         });
+
+        /**
+         * Displays a custom confirmation modal for project deletion.
+         * @param {string} projectId - The ID of the project to delete.
+         * @param {string} projectName - The name of the project to display in the message.
+         */
+        function promptDeleteConfirmation(projectId, projectName) {
+            projectIdToDelete = projectId;
+            deleteConfirmMessage.textContent = `Bạn có chắc chắn muốn xóa dự án "${projectName}"? Thao tác này sẽ xóa tất cả tác vụ của nó và không thể hoàn tác.`;
+            deleteProjectConfirmModal.classList.remove('hidden');
+        }
+
+        // Event listeners for the new confirmation modal
+        confirmDeleteYesBtn.addEventListener('click', async () => {
+            deleteProjectConfirmModal.classList.add('hidden'); // Hide modal immediately
+            if (projectIdToDelete) {
+                await executeProjectDeletion(projectIdToDelete);
+                projectIdToDelete = null; // Clear after execution
+            }
+        });
+
+        confirmDeleteNoBtn.addEventListener('click', () => {
+            deleteProjectConfirmModal.classList.add('hidden');
+            projectIdToDelete = null; // Clear if cancelled
+        });
+
+        /**
+         * Executes the actual project deletion from Firestore.
+         * @param {string} projectId - The ID of the project to delete.
+         */
+        async function executeProjectDeletion(projectId) {
+            try {
+                // First, delete all tasks associated with the project
+                const tasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`));
+                const deleteTasksPromises = tasksSnapshot.docs.map(taskDoc => deleteDoc(taskDoc.ref));
+                await Promise.all(deleteTasksPromises);
+
+                // Then, delete the project document itself
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, projectId));
+                showModal("Dự án đã được xóa.");
+                currentProjectId = null; // Clear current project
+                // The project listener will automatically update the UI
+            } catch (error) {
+                console.error("Error deleting project:", error);
+                showModal("Xóa dự án thất bại.");
+            }
+        }
 
         // Confirm create/edit project button
         confirmCreateProjectBtn.addEventListener('click', async () => {
