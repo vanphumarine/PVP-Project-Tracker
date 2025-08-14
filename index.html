@@ -359,7 +359,7 @@
 
             <button id="save-task-details-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300 mb-4">Save Task Changes</button>
 
-            <div class="mb-4">
+            <div id="comment-section-container" class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Comments:</label>
                 <div id="comments-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200 mb-2">
                     <!-- Comments will be loaded here -->
@@ -502,6 +502,7 @@
         const closeTaskDetailsModalBtn = document.getElementById('close-task-details-modal-btn');
         const commentToast = document.getElementById('comment-toast'); 
         const toastTaskName = document.getElementById('toast-task-name'); 
+        const commentSectionContainer = document.getElementById('comment-section-container');
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
         const deleteConfirmMessage = document.getElementById('delete-confirm-message');
@@ -865,12 +866,17 @@
             }
 
             // Click listener for the entire task card (for viewers, and for admins when not editing)
-            div.addEventListener('click', () => {
-                // If current user is an admin AND they are not clicking the edit button,
-                // they should open in view mode (no comment input/button).
-                // If current user is a viewer, they should open in view mode (with comment input/button).
-                const openInEditModeForAdmin = (userRole === 'Admin' && isCurrentUserProjectMember()); // This will be false if clicked generally
-                openTaskDetailsModal(task, openInEditModeForAdmin); 
+            div.addEventListener('click', (e) => {
+                // For viewers, clicking anywhere opens in view/comment mode
+                // For admins/members, clicking anywhere *except* action buttons or subtask checkboxes
+                // should open in view mode (no comment input/button).
+                // The edit button itself handles opening in edit mode for admins/members.
+                // Subtask checkbox click should not open the modal.
+                if (e.target.closest('button') || e.target.closest('input[type="checkbox"]')) {
+                    e.stopPropagation(); // Prevent card click event if a button or checkbox was clicked
+                    return;
+                }
+                openTaskDetailsModal(task, false); // Always open in view mode by default for general clicks
             });
 
 
@@ -1063,18 +1069,20 @@
             // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
             saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canEditTaskProperties));
 
-            // Commenting is available for any authenticated user
+            // Commenting section visibility based on user role and mode
             const canComment = !!userId; 
             if (userRole === 'Admin') {
                 // For admin, comment section only visible if opened via edit icon
-                newCommentInput.disabled = !isEditMode;
-                addCommentBtn.disabled = !isEditMode;
-                newCommentInput.placeholder = isEditMode ? "Add a comment..." : "Click the 'Edit Task' icon to add comments.";
+                commentSectionContainer.classList.toggle('hidden', !isEditMode);
             } else { // For Viewer
-                newCommentInput.disabled = !canComment;
-                addCommentBtn.disabled = !canComment;
-                newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add comments...";
+                // For viewer, comment section is always visible if user can comment
+                commentSectionContainer.classList.toggle('hidden', !canComment);
             }
+
+            // Enable/disable comment input and button based on canComment and mode
+            newCommentInput.disabled = !canComment;
+            addCommentBtn.disabled = !canComment;
+            newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add comments...";
             
             renderComments(task.comments || []);
 
@@ -1618,8 +1626,7 @@
                                         Math.max(...tasksInNewColumn.map(t => t.position)) + 1 : 
                                         Date.now();
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
-                } <<<<<<< Updated upstream:README.md
-catch (error) {
+                } catch (error) {
                     console.error("Error changing task status:", error);
                     showModal("Failed to change task status.");
                 }
