@@ -1036,7 +1036,10 @@
                 const addSubtaskButton = document.createElement('button');
                 addSubtaskButton.textContent = '+';
                 addSubtaskButton.className = 'bg-indigo-500 text-white p-2 rounded-md hover:bg-indigo-600 transition';
-                addSubtaskButton.onclick = () => handleAddSubtask(task.id, newSubtaskInput.value);
+                addSubtaskButton.onclick = (e) => { // Modified: added event parameter `e`
+                    e.stopPropagation(); // Modified: stop event propagation
+                    handleAddSubtask(task.id, newSubtaskInput.value);
+                };
 
                 addSubtaskDiv.appendChild(newSubtaskInput);
                 addSubtaskDiv.appendChild(addSubtaskButton);
