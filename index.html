@@ -23,6 +23,7 @@
         /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Chuyển đổi mượt mà khi kéo/di chuột */
+            border-left-width: 8px; /* Đã tăng độ rộng lề màu */
         }
         .task-card.is-admin {
             cursor: grab; /* Chỉ ra có thể kéo được cho admin */
@@ -378,7 +379,7 @@
     
     <!-- Toast Notification for New Comments -->
     <div id="comment-toast" class="toast-notification">
-        Bình luận mới trên tác vụ: <span id="toast-task-name" class="font-semibold"></span>
+        New comment on task: <span id="toast-task-name" class="font-semibold"></span>
     </div>
 
 
@@ -886,7 +887,7 @@
             // Add is-admin class and draggable attribute only if the current user is an admin or project member
             const canModifyTask = isCurrentUserProjectMember();
             // Use task.color for border-left-color, default to indigo-400
-            div.className = `task-card bg-white p-4 rounded-lg shadow-sm border-l-4 ${canModifyTask ? 'is-admin' : ''}`; 
+            div.className = `task-card bg-white p-4 rounded-lg shadow-sm ${canModifyTask ? 'is-admin' : ''}`; 
             div.style.borderLeftColor = task.color || '#818CF8'; // Tailwind's indigo-400
             div.setAttribute('data-id', task.id);
             div.setAttribute('data-position', task.position); // Store position on element
@@ -904,10 +905,12 @@
             }
 
             // Task Actions (Edit, Delete, Copy) - Moved to top right
-            if (canModifyTask) {
-                const taskActionsDiv = document.createElement('div');
-                taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
+            // This container ensures buttons stay in place and don't overlap text
+            const taskActionsDiv = document.createElement('div');
+            taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
+            div.style.position = 'relative'; // Ensure positioning context for absolute children
 
+            if (canModifyTask) {
                 // Edit Task Button
                 const editTaskButton = document.createElement('button');
                 editTaskButton.textContent = '✏️'; // Pencil emoji for edit
@@ -940,19 +943,19 @@
                     handleDeleteTask(task.id);
                 };
                 taskActionsDiv.appendChild(deleteButton);
-
-                div.style.position = 'relative'; // Ensure positioning context for absolute children
-                div.appendChild(taskActionsDiv);
             }
+            div.appendChild(taskActionsDiv);
 
             const text = document.createElement('p');
             text.textContent = task.text;
-            text.className = 'text-gray-800 font-semibold mb-1 pr-10'; // Added padding-right for buttons
+            // Adjusted padding-right to ensure text doesn't go under buttons
+            text.className = 'text-gray-800 font-semibold mb-1 pr-12'; 
             div.appendChild(text);
 
             // Display Deadline if exists
             if (task.deadline) {
                 const deadlineText = document.createElement('p');
+                // Format date for better display in en-US locale
                 deadlineText.className = 'text-xs text-gray-600 italic mb-2';
                 deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('en-US')}`;
                 div.appendChild(deadlineText);
@@ -1092,23 +1095,25 @@
             taskDetailsDeadlineInput.value = task.deadline || '';
 
             // Enable/Disable editing fields based on isEditMode and user role
-            const canEdit = isEditMode && isCurrentUserProjectMember();
-            taskDetailsTextInput.readOnly = !canEdit;
-            taskDetailsColorInput.disabled = !canEdit;
-            taskDetailsDeadlineInput.disabled = !canEdit;
-            saveTaskDetailsBtn.classList.toggle('hidden', !canEdit);
+            const canEditTaskProperties = isEditMode && isCurrentUserProjectMember();
+            taskDetailsTextInput.readOnly = !canEditTaskProperties;
+            taskDetailsColorInput.disabled = !canEditTaskProperties;
+            taskDetailsDeadlineInput.disabled = !canEditTaskProperties;
+            saveTaskDetailsBtn.classList.toggle('hidden', !canEditTaskProperties); // Hide/show save button
 
-            // Both admin and viewer can comment (but save button for comments is separate)
-            newCommentInput.disabled = false;
-            addCommentBtn.disabled = false;
-            newCommentInput.placeholder = "Add a comment...";
+            // Commenting is available for any authenticated user
+            const canComment = !!userId; // Check if userId exists (user is authenticated)
+            newCommentInput.disabled = !canComment;
+            addCommentBtn.disabled = !canComment;
+            newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add comments...";
+
 
             renderComments(task.comments || []); // Render existing comments
 
             taskDetailsModal.classList.remove('hidden');
-            if (canEdit) {
+            if (canEditTaskProperties) {
                 taskDetailsTextInput.focus();
-            } else {
+            } else if (canComment) {
                 newCommentInput.focus();
             }
         }
