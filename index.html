@@ -716,7 +716,7 @@
         function setupProjectsListener() {
             if (unsubscribeFromProjects) unsubscribeFromProjects();
 
-            const projectsQuery = query(projectsCollectionRef, orderBy('createdAt', 'desc'));
+            const projectsQuery = query(collection(db, `artifacts/${appId}/public/data/projects`), orderBy('createdAt', 'desc'));
 
             unsubscribeFromProjects = onSnapshot(projectsQuery, (snapshot) => {
                 projectSelect.innerHTML = '<option value="">Select a Project</option>';
@@ -872,8 +872,9 @@
                 // should open in view mode (no comment input/button).
                 // The edit button itself handles opening in edit mode for admins/members.
                 // Subtask checkbox click should not open the modal.
-                if (e.target.closest('button') || e.target.closest('input[type="checkbox"]')) {
-                    e.stopPropagation(); // Prevent card click event if a button or checkbox was clicked
+                // Added check for input field here
+                if (e.target.closest('button') || e.target.closest('input[type="checkbox"]') || e.target.closest('input[type="text"]')) {
+                    e.stopPropagation(); // Prevent card click event if a button, checkbox or text input was clicked
                     return;
                 }
                 openTaskDetailsModal(task, false); // Always open in view mode by default for general clicks
@@ -1027,17 +1028,21 @@
                 newSubtaskInput.placeholder = 'Add subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
                 newSubtaskInput.addEventListener('keypress', (e) => {
+                    e.stopPropagation(); // Stop propagation here
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         handleAddSubtask(task.id, newSubtaskInput.value);
                     }
                 });
+                newSubtaskInput.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Stop propagation here
+                });
 
                 const addSubtaskButton = document.createElement('button');
                 addSubtaskButton.textContent = '+';
                 addSubtaskButton.className = 'bg-indigo-500 text-white p-2 rounded-md hover:bg-indigo-600 transition';
-                addSubtaskButton.onclick = (e) => { // Modified: added event parameter `e`
-                    e.stopPropagation(); // Modified: stop event propagation
+                addSubtaskButton.onclick = (e) => { 
+                    e.stopPropagation(); 
                     handleAddSubtask(task.id, newSubtaskInput.value);
                 };
 
@@ -1948,7 +1953,7 @@
                         projectData.createdBy = userId;
                         projectData.createdAt = new Date().toISOString();
                         projectData.members = [userId];
-                        const docRef = await addDoc(projectsCollectionRef, projectData);
+                        const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/projects`), projectData);
                         const newProjectId = docRef.id;
                         currentProjectId = newProjectId;
                         projectSelect.value = newProjectId;
