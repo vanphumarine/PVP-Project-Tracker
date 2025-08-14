@@ -515,7 +515,7 @@
         let draggedTaskOriginalPosition = null;
 
         /**
-         * Shows the login screen.
+         * Displays the login screen.
          */
         function showLoginScreen() {
             loginScreen.classList.remove('hidden');
@@ -526,7 +526,7 @@
         }
 
         /**
-         * Shows the main Kanban application.
+         * Displays the main Kanban application.
          */
         function showKanbanBoard() {
             loginScreen.classList.add('hidden');
@@ -559,7 +559,7 @@
 
         /**
          * Sets up the listener for Firebase authentication state changes.
-         * Decides whether to show the login screen or the main application.
+         * Decides whether to display the login screen or the main application.
          */
         function setupAuthListener() {
             onAuthStateChanged(auth, async (user) => {
@@ -864,12 +864,13 @@
                 div.addEventListener('drop', handleDropTask);
             }
 
-            // Click listener for the entire task card
+            // Click listener for the entire task card (for viewers, and for admins when not editing)
             div.addEventListener('click', () => {
-                // For viewers, clicking anywhere on the card opens the comment section
-                // For admins/members, clicking anywhere *except* action buttons opens the comment section
-                // The edit button itself handles opening in edit mode for admins/members.
-                openTaskDetailsModal(task, false); // Always open in view/comment mode by default
+                // If current user is an admin AND they are not clicking the edit button,
+                // they should open in view mode (no comment input/button).
+                // If current user is a viewer, they should open in view mode (with comment input/button).
+                const openInEditModeForAdmin = (userRole === 'Admin' && isCurrentUserProjectMember()); // This will be false if clicked generally
+                openTaskDetailsModal(task, openInEditModeForAdmin); 
             });
 
 
@@ -878,7 +879,7 @@
             taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
             div.style.position = 'relative';
 
-            if (canModifyTask) {
+            if (canModifyTask) { // Only show these for admins/project members
                 const editTaskButton = document.createElement('button');
                 editTaskButton.textContent = '✏️';
                 editTaskButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
@@ -952,7 +953,10 @@
                     subtaskCheckbox.checked = subtask.isCompleted;
                     subtaskCheckbox.className = 'mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500';
                     subtaskCheckbox.disabled = !canModifyTask;
-                    subtaskCheckbox.addEventListener('change', () => handleToggleSubtask(task.id, index));
+                    subtaskCheckbox.addEventListener('change', (e) => {
+                        e.stopPropagation(); // Stop propagation to prevent task card click
+                        handleToggleSubtask(task.id, index);
+                    });
 
                     const subtaskTextSpan = document.createElement('span');
                     subtaskTextSpan.textContent = subtask.text;
@@ -1051,23 +1055,34 @@
             taskDetailsColorInput.value = task.color || '#818CF8';
             taskDetailsDeadlineInput.value = task.deadline || '';
 
-            const canEditTaskProperties = isEditMode && isCurrentUserProjectMember();
-            taskDetailsTextInput.readOnly = !canEditTaskProperties;
-            taskDetailsColorInput.disabled = !canEditTaskProperties;
-            taskDetailsDeadlineInput.disabled = !canEditTaskProperties;
-            saveTaskDetailsBtn.classList.toggle('hidden', !canEditTaskProperties);
+            const canEditTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
+            taskDetailsTextInput.readOnly = !canEditTaskProperties; // Always readonly for viewers
+            taskDetailsColorInput.disabled = !canEditTaskProperties; // Always disabled for viewers
+            taskDetailsDeadlineInput.disabled = !canEditTaskProperties; // Always disabled for viewers
 
-            const canComment = !!userId;
-            newCommentInput.disabled = !canComment;
-            addCommentBtn.disabled = !canComment;
-            newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add comments...";
+            // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
+            saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canEditTaskProperties));
 
+            // Commenting is available for any authenticated user
+            const canComment = !!userId; 
+            if (userRole === 'Admin') {
+                // For admin, comment section only visible if opened via edit icon
+                newCommentInput.disabled = !isEditMode;
+                addCommentBtn.disabled = !isEditMode;
+                newCommentInput.placeholder = isEditMode ? "Add a comment..." : "Click the 'Edit Task' icon to add comments.";
+            } else { // For Viewer
+                newCommentInput.disabled = !canComment;
+                addCommentBtn.disabled = !canComment;
+                newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add comments...";
+            }
+            
             renderComments(task.comments || []);
 
             taskDetailsModal.classList.remove('hidden');
-            if (canEditTaskProperties) {
+            // Focus based on user role and mode
+            if (userRole === 'Admin' && isEditMode) {
                 taskDetailsTextInput.focus();
-            } else if (canComment) {
+            } else if (canComment && userRole === 'Viewer') { // Viewer always focuses on comments
                 newCommentInput.focus();
             }
         }
@@ -1310,6 +1325,8 @@
          * @param {number} subtaskIndex - The index of the subtask in the array.
          */
         async function handleToggleSubtask(taskId, subtaskIndex) {
+            // Note: e.stopPropagation() is handled in createTaskElement for the checkbox event listener itself.
+            // This function is only called to update Firestore.
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to change subtask status.");
                 return;
@@ -1601,7 +1618,8 @@
                                         Math.max(...tasksInNewColumn.map(t => t.position)) + 1 : 
                                         Date.now();
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
-                } catch (error) {
+                } <<<<<<< Updated upstream:README.md
+catch (error) {
                     console.error("Error changing task status:", error);
                     showModal("Failed to change task status.");
                 }
