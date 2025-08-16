@@ -160,6 +160,8 @@
             <div id="auth-info" class="text-sm text-gray-500 flex flex-row items-center gap-4 flex-wrap justify-center md:justify-end mt-4 md:mt-0">
                 <p>User: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
+                <!-- NEW: Change Password Button -->
+                <button id="change-password-btn" class="bg-blue-500 text-white text-sm px-4 py-2 rounded-md hover:bg-blue-600 transition-colors duration-300">Change Password</button>
                 <button id="logout-btn" class="bg-red-500 text-white text-sm px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
             </div>
         </div>
@@ -426,7 +428,8 @@
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // NEW: sendPasswordResetEmail imported
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
         // IMPORTANT: REPLACE THE FOLLOWING PLACEHOLDER VALUES WITH YOUR ACTUAL FIREBASE PROJECT CONFIGURATION.
@@ -471,7 +474,7 @@
             "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung",
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Mr.Rune",
 	    "OTBxGbC5JZbh1bIRdhuMnq4i1CF3": "Mr.Chinh",
-            "thomas.ringstad@vard.com": "Mr.Thomas",
+            "uoQxAubtyqbRhwHcBPzD7h3geKg1": "Mr.Thomas",
             // Add more user IDs and their desired nicknames here
         };
 
@@ -483,6 +486,7 @@
         const guestLoginBtn = document.getElementById('guest-login-btn');
         const mainApp = document.getElementById('app');
         const logoutBtn = document.getElementById('logout-btn');
+        const changePasswordBtn = document.getElementById('change-password-btn'); // NEW: Change Password Button
 
         const displayUserId = document.getElementById('display-user-id');
         const displayUserRole = document.getElementById('display-user-role');
@@ -601,6 +605,7 @@
             displayUserId.textContent = '';
             displayUserRole.textContent = '';
             logoutBtn.classList.add('hidden');
+            changePasswordBtn.classList.add('hidden'); // NEW: Hide change password button
         }
 
         /**
@@ -720,6 +725,44 @@
         }
 
         /**
+         * NEW: Handles sending a password reset email to the current user.
+         */
+        async function handleChangePassword() {
+            const user = auth.currentUser;
+            if (user) {
+                // Check if the user signed in with email/password
+                const isEmailPasswordUser = user.providerData.some(
+                    (provider) => provider.providerId === EmailAuthProvider.PROVIDER_ID
+                );
+
+                if (isEmailPasswordUser && user.email) {
+                    try {
+                        await sendPasswordResetEmail(auth, user.email);
+                        showModal("Password reset email sent! Please check your inbox.");
+                    } catch (error) {
+                        console.error("Error sending password reset email:", error);
+                        let errorMessage = "Failed to send password reset email. Please try again later.";
+                        if (error.code === 'auth/missing-email') {
+                            errorMessage = "No email associated with this account. Cannot send reset link.";
+                        } else if (error.code === 'auth/network-request-failed') {
+                            errorMessage = "Network error. Please check your internet connection.";
+                        } else {
+                            errorMessage = `Failed to send password reset email: ${error.message}`;
+                        }
+                        showModal(errorMessage);
+                    }
+                } else if (user.isAnonymous) {
+                    showModal("You are currently logged in as a guest. Guest accounts do not have passwords to reset. Please log in with an email account to use this feature.");
+                } else {
+                    showModal("This feature is only available for users who signed up with email and password. For other login methods (e.g., Google), please change your password through that provider's settings.");
+                }
+            } else {
+                showModal("You must be logged in to change your password.");
+            }
+        }
+
+
+        /**
          * Checks the admin status for the current user.
          * If no admin is configured, the current non-anonymous user will become the admin.
          */
@@ -761,6 +804,9 @@
             displayUserRole.textContent = userRole;
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
+            // NEW: Show change password button if logged in and not anonymous
+            changePasswordBtn.classList.toggle('hidden', auth.currentUser.isAnonymous);
+
 
             const canManageProjects = isCurrentUserAdmin;
             createProjectBtn.disabled = !canManageProjects;
@@ -2778,6 +2824,7 @@
 
         guestLoginBtn.addEventListener('click', handleGuestLogin);
         logoutBtn.addEventListener('click', handleLogout);
+        changePasswordBtn.addEventListener('click', handleChangePassword); // NEW: Add event listener for change password button
 
         projectSelect.addEventListener('change', (e) => {
             currentProjectId = e.target.value;
