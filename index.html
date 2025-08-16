@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN to use utility classes -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter for modern interface -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -19,19 +19,11 @@
         /* Chiều cao tối thiểu cho cột Kanban để đảm bảo sự nhất quán về mặt hình ảnh */
         .kanban-column {
             min-height: 400px;
-            display: flex; /* Sử dụng flexbox để bố cục nội dung cột */
-            flex-direction: column; /* Xếp chồng các mục theo chiều dọc */
         }
-        /* Chiều cao tối đa và cuộn cho danh sách tác vụ bên trong mỗi cột */
-        .task-list {
-            max-height: calc(100vh - 350px); /* Đặt chiều cao tối đa cho phép cuộn */
-            overflow-y: auto; /* Kích hoạt cuộn theo chiều dọc khi nội dung tràn */
-            padding-right: 8px; /* Thêm một ít đệm để tránh thanh cuộn dính vào nội dung */
-        }
-
         /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
+            /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
             border-width: 1px; /* Add a subtle border on all sides for consistency */
         }
         .task-card.is-admin {
