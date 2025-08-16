@@ -1764,7 +1764,7 @@
                 e.dataTransfer.effectAllowed = 'move';
             } else {
                 console.error("Error: Subtask is not a valid object or is missing essential properties (id or text).", { taskId, subtaskId, subtaskToDrag });
-                showModal("Error: Cannot drag this subtask. It might be invalid or missing content."); 
+                showModal("Lỗi: Không thể kéo subtask này. Nó có thể không hợp lệ hoặc thiếu nội dung."); 
                 e.preventDefault(); 
             }
         }
@@ -1820,24 +1820,25 @@
          */
         async function handleSubtaskDrop(e) {
             e.preventDefault();
+            // Basic validation
             if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskId === null || !currentProjectId) {
-                showModal("Lỗi: Dữ liệu subtask kéo bị thiếu hoặc bạn không có quyền."); 
+                showModal("Lỗi: Dữ liệu subtask kéo bị thiếu hoặc bạn không có quyền.");
                 e.target.closest('.subtask-item')?.classList.remove('drag-over-subtask');
                 return;
             }
 
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-task-id') !== draggedSubtaskInfo.taskId) {
-                showModal("Subtask chỉ có thể được sắp xếp lại trong nhiệm vụ mẹ của chúng."); 
-                targetSubtaskItem?.classList.remove('drag-over-subtask');
-                return;
+            if (!targetSubtaskItem) {
+                e.target.closest('.subtask-item')?.classList.remove('drag-over-subtask');
+                return; // Not dropping on a valid subtask item
             }
 
             const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
-            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id'); 
+            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id');
 
+            // Ensure dropping within the same parent task
             if (targetTaskId !== draggedSubtaskInfo.taskId) {
-                showModal("Subtask chỉ có thể được sắp xếp lại trong nhiệm vụ mẹ của chúng."); 
+                showModal("Subtask chỉ có thể được sắp xếp lại trong nhiệm vụ mẹ của chúng.");
                 targetSubtaskItem.classList.remove('drag-over-subtask');
                 return;
             }
@@ -1850,55 +1851,66 @@
 
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, draggedSubtaskInfo.taskId);
             try {
+                // Fetch the latest state of the task document immediately before processing the drop
                 const taskDoc = await getDoc(taskRef);
                 if (!taskDoc.exists()) {
-                    showModal("Lỗi: Không tìm thấy nhiệm vụ mẹ cho việc sắp xếp lại subtask."); 
+                    showModal("Lỗi: Không tìm thấy nhiệm vụ mẹ cho việc sắp xếp lại subtask. Có thể đã bị xóa.");
                     targetSubtaskItem?.classList.remove('drag-over-subtask');
                     return;
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
+                
                 // IMPORTANT: Always sort subtasks by position from Firestore data before manipulating
+                // This ensures consistent ordering even if positions are slightly off due to previous operations
                 currentSubtasks.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-                // --- NEW ROBUST CHECK ---
-                // Find the *actual* index of the dragged subtask in the *current fetched* subtasks array
+                // Find the *actual* index of the dragged and target subtasks in the *current fetched* subtasks array
                 const draggedSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskId);
+                const targetSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === targetSubtaskId);
+
+                // Robust check: Ensure both subtasks exist in the fetched array
                 if (draggedSubtaskIndexInFetchedArray === -1) {
                     showModal("Lỗi: Subtask được kéo không còn tồn tại trong dự án. Nó có thể đã bị xóa bởi người dùng khác.");
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
-
-                const targetSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === targetSubtaskId);
                 if (targetSubtaskIndexInFetchedArray === -1) {
                     showModal("Lỗi: Subtask đích không tìm thấy trong dự án. Nó có thể đã bị xóa bởi người dùng khác.");
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
-                // --- END NEW ROBUST CHECK ---
                 
-                // Remove the dragged subtask
+                // Remove the dragged subtask from its current position
                 const [removedSubtask] = currentSubtasks.splice(draggedSubtaskIndexInFetchedArray, 1);
 
-                // Determine the new insertion index based on mouse position
+                // Calculate the new index where the removed subtask should be inserted
+                // This `insertionIndex` refers to the index in the `currentSubtasks` array *after* the removal.
+                let insertionIndex = targetSubtaskIndexInFetchedArray;
+
+                // Adjust insertionIndex if the dragged element was originally before the target element
+                // Because removing an element from an earlier index shifts subsequent elements to the left by one.
+                if (draggedSubtaskIndexInFetchedArray < targetSubtaskIndexInFetchedArray) {
+                    insertionIndex--;
+                }
+
+                // Determine precise insertion point based on mouse position relative to target element
                 const subtaskRect = targetSubtaskItem.getBoundingClientRect();
                 const mouseRelativeY = e.clientY - subtaskRect.top;
-                let newInsertionIndex = targetSubtaskIndexInFetchedArray;
 
                 if (mouseRelativeY > subtaskRect.height / 2) {
-                    // Drop after the target subtask
-                    newInsertionIndex = targetSubtaskIndexInFetchedArray + 1;
+                    // If dropping on the bottom half, insert *after* the target element
+                    insertionIndex++;
                 }
 
-                // Adjust the insertion index if we removed an element from an earlier position
-                if (draggedSubtaskIndexInFetchedArray < newInsertionIndex) {
-                    newInsertionIndex--;
-                }
+                // Ensure insertionIndex is within valid bounds (0 to currentSubtasks.length)
+                insertionIndex = Math.max(0, Math.min(insertionIndex, currentSubtasks.length));
 
-                // Insert the dragged subtask at the new position
-                currentSubtasks.splice(newInsertionIndex, 0, removedSubtask);
+                // Insert the dragged subtask at the calculated position
+                currentSubtasks.splice(insertionIndex, 0, removedSubtask);
 
                 // Re-assign positions based on the new order
+                // Using a larger step (e.g., 1000) for positions leaves gaps,
+                // which helps prevent floating point errors and makes future insertions smoother.
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
 
                 await updateDoc(taskRef, { subtasks: currentSubtasks });
@@ -1908,6 +1920,7 @@
                 console.error("Lỗi khi sắp xếp lại subtask:", error);
                 showModal("Không thể sắp xếp lại subtask."); 
             } finally {
+                // Always remove the drag-over visual indicator
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
             }
         }
