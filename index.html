@@ -296,6 +296,25 @@
         </div>
     </div>
 
+<<<<<<< HEAD
+=======
+    <!-- Modal to add/edit note for subtask - REPURPOSED or REMOVED based on decision -->
+    <!-- The user asked for 'note for task', not subtask. This modal will be removed or its content shifted.
+         Keeping for now, but will likely be empty. -->
+    <div id="subtask-note-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Subtask Note</h3>
+            <textarea id="subtask-note-textarea" placeholder="Enter note for this subtask..." rows="5" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+            <input type="hidden" id="editing-task-id-note">
+            <input type="hidden" id="editing-subtask-index-note">
+            <div class="flex justify-end gap-2">
+                <button id="save-subtask-note-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Note</button>
+                <button id="cancel-subtask-note-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+>>>>>>> parent of 54aa167 (Update index.html)
     <!-- NEW: Modal to edit subtask text and color -->
     <div id="subtask-edit-text-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
@@ -376,6 +395,21 @@
 
             <button id="save-task-details-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300 mb-4">Save Task Changes</button>
 
+<<<<<<< HEAD
+=======
+            <!-- NEW: Task Notes Section -->
+            <div id="task-notes-section-container" class="mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">Task Notes:</h4>
+                <div id="task-notes-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200 mb-2">
+                    <!-- Task Notes will be loaded here -->
+                </div>
+                <div class="flex flex-col gap-2">
+                    <textarea id="new-task-note-input" placeholder="Add a new note..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
+                    <button id="add-task-note-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Add Task Note</button>
+                </div>
+            </div>
+
+>>>>>>> parent of 54aa167 (Update index.html)
             <!-- Existing Comments Section -->
             <div id="comment-section-container" class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Comments:</label>
@@ -488,7 +522,18 @@
         const displayProjectEndDate = document.getElementById('display-project-end-date');
         const displayProjectStatus = document.getElementById('display-project-status');
 
+<<<<<<< HEAD
         const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); 
+=======
+        const subtaskNoteModal = document.getElementById('subtask-note-modal'); // This modal is now unused for its original purpose
+        const subtaskNoteTextarea = document.getElementById('subtask-note-textarea');
+        const editingTaskIdNote = document.getElementById('editing-task-id-note');
+        const editingSubtaskIndexNote = document.getElementById('editing-subtask-index-note');
+        const saveSubtaskNoteBtn = document.getElementById('save-subtask-note-btn');
+        const cancelSubtaskNoteBtn = document.getElementById('cancel-subtask-note-btn');
+
+        const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); // Repurposed for subtask edit & color
+>>>>>>> parent of 54aa167 (Update index.html)
         const subtaskEditTextInput = document.getElementById('subtask-edit-text-input');
         const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); 
         const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); 
@@ -528,10 +573,14 @@
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
+<<<<<<< HEAD
         // Stores information about the subtask being dragged.
         // `subtaskIndex` stores its index in the array at the start of the drag.
         // `subtaskObject` holds a deep copy of the subtask for consistent reference.
         let draggedSubtaskInfo = { taskId: null, subtaskIndex: null, subtaskObject: null }; 
+=======
+        let draggedSubtaskInfo = { taskId: null, subtaskIndex: null, originalPosition: null }; // NEW for subtask drag-and-drop
+>>>>>>> parent of 54aa167 (Update index.html)
 
         // Helper map for subtask colors
         const subtaskColorMap = {
@@ -616,6 +665,7 @@
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
                 console.error("Admin Login Failed:", error);
+<<<<<<< HEAD
                 let errorMessage = "Login failed. Please check your email and password."; 
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     errorMessage = "Invalid email or password."; 
@@ -630,6 +680,22 @@
                 }
                 else {
                     errorMessage = `Login failed: ${error.message}`; 
+=======
+                let errorMessage = "Login failed. Please check your email and password.";
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    errorMessage = "Invalid email or password.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = "Invalid email format.";
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = "Network error. Please check your internet connection.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = "Too many failed login attempts. Please try again later.";
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    errorMessage = "Email/Password authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
+                }
+                else {
+                    errorMessage = `Login failed: ${error.message}`;
+>>>>>>> parent of 54aa167 (Update index.html)
                 }
                 showModal(errorMessage);
             }
@@ -643,6 +709,7 @@
                 const userCredential = await signInAnonymously(auth);
             } catch (error) {
                 console.error("Guest Login Failed:", error);
+<<<<<<< HEAD
                 let errorMessage = "Could not log in as guest. Please refresh the page or try again."; 
                 if (error.code === 'auth/network-request-failed') {
                     errorMessage = "Network error. Please check your internet connection."; 
@@ -650,6 +717,15 @@
                     errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings."; 
                 } else {
                     errorMessage = `Guest login failed: ${error.message}`; 
+=======
+                let errorMessage = "Could not log in as guest. Please refresh the page or try again.";
+                if (error.code === 'auth/network-request-failed') {
+                    errorMessage = "Network error. Please check your internet connection.";
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
+                } else {
+                    errorMessage = `Guest login failed: ${error.message}`;
+>>>>>>> parent of 54aa167 (Update index.html)
                 }
                 showModal(errorMessage);
             }
@@ -661,10 +737,17 @@
         async function handleLogout() {
             try {
                 await signOut(auth);
+<<<<<<< HEAD
                 showModal("You have been logged out."); 
             } catch (error) {
                 console.error("Logout Failed:", error);
                 showModal("Logout failed."); 
+=======
+                showModal("You have been logged out.");
+            } catch (error) {
+                console.error("Logout Failed:", error);
+                showModal("Logout failed.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -684,7 +767,11 @@
                     if (auth.currentUser && !auth.currentUser.isAnonymous) {
                         await setDoc(adminDocRef, { adminId: userId });
                         isCurrentUserAdmin = true;
+<<<<<<< HEAD
                         showModal("You are the first admin! You can now create and manage projects."); 
+=======
+                        showModal("You are the first admin! You can now create and manage projects.");
+>>>>>>> parent of 54aa167 (Update index.html)
                     } else {
                         isCurrentUserAdmin = false;
                     }
@@ -693,9 +780,15 @@
             catch (error) {
                 console.error("Error checking admin status:", error);
                 if (error.code === 'permission-denied') {
+<<<<<<< HEAD
                     showModal("Permission denied when checking admin status. Please verify Firestore Security Rules."); 
                 } else {
                     showModal(`Error during admin check: ${error.message}. You will have viewer access.`); 
+=======
+                    showModal("Permission denied while checking admin status. Please verify Firestore Security Rules.");
+                } else {
+                    showModal(`Error checking admin: ${error.message}. You will have viewer access.`);
+>>>>>>> parent of 54aa167 (Update index.html)
                 }
                 isCurrentUserAdmin = false;
             }
@@ -777,21 +870,21 @@
                 } else if (currentProjectId && !snapshot.docs.some(doc => doc.id === currentProjectId)) {
                     currentProjectId = firstProjectId;
                     projectSelect.value = firstProjectId || "";
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
-                    renderTasks(); // Clear tasks from UI
+                    if (unsubscribeFromTasks) unsubscribeFromTasks();
+                    renderTasks();
                     if (firstProjectId) {
                          setupRealtimeListener(firstProjectId);
                          displayProjectDetails(projectsData[firstProjectId]);
                     } else {
-                        displayProjectDetails(null); // Clear project details
+                        displayProjectDetails(null);
                     }
                 } else if (currentProjectId) {
                      projectSelect.value = currentProjectId;
                      displayProjectDetails(projectsData[currentProjectId]);
                 } else {
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
-                    renderTasks(); // Clear tasks from UI
-                    displayProjectDetails(null); // Clear project details
+                    if (unsubscribeFromTasks) unsubscribeFromTasks();
+                    renderTasks();
+                    displayProjectDetails(null);
                 }
 
                 const mainContent = document.querySelector('main');
@@ -803,7 +896,11 @@
                 }
             }, (error) => {
                 console.error("Error fetching projects:", error);
+<<<<<<< HEAD
                 showModal("Error listening to projects."); 
+=======
+                showModal("Error listening to projects.");
+>>>>>>> parent of 54aa167 (Update index.html)
             });
         }
 
@@ -844,7 +941,11 @@
                 }
             }, (error) => {
                 console.error("Error fetching tasks for project:", error);
+<<<<<<< HEAD
                 showModal("Error listening to real-time task updates."); 
+=======
+                showModal("Error listening to real-time task updates.");
+>>>>>>> parent of 54aa167 (Update index.html)
             });
         }
 
@@ -977,10 +1078,15 @@
                     const subtaskItem = document.createElement('div');
                     subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
                     subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
+<<<<<<< HEAD
                     // Use index for stable identification
                     subtaskItem.setAttribute('data-subtask-index', index); 
                     // Store the subtask's unique ID for consistency during operations
                     subtaskItem.setAttribute('data-subtask-id', subtask.id);
+=======
+                    subtaskItem.setAttribute('data-subtask-index', index); // For subtask drag-drop
+                    subtaskItem.setAttribute('data-subtask-position', subtask.position); // For subtask drag-drop
+>>>>>>> parent of 54aa167 (Update index.html)
 
                     if (canModifyTask) {
                         subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
@@ -1100,14 +1206,34 @@
             taskDetailsColorInput.value = task.color || '#818CF8';
             taskDetailsDeadlineInput.value = task.deadline || '';
 
+<<<<<<< HEAD
             const canModifyTaskProperties = isCurrentUserProjectMember(); 
             const canComment = !!userId; 
 
             saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canModifyTaskProperties));
+=======
+            const canEditTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
+            taskDetailsTextInput.readOnly = !canEditTaskProperties; // Always readonly for viewers
+            taskDetailsColorInput.disabled = !canEditTaskProperties; // Always disabled for viewers
+            taskDetailsDeadlineInput.disabled = !canEditTaskProperties; // Always disabled for viewers
 
-            // Commenting section visibility
-            commentSectionContainer.classList.toggle('hidden', !canComment);
+            // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
+            saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canEditTaskProperties));
+>>>>>>> parent of 54aa167 (Update index.html)
 
+            // Commenting section visibility based on user role and mode
+            const canComment = !!userId; 
+            if (userRole === 'Admin') {
+                // For admin, comment section only visible if opened via edit icon
+                commentSectionContainer.classList.toggle('hidden', !isEditMode);
+                taskNotesSectionContainer.classList.toggle('hidden', !isEditMode); // NEW: hide task notes section for admin if not in edit mode
+            } else { // For Viewer
+                // For viewer, comment and task notes sections are always visible if user can comment/add notes
+                commentSectionContainer.classList.toggle('hidden', !canComment);
+                taskNotesSectionContainer.classList.toggle('hidden', !canComment); // NEW: hide task notes section for viewer if not logged in
+            }
+
+<<<<<<< HEAD
             // Task details input fields read-only/disabled status
             taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
             taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties;
@@ -1118,12 +1244,30 @@
             addCommentBtn.disabled = !canComment;
             newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add a comment..."; 
 
+=======
+            // Enable/disable comment input and button based on canComment and mode
+            newCommentInput.disabled = !canComment;
+            addCommentBtn.disabled = !canComment;
+            newTaskNoteInput.disabled = !canComment; // NEW
+            addTaskNoteBtn.disabled = !canComment; // NEW
+
+            newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add comments...";
+            newTaskNoteInput.placeholder = canComment ? "Add a new note..." : "Login to add notes..."; // NEW
+            
+>>>>>>> parent of 54aa167 (Update index.html)
             renderComments(task.comments || []);
 
             taskDetailsModal.classList.remove('hidden');
+<<<<<<< HEAD
             if (isEditMode && canModifyTaskProperties) {
                 taskDetailsTextInput.focus();
             } else if (canComment) {
+=======
+            // Focus based on user role and mode
+            if (userRole === 'Admin' && isEditMode) {
+                taskDetailsTextInput.focus();
+            } else if (canComment && userRole === 'Viewer') { // Viewer always focuses on comments
+>>>>>>> parent of 54aa167 (Update index.html)
                 newCommentInput.focus();
             }
         }
@@ -1138,11 +1282,19 @@
             const newDeadline = taskDetailsDeadlineInput.value;
 
             if (!taskId || !currentProjectId || !newText) {
+<<<<<<< HEAD
                 showModal("Please enter task content."); 
                 return;
             }
             if (!isCurrentUserProjectMember()) {
                 showModal("You do not have permission to edit this task."); 
+=======
+                showModal("Please enter task text.");
+                return;
+            }
+            if (!isCurrentUserProjectMember()) {
+                showModal("You do not have permission to edit this task.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -1154,11 +1306,18 @@
                     deadline: newDeadline || null
                 });
                 taskDetailsModal.classList.add('hidden');
+<<<<<<< HEAD
                 showModal("Task updated successfully!"); 
             }
             catch (error) {
                 console.error("Error updating task details:", error);
                 showModal("Could not update task details."); 
+=======
+                showModal("Task updated successfully!");
+            } catch (error) {
+                console.error("Error updating task details:", error);
+                showModal("Failed to update task details.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
@@ -1169,7 +1328,11 @@
         function renderComments(commentsArray) {
             commentsList.innerHTML = '';
             if (commentsArray.length === 0) {
+<<<<<<< HEAD
                 commentsList.textContent = 'No comments yet.'; 
+=======
+                commentsList.textContent = 'No comments yet.';
+>>>>>>> parent of 54aa167 (Update index.html)
                 commentsList.classList.add('text-gray-500', 'italic');
                 return;
             }
@@ -1205,7 +1368,11 @@
                     const deleteCommentButton = document.createElement('button');
                     deleteCommentButton.textContent = '×';
                     deleteCommentButton.className = 'absolute top-1 right-1 text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
+<<<<<<< HEAD
                     deleteCommentButton.title = 'Delete comment'; 
+=======
+                    deleteCommentButton.title = 'Delete Comment';
+>>>>>>> parent of 54aa167 (Update index.html)
                     deleteCommentButton.onclick = (e) => {
                         e.stopPropagation();
                         handleDeleteComment(taskIdForComments.value, index);
@@ -1226,11 +1393,19 @@
             const commentText = newCommentInput.value.trim();
 
             if (!taskId || !currentProjectId || !commentText) {
+<<<<<<< HEAD
                 showModal("Please enter a comment."); 
                 return;
             }
             if (!userId) {
                 showModal("You must be logged in to add a comment."); 
+=======
+                showModal("Please enter a comment.");
+                return;
+            }
+            if (!userId) {
+                showModal("You must be logged in to add a comment.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -1247,7 +1422,11 @@
                 newCommentInput.value = '';
             } catch (error) {
                 console.error("Error adding comment:", error);
+<<<<<<< HEAD
                 showModal("Could not add comment."); 
+=======
+                showModal("Failed to add comment.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
@@ -1258,7 +1437,11 @@
          */
         async function handleDeleteComment(taskId, commentIndex) {
             if (!currentProjectId) {
+<<<<<<< HEAD
                 showModal("No project selected."); 
+=======
+                showModal("No project selected.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -1273,11 +1456,16 @@
                         if (isCurrentUserAdmin || currentComments[commentIndex].commenterId === userId) {
                             const updatedComments = currentComments.filter((_, i) => i !== commentIndex);
                             await updateDoc(taskRef, { comments: updatedComments });
+<<<<<<< HEAD
                             showModal("Comment deleted successfully!"); 
+=======
+                            showModal("Comment deleted successfully!");
+>>>>>>> parent of 54aa167 (Update index.html)
                         } else {
                             showModal("You do not have permission to delete this comment.");
                         }
                     } else {
+<<<<<<< HEAD
                         showModal("Error: Comment not found."); 
                     }
                 } else {
@@ -1289,6 +1477,146 @@
             }
         }
         
+=======
+                        showModal("Error: Comment not found.");
+                    }
+                } else {
+                    showModal("Error: Task not found.");
+                }
+            } catch (error) {
+                console.error("Error deleting comment:", error);
+                showModal("Failed to delete comment.");
+            }
+        }
+
+        /**
+         * NEW: Renders the list of task notes in the task details modal.
+         * @param {Array<Object>} notesArray - Array of note objects.
+         */
+        function renderTaskNotes(notesArray) {
+            taskNotesList.innerHTML = '';
+            if (notesArray.length === 0) {
+                taskNotesList.textContent = 'No notes yet.';
+                taskNotesList.classList.add('text-gray-500', 'italic');
+                return;
+            }
+            taskNotesList.classList.remove('text-gray-500', 'italic');
+            notesArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            notesArray.forEach((note, index) => {
+                const noteItem = document.createElement('div');
+                noteItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-purple-300 relative';
+                
+                const noteHeader = document.createElement('div');
+                noteHeader.className = 'flex justify-between items-center mb-1';
+                
+                const noteInfoSpan = document.createElement('span');
+                noteInfoSpan.className = 'font-semibold text-purple-700';
+                noteInfoSpan.textContent = `Note ${index + 1}: By ${note.authorId.substring(0, 8)}...`;
+                noteHeader.appendChild(noteInfoSpan);
+
+                const timestampSpan = document.createElement('span');
+                timestampSpan.className = 'text-xs text-gray-500';
+                const date = new Date(note.timestamp);
+                timestampSpan.textContent = date.toLocaleDateString('en-US') + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                noteHeader.appendChild(timestampSpan);
+
+                noteItem.appendChild(noteHeader);
+
+                const noteTextP = document.createElement('p');
+                noteTextP.className = 'text-gray-800 break-words pr-6';
+                noteTextP.textContent = note.text;
+                noteItem.appendChild(noteTextP);
+
+                if (isCurrentUserAdmin || note.authorId === userId) {
+                    const deleteNoteButton = document.createElement('button');
+                    deleteNoteButton.textContent = '×';
+                    deleteNoteButton.className = 'absolute top-1 right-1 text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
+                    deleteNoteButton.title = 'Delete Note';
+                    deleteNoteButton.onclick = (e) => {
+                        e.stopPropagation();
+                        handleDeleteTaskNote(taskIdForComments.value, index);
+                    };
+                    noteItem.appendChild(deleteNoteButton);
+                }
+
+                taskNotesList.appendChild(noteItem);
+            });
+            taskNotesList.scrollTop = taskNotesList.scrollHeight;
+        }
+
+        /**
+         * NEW: Adds a note to the current task.
+         */
+        addTaskNoteBtn.addEventListener('click', async () => {
+            const taskId = taskIdForComments.value;
+            const noteText = newTaskNoteInput.value.trim();
+
+            if (!taskId || !currentProjectId || !noteText) {
+                showModal("Please enter a note.");
+                return;
+            }
+            if (!userId) {
+                showModal("You must be logged in to add a note.");
+                return;
+            }
+
+            try {
+                const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+                const newTaskNote = {
+                    text: noteText,
+                    authorId: userId,
+                    timestamp: new Date().toISOString()
+                };
+                await updateDoc(taskRef, {
+                    notes: arrayUnion(newTaskNote)
+                });
+                newTaskNoteInput.value = '';
+            } catch (error) {
+                console.error("Error adding task note:", error);
+                showModal("Failed to add task note.");
+            }
+        });
+
+        /**
+         * NEW: Deletes a specific note from a task.
+         * @param {string} taskId - The ID of the task containing the note.
+         * @param {number} noteIndex - The index of the note to delete in the notes array.
+         */
+        async function handleDeleteTaskNote(taskId, noteIndex) {
+            if (!currentProjectId) {
+                showModal("No project selected.");
+                return;
+            }
+
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+            
+            try {
+                const taskDoc = await getDoc(taskRef);
+                if (taskDoc.exists()) {
+                    const currentNotes = taskDoc.data().notes || [];
+
+                    if (noteIndex >= 0 && noteIndex < currentNotes.length) {
+                        if (isCurrentUserAdmin || currentNotes[noteIndex].authorId === userId) {
+                            const updatedNotes = currentNotes.filter((_, i) => i !== noteIndex);
+                            await updateDoc(taskRef, { notes: updatedNotes });
+                            showModal("Note deleted successfully!");
+                        } else {
+                            showModal("You do not have permission to delete this note.");
+                        }
+                    } else {
+                        showModal("Error: Note not found.");
+                    }
+                } else {
+                    showModal("Error: Task not found.");
+                }
+            } catch (error) {
+                console.error("Error deleting note:", error);
+                showModal("Failed to delete note.");
+            }
+        }
+
+>>>>>>> parent of 54aa167 (Update index.html)
         closeTaskDetailsModalBtn.addEventListener('click', () => {
             taskDetailsModal.classList.add('hidden');
             currentOpenTaskDetailsId = null;
@@ -1303,7 +1631,11 @@
         async function handleAddTask(e) {
             e.preventDefault();
             if (!isCurrentUserProjectMember() || !currentProjectId) {
+<<<<<<< HEAD
                 showModal("You do not have permission to add tasks."); 
+=======
+                showModal("You do not have permission to add tasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const taskText = taskInput.value.trim();
@@ -1329,7 +1661,11 @@
                     taskDeadlineInput.value = '';
                 } catch (error) {
                     console.error("Error adding task: ", error);
+<<<<<<< HEAD
                     showModal("Could not add task."); 
+=======
+                    showModal("Failed to add task.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 }
             }
         }
@@ -1341,7 +1677,11 @@
          */
         async function handleAddSubtask(taskId, subtaskText) {
             if (!isCurrentUserProjectMember() || !currentProjectId || !subtaskText.trim()) {
+<<<<<<< HEAD
                 showModal("You do not have permission to add subtasks."); 
+=======
+                showModal("You do not have permission to add subtasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1365,7 +1705,11 @@
                 }
             } catch (error) {
                 console.error("Error adding subtask:", error);
+<<<<<<< HEAD
                 showModal("Could not add subtask."); 
+=======
+                showModal("Failed to add subtask.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -1376,7 +1720,11 @@
          */
         async function handleToggleSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
+<<<<<<< HEAD
                 showModal("You do not have permission to change subtask status."); 
+=======
+                showModal("You do not have permission to change subtask status.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1398,7 +1746,11 @@
                 }
             } catch (error) {
                 console.error("Error toggling subtask:", error);
+<<<<<<< HEAD
                 showModal("Could not change subtask status."); 
+=======
+                showModal("Failed to change subtask status.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -1409,7 +1761,11 @@
          */
         async function handleDeleteSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
+<<<<<<< HEAD
                 showModal("You do not have permission to delete subtasks."); 
+=======
+                showModal("You do not have permission to delete subtasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1425,7 +1781,11 @@
                 }
             } catch (error) {
                 console.error("Error deleting subtask:", error);
+<<<<<<< HEAD
                 showModal("Could not delete subtask."); 
+=======
+                showModal("Failed to delete subtask.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -1439,7 +1799,11 @@
          */
         function openSubtaskEditTextModal(taskId, subtaskId, currentText, currentNote, currentColor) {
             if (!isCurrentUserProjectMember()) {
+<<<<<<< HEAD
                 showModal("You do not have permission to edit subtasks."); 
+=======
+                showModal("You do not have permission to edit subtasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             editingTaskIdSubtext.value = taskId;
@@ -1469,13 +1833,22 @@
             const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
             const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
 
+<<<<<<< HEAD
             if (!taskId || !subtaskId || !currentProjectId || !newSubtaskText) {
                 showModal("Error: Subtask information not found or content is empty."); 
+=======
+            if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
+                showModal("Error: Subtask information or text not found.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
             if (!isCurrentUserProjectMember()) {
+<<<<<<< HEAD
                 showModal("You do not have permission to save subtask changes."); 
+=======
+                showModal("You do not have permission to save subtask changes.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -1492,6 +1865,7 @@
                         currentSubtasks[subtaskIndex].color = newSubtaskColor; 
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                         subtaskEditTextModal.classList.add('hidden');
+<<<<<<< HEAD
                         showModal("Subtask changes saved successfully!"); 
                     } else {
                         showModal("Error: Subtask not found."); 
@@ -1502,6 +1876,18 @@
             } catch (error) {
                 console.error("Error saving subtask changes:", error);
                 showModal("Could not save subtask changes."); 
+=======
+                        showModal("Subtask changes saved successfully!");
+                    } else {
+                        showModal("Error: Invalid subtask index.");
+                    }
+                } else {
+                    showModal("Error: Task not found.");
+                }
+            } catch (error) {
+                console.error("Error saving subtask changes:", error);
+                showModal("Failed to save subtask changes.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
@@ -1519,7 +1905,11 @@
          */
         async function handleUpdateTaskStatus(taskId, newStatus, newPosition = null) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
+<<<<<<< HEAD
                 showModal("You do not have permission to move tasks."); 
+=======
+                showModal("You do not have permission to move tasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1537,7 +1927,11 @@
                 await updateDoc(taskRef, updateData);
             } catch (error) {
                 console.error("Error updating task: ", error);
+<<<<<<< HEAD
                 showModal("Could not update task status."); 
+=======
+                showModal("Failed to update task status.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -1547,7 +1941,11 @@
          */
         async function handleDeleteTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
+<<<<<<< HEAD
                 showModal("You do not have permission to delete tasks."); 
+=======
+                showModal("You do not have permission to delete tasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1555,7 +1953,11 @@
                 await deleteDoc(taskRef);
             } catch (error) {
                 console.error("Error deleting task: ", error);
+<<<<<<< HEAD
                 showModal("Could not delete task."); 
+=======
+                showModal("Failed to delete task.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -1628,7 +2030,11 @@
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
                 } catch (error) {
                     console.error("Error changing task status:", error);
+<<<<<<< HEAD
                     showModal("Could not change task status."); 
+=======
+                    showModal("Failed to change task status.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 }
             }
             targetColumn.classList.remove('drag-over-empty');
@@ -1690,7 +2096,11 @@
             const draggedTask = tasks.find(t => t.id === draggedTaskId);
 
             if (!targetTask || !draggedTask) {
+<<<<<<< HEAD
                 showModal("Error: Dragged or target task not found."); 
+=======
+                showModal("Error: Dragged or target task not found.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -1753,6 +2163,7 @@
                 return;
             }
             const subtaskItem = e.target.closest('.subtask-item');
+<<<<<<< HEAD
             const taskId = subtaskItem.getAttribute('data-task-id');
             const subtaskIndex = parseInt(subtaskItem.getAttribute('data-subtask-index'));
 
@@ -1768,6 +2179,13 @@
                 e.preventDefault(); // Invalid subtask
                 showModal("Error: Cannot drag this subtask. It might be invalid or missing content.");
             }
+=======
+            draggedSubtaskInfo.taskId = subtaskItem.getAttribute('data-task-id');
+            draggedSubtaskInfo.subtaskIndex = parseInt(subtaskItem.getAttribute('data-subtask-index'));
+            draggedSubtaskInfo.originalPosition = parseFloat(subtaskItem.getAttribute('data-subtask-position'));
+            subtaskItem.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+>>>>>>> parent of 54aa167 (Update index.html)
         }
 
         /**
@@ -1777,8 +2195,12 @@
         function handleSubtaskDragEnd(e) {
             e.target.classList.remove('dragging');
             document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
+<<<<<<< HEAD
             // Reset dragged subtask info
             draggedSubtaskInfo = { taskId: null, subtaskIndex: null, subtaskObject: null };
+=======
+            draggedSubtaskInfo = { taskId: null, subtaskIndex: null, originalPosition: null };
+>>>>>>> parent of 54aa167 (Update index.html)
         }
 
         /**
@@ -1788,8 +2210,12 @@
         function handleSubtaskDragEnter(e) {
             e.preventDefault();
             const targetSubtaskItem = e.target.closest('.subtask-item');
+<<<<<<< HEAD
             // Check if it's the same subtask being dragged or if the parent tasks differ
             if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.subtaskIndex) || targetSubtaskItem.getAttribute('data-task-id') !== draggedSubtaskInfo.taskId) return;
+=======
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.subtaskIndex)) return;
+>>>>>>> parent of 54aa167 (Update index.html)
 
             targetSubtaskItem.classList.add('drag-over-subtask');
         }
@@ -1800,7 +2226,10 @@
          */
         function handleSubtaskDragLeave(e) {
             const targetSubtaskItem = e.target.closest('.subtask-item');
+<<<<<<< HEAD
             // Check if it's the same subtask being dragged
+=======
+>>>>>>> parent of 54aa167 (Update index.html)
             if (targetSubtaskItem && targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.subtaskIndex)) return;
             targetSubtaskItem?.classList.remove('drag-over-subtask');
         }
@@ -1821,6 +2250,7 @@
          */
         async function handleSubtaskDrop(e) {
             e.preventDefault();
+<<<<<<< HEAD
             // Basic validation for the dragged subtask information
             if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskObject === null || draggedSubtaskInfo.subtaskIndex === null || !currentProjectId) {
                 showModal("Error: Missing dragged subtask data or insufficient permissions.");
@@ -1835,8 +2265,24 @@
                 return; 
             }
 
+=======
+            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || !currentProjectId) return;
+
+            const targetSubtaskItem = e.target.closest('.subtask-item');
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.subtaskIndex)) {
+                targetSubtaskItem?.classList.remove('drag-over-subtask');
+                return;
+            }
+
+>>>>>>> parent of 54aa167 (Update index.html)
             const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
             const targetSubtaskIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index'));
+
+            if (targetTaskId !== draggedSubtaskInfo.taskId) { // Ensure dropping within the same parent task
+                showModal("Subtasks can only be reordered within their parent task.");
+                targetSubtaskItem.classList.remove('drag-over-subtask');
+                return;
+            }
             
             // Ensure dropping within the same parent task
             if (targetTaskId !== draggedSubtaskInfo.taskId) {
@@ -1856,12 +2302,18 @@
                 // Fetch the latest state of the task document immediately before processing the drop
                 const taskDoc = await getDoc(taskRef);
                 if (!taskDoc.exists()) {
+<<<<<<< HEAD
                     showModal("Error: Parent task not found for subtask reorder. It might have been deleted.");
                     targetSubtaskItem?.classList.remove('drag-over-subtask');
+=======
+                    showModal("Error: Parent task not found for subtask reorder.");
+                    targetSubtaskItem.classList.remove('drag-over-subtask');
+>>>>>>> parent of 54aa167 (Update index.html)
                     return;
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
                 
+<<<<<<< HEAD
                 // Sort the subtasks from Firestore by position to ensure consistent indexing
                 // This is crucial because `onSnapshot` might return documents in any order if not explicitly sorted,
                 // and we rely on array indices here.
@@ -1872,10 +2324,16 @@
                 const actualDraggedSubtaskCurrentIndex = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskObject.id);
                 if (actualDraggedSubtaskCurrentIndex === -1) {
                     showModal("Error: Dragged subtask no longer found. It may have been modified or deleted by another user.");
+=======
+                const draggedSubtask = currentSubtasks[draggedSubtaskInfo.subtaskIndex];
+                if (!draggedSubtask) {
+                    showModal("Error: Dragged subtask not found.");
+>>>>>>> parent of 54aa167 (Update index.html)
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
 
+<<<<<<< HEAD
                 // 1. Remove the dragged subtask from its current (actual) position
                 const [removedSubtask] = currentSubtasks.splice(actualDraggedSubtaskCurrentIndex, 1);
 
@@ -1912,6 +2370,64 @@
             } catch (error) {
                 console.error("Error reordering subtask:", error);
                 showModal("Could not reorder subtask."); 
+=======
+                // Temporarily remove dragged subtask to find new position
+                const tempSubtasks = currentSubtasks.filter((_, i) => i !== draggedSubtaskInfo.subtaskIndex);
+                
+                // Find new position based on target subtask and mouse position
+                const targetSubtaskObj = tempSubtasks.find((_, i) => i === targetSubtaskIndex); // This index is within tempSubtasks
+                let newPosition;
+
+                const subtaskRect = targetSubtaskItem.getBoundingClientRect();
+                const mouseRelativeY = e.clientY - subtaskRect.top;
+
+                if (tempSubtasks.length === 0) { // Should not happen if dragging on existing subtask
+                    newPosition = Date.now();
+                } else if (mouseRelativeY < subtaskRect.height / 2) {
+                    // Drop before target
+                    const prevSubtask = tempSubtasks[targetSubtaskIndex - 1];
+                    if (prevSubtask) {
+                        newPosition = (prevSubtask.position + targetSubtaskObj.position) / 2;
+                    } else {
+                        newPosition = targetSubtaskObj.position / 2;
+                    }
+                } else {
+                    // Drop after target
+                    const nextSubtask = tempSubtasks[targetSubtaskIndex + 1];
+                    if (nextSubtask) {
+                        newPosition = (targetSubtaskObj.position + nextSubtask.position) / 2;
+                    } else {
+                        newPosition = targetSubtaskObj.position + 1;
+                    }
+                }
+
+                // Assign new position to dragged subtask and update Firestore
+                draggedSubtask.position = newPosition;
+                
+                // Re-insert dragged subtask into correct position (conceptually, actual reordering is done by Firestore's `orderBy`)
+                // We send the whole array back to Firestore, let Firestore re-sort based on 'position'
+                
+                // Construct the new subtasks array by replacing the old dragged subtask with the updated one
+                // This approach requires knowing the original subtask properties to update it.
+                // A better approach for maintaining positions is to update only the position field,
+                // and let the `onSnapshot` listener re-render with the correct order.
+                
+                // Find the original task object and modify its subtasks array locally
+                const taskToUpdate = tasks.find(t => t.id === draggedSubtaskInfo.taskId);
+                if (taskToUpdate) {
+                    taskToUpdate.subtasks[draggedSubtaskInfo.subtaskIndex].position = newPosition;
+                    // Sort the subtasks array locally before sending to Firestore to ensure consistency
+                    taskToUpdate.subtasks.sort((a,b) => (a.position || 0) - (b.position || 0));
+                    await updateDoc(taskRef, { subtasks: taskToUpdate.subtasks });
+                    showModal("Subtask reordered successfully!");
+                } else {
+                    showModal("Error: Task not found for subtask reorder.");
+                }
+
+            } catch (error) {
+                console.error("Error reordering subtask:", error);
+                showModal("Failed to reorder subtask.");
+>>>>>>> parent of 54aa167 (Update index.html)
             } finally {
                 // Always remove the drag-over visual indicator
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
@@ -1967,7 +2483,11 @@
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
+<<<<<<< HEAD
                 showModal("You do not have permission to create new projects."); 
+=======
+                showModal("You do not have permission to create new projects.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             projectModalTitle.textContent = "Create New Project";
@@ -1986,11 +2506,19 @@
 
         editProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
+<<<<<<< HEAD
                 showModal("You do not have permission to edit projects."); 
                 return;
             }
             if (!currentProjectId) {
                 showModal("Please select a project to edit."); 
+=======
+                showModal("You do not have permission to edit projects.");
+                return;
+            }
+            if (!currentProjectId) {
+                showModal("Please select a project to edit.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const projectToEdit = projectsData[currentProjectId];
@@ -2008,24 +2536,40 @@
                 createProjectModal.classList.remove('hidden');
                 newProjectNameInput.focus();
             } else {
+<<<<<<< HEAD
                 showModal("Error: Project data not found for editing."); 
+=======
+                showModal("Error: Project data not found for editing.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
         deleteProjectBtn.addEventListener('click', async () => {
             if (!isCurrentUserAdmin) {
+<<<<<<< HEAD
                 showModal("You do not have permission to delete projects."); 
                 return;
             }
             if (!currentProjectId) {
                 showModal("Please select a project to delete."); 
+=======
+                showModal("You do not have permission to delete projects.");
+                return;
+            }
+            if (!currentProjectId) {
+                showModal("Please select a project to delete.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             const project = projectsData[currentProjectId];
             if (project) {
                 promptDeleteConfirmation(currentProjectId, project.name);
             } else {
+<<<<<<< HEAD
                 showModal("Error: Project data not found for deletion."); 
+=======
+                showModal("Error: Project data not found for deletion.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
@@ -2036,7 +2580,11 @@
          */
         function promptDeleteConfirmation(projectId, projectName) {
             projectIdToDelete = projectId;
+<<<<<<< HEAD
             deleteConfirmMessage.textContent = `Are you sure you want to delete project "${projectName}"? This action will delete all its tasks and cannot be undone.`; 
+=======
+            deleteConfirmMessage.textContent = `Are you sure you want to delete project "${projectName}"? This action will delete all its tasks and cannot be undone.`;
+>>>>>>> parent of 54aa167 (Update index.html)
             deleteProjectConfirmModal.classList.remove('hidden');
         }
 
@@ -2073,14 +2621,24 @@
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, projectId));
                 console.log("Project document deleted successfully.");
                 
+<<<<<<< HEAD
                 showModal("Project deleted successfully!"); 
+=======
+                showModal("Project deleted successfully!");
+>>>>>>> parent of 54aa167 (Update index.html)
                 currentProjectId = null;
             } catch (error) {
                 console.error("Error deleting project:", error);
                 if (error.code === 'permission-denied') {
+<<<<<<< HEAD
                     showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules."); 
                 } else {
                     showModal(`Failed to delete project: ${error.message}`); 
+=======
+                    showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules.");
+                } else {
+                    showModal(`Failed to delete project: ${error.message}`);
+>>>>>>> parent of 54aa167 (Update index.html)
                 }
             }
         }
@@ -2095,13 +2653,21 @@
             const sourceProjectIdToCopy = copyTasksFromProjectSelect.value;
 
             if (!isCurrentUserAdmin) {
+<<<<<<< HEAD
                 showModal("You do not have permission to save projects."); 
+=======
+                showModal("You do not have permission to save projects.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
             if (projectName && projectStartDate && projectEndDate) {
                 if (new Date(projectStartDate) > new Date(projectEndDate)) {
+<<<<<<< HEAD
                     showModal("End Date cannot be before Start Date."); 
+=======
+                    showModal("End Date cannot be before Start Date.");
+>>>>>>> parent of 54aa167 (Update index.html)
                     return;
                 }
                 try {
@@ -2116,7 +2682,11 @@
                     if (projectIdToModify) {
                         const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, projectIdToModify);
                         await updateDoc(projectRef, projectData);
+<<<<<<< HEAD
                         showModal("Project updated successfully!"); 
+=======
+                        showModal("Project updated successfully!");
+>>>>>>> parent of 54aa167 (Update index.html)
                     } else {
                         projectData.createdBy = userId;
                         projectData.createdAt = new Date().toISOString();
@@ -2125,7 +2695,11 @@
                         const newProjectId = docRef.id;
                         currentProjectId = newProjectId;
                         projectSelect.value = newProjectId;
+<<<<<<< HEAD
                         showModal("Project created successfully!"); 
+=======
+                        showModal("Project created successfully!");
+>>>>>>> parent of 54aa167 (Update index.html)
 
                         if (sourceProjectIdToCopy) {
                             await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
@@ -2134,10 +2708,17 @@
                     createProjectModal.classList.add('hidden');
                 } catch (error) {
                     console.error("Error saving project:", error);
+<<<<<<< HEAD
                     showModal("Could not save project."); 
                 }
             } else {
                 showModal("Project Name, Start Date, and End Date are required."); 
+=======
+                    showModal("Failed to save project.");
+                }
+            } else {
+                showModal("Project Name, Start Date, and End Date are required.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
@@ -2147,7 +2728,11 @@
          */
         async function handleCopyTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
+<<<<<<< HEAD
                 showModal("You do not have permission to copy tasks."); 
+=======
+                showModal("You do not have permission to copy tasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -2178,6 +2763,7 @@
                         notes: [] 
                     };
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
+<<<<<<< HEAD
                     showModal("Task copied successfully!"); 
                 } else {
                     showModal("Task not found to copy."); 
@@ -2185,6 +2771,15 @@
             } catch (error) {
                 console.error("Error copying task:", error);
                 showModal("Could not copy task."); 
+=======
+                    showModal("Task copied successfully!");
+                } else {
+                    showModal("Task not found to copy.");
+                }
+            } catch (error) {
+                console.error("Error copying task:", error);
+                showModal("Failed to copy task.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -2229,10 +2824,17 @@
                 const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
                 
                 await Promise.all(addTasksPromises);
+<<<<<<< HEAD
                 console.log(`Copied ${todoTasksToCopy.length} 'To Do' tasks from ${sourceProjectId} to ${destinationProjectId}`); 
             } catch (error) {
                 console.error("Error copying tasks:", error);
                 showModal("Could not copy 'To Do' tasks."); 
+=======
+                console.log(`Copied ${todoTasksToCopy.length} 'To Do' tasks from ${sourceProjectId} to ${destinationProjectId}`);
+            } catch (error) {
+                console.error("Error copying tasks:", error);
+                showModal("Failed to copy 'To Do' tasks.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -2260,6 +2862,7 @@
         function displayProjectDetails(project) {
             if (project) {
                 displayProjectName.textContent = project.name;
+<<<<<<< HEAD
                 displayProjectDescription.textContent = project.description || 'No description.'; 
                 displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set'; 
                 displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set'; 
@@ -2267,6 +2870,15 @@
 
                 currentProjectMembers = project.members || [];
                 const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.'; 
+=======
+                displayProjectDescription.textContent = project.description || 'No description.';
+                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set';
+                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set';
+                displayProjectStatus.textContent = project.status || 'Active';
+
+                currentProjectMembers = project.members || [];
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.';
+>>>>>>> parent of 54aa167 (Update index.html)
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
@@ -2314,7 +2926,11 @@
             const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
             for (let i = 0; currentDate <= endDate; i++) {
+<<<<<<< HEAD
                 labels.push(currentDate.toLocaleDateString('en-US')); 
+=======
+                labels.push(currentDate.toLocaleDateString('en-US'));
+>>>>>>> parent of 54aa167 (Update index.html)
 
                 const idealRemaining = initialTotalTasks - (initialTotalTasks / (totalDays - 1)) * i;
                 idealBurndown.push(Math.max(0, idealRemaining));
@@ -2416,11 +3032,19 @@
         // --- Project Member Management Logic ---
         manageMembersBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
+<<<<<<< HEAD
                 showModal("You do not have permission to manage members."); 
                 return;
             }
             if (!currentProjectId) {
                 showModal("Please select a project to manage members."); 
+=======
+                showModal("You do not have permission to manage members.");
+                return;
+            }
+            if (!currentProjectId) {
+                showModal("Please select a project to manage members.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             displayMembersInModal();
@@ -2435,6 +3059,7 @@
         addMemberBtn.addEventListener('click', async () => {
             const newMemberId = newMemberIdInput.value.trim();
             if (!newMemberId) {
+<<<<<<< HEAD
                 showModal("Please enter a User ID."); 
                 return;
             }
@@ -2444,6 +3069,17 @@
             }
             if (!currentProjectId) {
                 showModal("Please select a project to add members to."); 
+=======
+                showModal("Please enter a User ID.");
+                return;
+            }
+            if (!isCurrentUserAdmin) {
+                showModal("You do not have permission to add members.");
+                return;
+            }
+            if (!currentProjectId) {
+                showModal("Please select a project to add members to.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
 
@@ -2453,18 +3089,30 @@
                 if (projectDoc.exists()) {
                     const projectData = projectDoc.data();
                     if (projectData.members && projectData.members.includes(newMemberId)) {
+<<<<<<< HEAD
                         showModal("This user is already a member of the project."); 
+=======
+                        showModal("This user is already a member of the project.");
+>>>>>>> parent of 54aa167 (Update index.html)
                         return;
                     }
                     await updateDoc(projectRef, {
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
+<<<<<<< HEAD
                     showModal(`User ${newMemberId} added to the project.`); 
                 }
             } catch (error) {
                 console.error("Error adding member:", error);
                 showModal("Could not add member."); 
+=======
+                    showModal(`User ${newMemberId} added to the project.`);
+                }
+            } catch (error) {
+                console.error("Error adding member:", error);
+                showModal("Failed to add member.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
@@ -2477,7 +3125,11 @@
             const projectMembers = (project && project.members) ? project.members : [];
 
             if (projectMembers.length === 0) {
+<<<<<<< HEAD
                 currentMembersList.textContent = 'No members in this project yet.'; 
+=======
+                currentMembersList.textContent = 'No members in this project yet.';
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             projectMembers.forEach(memberId => {
@@ -2491,13 +3143,21 @@
 
                 if (isCurrentUserAdmin && memberId !== userId) {
                     const removeButton = document.createElement('button');
+<<<<<<< HEAD
                     removeButton.textContent = 'Remove'; 
+=======
+                    removeButton.textContent = 'Remove';
+>>>>>>> parent of 54aa167 (Update index.html)
                     removeButton.className = 'ml-4 bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 transition';
                     removeButton.onclick = () => removeProjectMember(currentProjectId, memberId);
                     memberItem.appendChild(removeButton);
                 } else if (memberId === userId) {
                     const selfTag = document.createElement('span');
+<<<<<<< HEAD
                     selfTag.textContent = '(You)'; 
+=======
+                    selfTag.textContent = '(You)';
+>>>>>>> parent of 54aa167 (Update index.html)
                     selfTag.className = 'ml-2 text-gray-400 text-xs italic';
                     memberIdSpan.appendChild(selfTag);
                 }
@@ -2512,11 +3172,19 @@
          */
         async function removeProjectMember(projectId, memberIdToRemove) {
             if (!isCurrentUserAdmin) {
+<<<<<<< HEAD
                 showModal("You do not have permission to remove members."); 
                 return;
             }
             if (memberIdToRemove === userId) {
                 showModal("You cannot remove yourself from the project via this interface."); 
+=======
+                showModal("You do not have permission to remove members.");
+                return;
+            }
+            if (memberIdToRemove === userId) {
+                showModal("You cannot remove yourself from the project via this interface.");
+>>>>>>> parent of 54aa167 (Update index.html)
                 return;
             }
             try {
@@ -2524,10 +3192,17 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
+<<<<<<< HEAD
                 showModal(`User ${memberIdToRemove} removed from the project.`); 
             } catch (error) {
                 console.error("Error removing member:", error);
                 showModal("Could not remove member."); 
+=======
+                showModal(`User ${memberIdToRemove} removed from the project.`);
+            } catch (error) {
+                console.error("Error removing member:", error);
+                showModal("Failed to remove member.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         }
 
@@ -2540,7 +3215,11 @@
             if (email && password) {
                 handleAdminLogin(email, password);
             } else {
+<<<<<<< HEAD
                 showModal("Please enter both email and password for admin login."); 
+=======
+                showModal("Please enter both email and password for admin login.");
+>>>>>>> parent of 54aa167 (Update index.html)
             }
         });
 
