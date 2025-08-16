@@ -11,16 +11,16 @@
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Basic CSS for font and background color */
+        /* CSS cơ bản cho font chữ và màu nền */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
         }
-        /* Minimum height for Kanban columns to ensure visual consistency */
+        /* Chiều cao tối thiểu cho cột Kanban để đảm bảo sự nhất quán về mặt hình ảnh */
         .kanban-column {
             min-height: 400px;
         }
-        /* Task card styling and hover effects for admin */
+        /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
             border-left-width: 8px; /* Increased color border width */
@@ -299,13 +299,13 @@
     <!-- RENAMED: Modal to edit existing task note -->
     <div id="task-note-edit-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Chỉnh sửa Ghi chú Công việc</h3>
-            <textarea id="task-note-textarea-modal" placeholder="Nhập ghi chú cho công việc này..." rows="5" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Task Note</h3>
+            <textarea id="task-note-textarea-modal" placeholder="Enter note for this task..." rows="5" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
             <input type="hidden" id="editing-task-id-note-modal">
             <input type="hidden" id="editing-note-index-modal">
             <div class="flex justify-end gap-2">
-                <button id="save-task-note-modal-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Lưu Ghi chú</button>
-                <button id="cancel-task-note-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Hủy bỏ</button>
+                <button id="save-task-note-modal-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Note</button>
+                <button id="cancel-task-note-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
             </div>
         </div>
     </div>
@@ -397,8 +397,8 @@
                     <!-- Task Notes will be loaded here -->
                 </div>
                 <div class="flex flex-col gap-2">
-                    <textarea id="new-task-note-input" placeholder="Thêm ghi chú mới..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
-                    <button id="add-task-note-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Thêm Ghi chú Công việc</button>
+                    <textarea id="new-task-note-input" placeholder="Add a new note..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
+                    <button id="add-task-note-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Add Task Note</button>
                 </div>
             </div>
 
@@ -409,14 +409,14 @@
                     <!-- Comments will be loaded here -->
                 </div>
                 <div class="flex flex-col gap-2">
-                    <textarea id="new-comment-input" placeholder="Thêm bình luận..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
-                    <button id="add-comment-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">Thêm Bình luận</button>
+                    <textarea id="new-comment-input" placeholder="Add a comment..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
+                    <button id="add-comment-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">Add Comment</button>
                 </div>
             </div>
             <input type="hidden" id="task-id-for-comments">
 
             <div class="flex justify-end gap-2">
-                <button id="close-task-details-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Đóng</button>
+                <button id="close-task-details-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
             </div>
         </div>
     </div>
@@ -653,20 +653,20 @@
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
                 console.error("Admin Login Failed:", error);
-                let errorMessage = "Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu của bạn.";
+                let errorMessage = "Login failed. Please check your email and password.";
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                    errorMessage = "Email hoặc mật khẩu không hợp lệ.";
+                    errorMessage = "Invalid email or password.";
                 } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = "Định dạng email không hợp lệ.";
+                    errorMessage = "Invalid email format.";
                 } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = "Lỗi mạng. Vui lòng kiểm tra kết nối internet của bạn.";
+                    errorMessage = "Network error. Please check your internet connection.";
                 } else if (error.code === 'auth/too-many-requests') {
-                    errorMessage = "Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau.";
+                    errorMessage = "Too many failed login attempts. Please try again later.";
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMessage = "Xác thực Email/Password chưa được bật trong Firebase. Vui lòng bật nó trong cài đặt dự án Firebase của bạn.";
+                    errorMessage = "Email/Password authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
                 }
                 else {
-                    errorMessage = `Đăng nhập thất bại: ${error.message}`;
+                    errorMessage = `Login failed: ${error.message}`;
                 }
                 showModal(errorMessage);
             }
@@ -680,13 +680,13 @@
                 const userCredential = await signInAnonymously(auth);
             } catch (error) {
                 console.error("Guest Login Failed:", error);
-                let errorMessage = "Không thể đăng nhập với tư cách khách. Vui lòng làm mới trang hoặc thử lại.";
+                let errorMessage = "Failed to log in as guest. Please refresh the page or try again.";
                 if (error.code === 'auth/network-request-failed') {
-                    errorMessage = "Lỗi mạng. Vui lòng kiểm tra kết nối internet của bạn.";
+                    errorMessage = "Network error. Please check your internet connection.";
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMessage = "Xác thực ẩn danh chưa được bật trong Firebase. Vui lòng bật nó trong cài đặt dự án Firebase của bạn.";
+                    errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
                 } else {
-                    errorMessage = `Đăng nhập khách thất bại: ${error.message}`;
+                    errorMessage = `Guest login failed: ${error.message}`;
                 }
                 showModal(errorMessage);
             }
@@ -698,10 +698,10 @@
         async function handleLogout() {
             try {
                 await signOut(auth);
-                showModal("Bạn đã đăng xuất.");
+                showModal("You have been logged out.");
             } catch (error) {
                 console.error("Logout Failed:", error);
-                showModal("Đăng xuất thất bại.");
+                showModal("Logout failed.");
             }
         }
 
@@ -721,7 +721,7 @@
                     if (auth.currentUser && !auth.currentUser.isAnonymous) {
                         await setDoc(adminDocRef, { adminId: userId });
                         isCurrentUserAdmin = true;
-                        showModal("Bạn là admin đầu tiên! Bây giờ bạn có thể tạo và quản lý dự án.");
+                        showModal("You are the first admin! You can now create and manage projects.");
                     } else {
                         isCurrentUserAdmin = false;
                     }
@@ -730,9 +730,9 @@
             catch (error) {
                 console.error("Error checking admin status:", error);
                 if (error.code === 'permission-denied') {
-                    showModal("Quyền bị từ chối khi kiểm tra trạng thái admin. Vui lòng xác minh Quy tắc bảo mật Firestore.");
+                    showModal("Permission denied when checking admin status. Please verify your Firestore Security Rules.");
                 } else {
-                    showModal(`Lỗi trong quá trình kiểm tra admin: ${error.message}. Bạn sẽ có quyền truy cập của người xem.`);
+                    showModal(`Error during admin check: ${error.message}. You will have viewer access.`);
                 }
                 isCurrentUserAdmin = false;
             }
@@ -840,7 +840,7 @@
                 }
             }, (error) => {
                 console.error("Error fetching projects:", error);
-                showModal("Lỗi khi lắng nghe dự án.");
+                showModal("Error fetching projects.");
             });
         }
 
@@ -881,7 +881,7 @@
                 }
             }, (error) => {
                 console.error("Error fetching tasks for project:", error);
-                showModal("Lỗi khi lắng nghe cập nhật tác vụ thời gian thực.");
+                showModal("Error listening for real-time task updates.");
             });
         }
 
@@ -1152,12 +1152,12 @@
             // Enable/disable comment input and button based on canComment
             newCommentInput.disabled = !canComment;
             addCommentBtn.disabled = !canComment;
-            newCommentInput.placeholder = canComment ? "Thêm bình luận..." : "Đăng nhập để thêm bình luận...";
+            newCommentInput.placeholder = canComment ? "Add a comment..." : "Log in to add comments...";
 
             // Task note input and button are disabled based on canAddOrEditNotes
             newTaskNoteInput.disabled = !canAddOrEditNotes;
             addTaskNoteBtn.disabled = !canAddOrEditNotes;
-            newTaskNoteInput.placeholder = canAddOrEditNotes ? "Thêm ghi chú mới..." : "Chỉ thành viên dự án mới có thể thêm ghi chú...";
+            newTaskNoteInput.placeholder = canAddOrEditNotes ? "Add a new note..." : "Only project members can add notes...";
             
             // Task details input fields read-only/disabled status
             taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
@@ -1187,11 +1187,11 @@
             const newDeadline = taskDetailsDeadlineInput.value;
 
             if (!taskId || !currentProjectId || !newText) {
-                showModal("Vui lòng nhập nội dung tác vụ.");
+                showModal("Please enter task content.");
                 return;
             }
             if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền chỉnh sửa tác vụ này.");
+                showModal("You do not have permission to edit this task.");
                 return;
             }
 
@@ -1203,10 +1203,10 @@
                     deadline: newDeadline || null
                 });
                 taskDetailsModal.classList.add('hidden');
-                showModal("Tác vụ đã được cập nhật thành công!");
+                showModal("Task updated successfully!");
             } catch (error) {
                 console.error("Lỗi khi cập nhật chi tiết tác vụ:", error);
-                showModal("Không thể cập nhật chi tiết tác vụ.");
+                showModal("Failed to update task details.");
             }
         });
 
@@ -1217,7 +1217,7 @@
         function renderComments(commentsArray) {
             commentsList.innerHTML = '';
             if (commentsArray.length === 0) {
-                commentsList.textContent = 'Chưa có bình luận nào.';
+                commentsList.textContent = 'No comments yet.';
                 commentsList.classList.add('text-gray-500', 'italic');
                 return;
             }
@@ -1239,7 +1239,7 @@
                 const timestampSpan = document.createElement('span');
                 timestampSpan.className = 'text-xs text-gray-500';
                 const date = new Date(comment.timestamp);
-                timestampSpan.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                timestampSpan.textContent = date.toLocaleDateString('en-US') + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 commentHeader.appendChild(timestampSpan);
 
                 commentItem.appendChild(commentHeader);
@@ -1254,7 +1254,7 @@
                     const deleteCommentButton = document.createElement('button');
                     deleteCommentButton.textContent = '×';
                     deleteCommentButton.className = 'absolute top-1 right-1 text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
-                    deleteCommentButton.title = 'Xóa bình luận';
+                    deleteCommentButton.title = 'Delete comment';
                     deleteCommentButton.onclick = (e) => {
                         e.stopPropagation();
                         handleDeleteComment(taskIdForComments.value, index);
@@ -1275,11 +1275,11 @@
             const commentText = newCommentInput.value.trim();
 
             if (!taskId || !currentProjectId || !commentText) {
-                showModal("Vui lòng nhập bình luận.");
+                showModal("Please enter a comment.");
                 return;
             }
             if (!userId) {
-                showModal("Bạn phải đăng nhập để thêm bình luận.");
+                showModal("You must be logged in to add a comment.");
                 return;
             }
 
@@ -1296,7 +1296,7 @@
                 newCommentInput.value = '';
             } catch (error) {
                 console.error("Lỗi khi thêm bình luận:", error);
-                showModal("Không thể thêm bình luận.");
+                showModal("Failed to add comment.");
             }
         });
 
@@ -1307,7 +1307,7 @@
          */
         async function handleDeleteComment(taskId, commentIndex) {
             if (!currentProjectId) {
-                showModal("Chưa chọn dự án.");
+                showModal("No project selected.");
                 return;
             }
 
@@ -1323,19 +1323,19 @@
                         if (isCurrentUserAdmin || currentComments[commentIndex].commenterId === userId) {
                             const updatedComments = currentComments.filter((_, i) => i !== commentIndex);
                             await updateDoc(taskRef, { comments: updatedComments });
-                            showModal("Bình luận đã được xóa thành công!");
+                            showModal("Comment deleted successfully!");
                         } else {
-                            showModal("Bạn không có quyền xóa bình luận này.");
+                            showModal("You do not have permission to delete this comment.");
                         }
                     } else {
-                        showModal("Lỗi: Không tìm thấy bình luận.");
+                        showModal("Error: Comment not found.");
                     }
                 } else {
-                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                    showModal("Error: Task not found.");
                 }
             } catch (error) {
                 console.error("Lỗi khi xóa bình luận:", error);
-                showModal("Không thể xóa bình luận.");
+                showModal("Failed to delete comment.");
             }
         }
 
@@ -1346,7 +1346,7 @@
         function renderTaskNotes(notesArray) {
             taskNotesList.innerHTML = '';
             if (notesArray.length === 0) {
-                taskNotesList.textContent = 'Chưa có ghi chú nào.';
+                taskNotesList.textContent = 'No notes yet.';
                 taskNotesList.classList.add('text-gray-500', 'italic');
                 return;
             }
@@ -1362,13 +1362,13 @@
                 
                 const noteInfoSpan = document.createElement('span');
                 noteInfoSpan.className = 'font-semibold text-purple-700';
-                noteInfoSpan.textContent = `Ghi chú ${index + 1}: Bởi ${note.authorId.substring(0, 8)}...`;
+                noteInfoSpan.textContent = `Note ${index + 1}: By ${note.authorId.substring(0, 8)}...`;
                 noteHeader.appendChild(noteInfoSpan);
 
                 const timestampSpan = document.createElement('span');
                 timestampSpan.className = 'text-xs text-gray-500';
                 const date = new Date(note.timestamp);
-                timestampSpan.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                timestampSpan.textContent = date.toLocaleDateString('en-US') + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 noteHeader.appendChild(timestampSpan);
 
                 noteItem.appendChild(noteHeader);
@@ -1385,7 +1385,7 @@
                     const editNoteButton = document.createElement('button');
                     editNoteButton.textContent = '✏️';
                     editNoteButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
-                    editNoteButton.title = 'Chỉnh sửa ghi chú';
+                    editNoteButton.title = 'Edit note';
                     editNoteButton.onclick = (e) => {
                         e.stopPropagation();
                         openTaskNoteEditModal(taskIdForComments.value, index, note.text);
@@ -1395,7 +1395,7 @@
                     const deleteNoteButton = document.createElement('button');
                     deleteNoteButton.textContent = '×';
                     deleteNoteButton.className = 'text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
-                    deleteNoteButton.title = 'Xóa ghi chú';
+                    deleteNoteButton.title = 'Delete note';
                     deleteNoteButton.onclick = (e) => {
                         e.stopPropagation();
                         handleDeleteTaskNote(taskIdForComments.value, index);
@@ -1417,15 +1417,15 @@
             const noteText = newTaskNoteInput.value.trim();
 
             if (!taskId || !currentProjectId || !noteText) {
-                showModal("Vui lòng nhập ghi chú.");
+                showModal("Please enter a note.");
                 return;
             }
             if (!userId) {
-                showModal("Bạn phải đăng nhập để thêm ghi chú.");
+                showModal("You must be logged in to add a note.");
                 return;
             }
             if (!isCurrentUserProjectMember()) { // Explicit check
-                showModal("Bạn không có quyền thêm ghi chú công việc.");
+                showModal("You do not have permission to add task notes.");
                 return;
             }
 
@@ -1442,7 +1442,7 @@
                 newTaskNoteInput.value = '';
             } catch (error) {
                 console.error("Lỗi khi thêm ghi chú công việc:", error);
-                showModal("Không thể thêm ghi chú công việc.");
+                showModal("Failed to add task note.");
             }
         });
 
@@ -1453,7 +1453,7 @@
          */
         async function handleDeleteTaskNote(taskId, noteIndex) {
             if (!currentProjectId) {
-                showModal("Chưa chọn dự án.");
+                showModal("No project selected.");
                 return;
             }
 
@@ -1468,26 +1468,26 @@
                         if (isCurrentUserAdmin || currentNotes[noteIndex].authorId === userId) {
                             const updatedNotes = currentNotes.filter((_, i) => i !== noteIndex);
                             await updateDoc(taskRef, { notes: updatedNotes });
-                            showModal("Ghi chú đã được xóa thành công!");
+                            showModal("Note deleted successfully!");
                         } else {
-                            showModal("Bạn không có quyền xóa ghi chú này.");
+                            showModal("You do not have permission to delete this note.");
                         }
                     } else {
-                        showModal("Lỗi: Không tìm thấy ghi chú.");
+                        showModal("Error: Note not found.");
                     }
                 } else {
-                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                    showModal("Error: Task not found.");
                 }
             } catch (error) {
                 console.error("Lỗi khi xóa ghi chú:", error);
-                showModal("Không thể xóa ghi chú.");
+                showModal("Failed to delete note.");
             }
         }
 
         // NEW: Handles opening the modal to edit an existing task note.
         function openTaskNoteEditModal(taskId, noteIndex, currentNoteText) {
             if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền chỉnh sửa ghi chú công việc.");
+                showModal("You do not have permission to edit task notes.");
                 return;
             }
             editingTaskIdNoteModal.value = taskId;
@@ -1504,12 +1504,12 @@
             const newNoteContent = taskNoteTextareaModal.value.trim();
 
             if (!taskId || isNaN(noteIndex) || !currentProjectId || !newNoteContent) {
-                showModal("Lỗi: Không tìm thấy thông tin ghi chú công việc hoặc nội dung rỗng.");
+                showModal("Error: Task note information not found or content is empty.");
                 return;
             }
 
             if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền lưu thay đổi ghi chú công việc.");
+                showModal("You do not have permission to save task note changes.");
                 return;
             }
 
@@ -1524,19 +1524,19 @@
                             currentNotes[noteIndex].text = newNoteContent;
                             await updateDoc(taskRef, { notes: currentNotes });
                             taskNoteEditModal.classList.add('hidden');
-                            showModal("Ghi chú công việc đã được cập nhật thành công!");
+                            showModal("Task note updated successfully!");
                         } else {
-                            showModal("Bạn không có quyền chỉnh sửa ghi chú công việc này.");
+                            showModal("You do not have permission to edit this task note.");
                         }
                     } else {
-                        showModal("Lỗi: Chỉ số ghi chú công việc không hợp lệ.");
+                        showModal("Error: Invalid task note index.");
                     }
                 } else {
-                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                    showModal("Error: Task not found.");
                 }
             } catch (error) {
                 console.error("Lỗi khi lưu ghi chú công việc:", error);
-                showModal("Lỗi khi lưu ghi chú công việc.");
+                showModal("Failed to save task note.");
             }
         });
 
@@ -1559,7 +1559,7 @@
         async function handleAddTask(e) {
             e.preventDefault();
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền thêm tác vụ.");
+                showModal("You do not have permission to add tasks.");
                 return;
             }
             const taskText = taskInput.value.trim();
@@ -1585,7 +1585,7 @@
                     taskDeadlineInput.value = '';
                 } catch (error) {
                     console.error("Lỗi khi thêm tác vụ: ", error);
-                    showModal("Không thể thêm tác vụ.");
+                    showModal("Failed to add task.");
                 }
             }
         }
@@ -1597,7 +1597,7 @@
          */
         async function handleAddSubtask(taskId, subtaskText) {
             if (!isCurrentUserProjectMember() || !currentProjectId || !subtaskText.trim()) {
-                showModal("Bạn không có quyền thêm subtask.");
+                showModal("You do not have permission to add subtasks.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1612,7 +1612,7 @@
                 }
             } catch (error) {
                 console.error("Lỗi khi thêm subtask:", error);
-                showModal("Không thể thêm subtask.");
+                showModal("Failed to add subtask.");
             }
         }
 
@@ -1625,7 +1625,7 @@
             // Note: e.stopPropagation() is handled in createTaskElement for the checkbox event listener itself.
             // This function is only called to update Firestore.
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền thay đổi trạng thái subtask.");
+                showModal("You do not have permission to change subtask status.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1641,7 +1641,7 @@
                 }
             } catch (error) {
                 console.error("Lỗi khi chuyển đổi subtask:", error);
-                showModal("Không thể thay đổi trạng thái subtask.");
+                showModal("Failed to toggle subtask status.");
             }
         }
 
@@ -1652,7 +1652,7 @@
          */
         async function handleDeleteSubtask(taskId, subtaskIndex) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền xóa subtask.");
+                showModal("You do not have permission to delete subtasks.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1668,7 +1668,7 @@
                 }
             } catch (error) {
                 console.error("Lỗi khi xóa subtask:", error);
-                showModal("Không thể xóa subtask.");
+                showModal("Failed to delete subtask.");
             }
         }
 
@@ -1682,7 +1682,7 @@
          */
         function openSubtaskEditTextModal(taskId, subtaskIndex, currentText, currentNote, currentColor) {
             if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền chỉnh sửa subtask.");
+                showModal("You do not have permission to edit subtasks.");
                 return;
             }
             editingTaskIdSubtext.value = taskId;
@@ -1714,12 +1714,12 @@
             const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; // Get selected color
 
             if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
-                showModal("Lỗi: Không tìm thấy thông tin subtask hoặc nội dung rỗng.");
+                showModal("Error: Subtask information not found or content is empty.");
                 return;
             }
 
             if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền lưu thay đổi subtask.");
+                showModal("You do not have permission to save subtask changes.");
                 return;
             }
 
@@ -1735,16 +1735,16 @@
                         currentSubtasks[subtaskIndex].color = newSubtaskColor; // Save color
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                         subtaskEditTextModal.classList.add('hidden');
-                        showModal("Thay đổi subtask đã được lưu thành công!");
+                        showModal("Subtask changes saved successfully!");
                     } else {
-                        showModal("Lỗi: Chỉ số subtask không hợp lệ.");
+                        showModal("Error: Invalid subtask index.");
                     }
                 } else {
-                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                    showModal("Error: Task not found.");
                 }
             } catch (error) {
                 console.error("Lỗi khi lưu thay đổi subtask:", error);
-                showModal("Không thể lưu thay đổi subtask.");
+                showModal("Failed to save subtask changes.");
             }
         });
 
@@ -1762,7 +1762,7 @@
          */
         async function handleUpdateTaskStatus(taskId, newStatus, newPosition = null) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền di chuyển tác vụ.");
+                showModal("You do not have permission to move tasks.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1780,7 +1780,7 @@
                 await updateDoc(taskRef, updateData);
             } catch (error) {
                 console.error("Lỗi khi cập nhật tác vụ: ", error);
-                showModal("Không thể cập nhật trạng thái tác vụ.");
+                showModal("Failed to update task status.");
             }
         }
 
@@ -1790,7 +1790,7 @@
          */
         async function handleDeleteTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền xóa tác vụ.");
+                showModal("You do not have permission to delete tasks.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1798,7 +1798,7 @@
                 await deleteDoc(taskRef);
             } catch (error) {
                 console.error("Lỗi khi xóa tác vụ: ", error);
-                showModal("Không thể xóa tác vụ.");
+                showModal("Failed to delete task.");
             }
         }
 
@@ -1871,7 +1871,7 @@
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
                 } catch (error) {
                     console.error("Lỗi khi thay đổi trạng thái tác vụ:", error);
-                    showModal("Không thể thay đổi trạng thái tác vụ.");
+                    showModal("Failed to change task status.");
                 }
             }
             targetColumn.classList.remove('drag-over-empty');
@@ -1933,7 +1933,7 @@
             const draggedTask = tasks.find(t => t.id === draggedTaskId);
 
             if (!targetTask || !draggedTask) {
-                showModal("Lỗi: Không tìm thấy tác vụ kéo hoặc tác vụ đích.");
+                showModal("Error: Dragged task or target task not found.");
                 return;
             }
 
@@ -2076,7 +2076,7 @@
             try {
                 const taskDoc = await getDoc(taskRef);
                 if (!taskDoc.exists()) {
-                    showModal("Lỗi: Không tìm thấy tác vụ cha cho việc sắp xếp lại subtask.");
+                    showModal("Error: Parent task not found for subtask reordering.");
                     targetSubtaskItem?.classList.remove('drag-over-subtask');
                     return;
                 }
@@ -2104,11 +2104,11 @@
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
 
                 await updateDoc(taskRef, { subtasks: currentSubtasks });
-                showModal("Subtask đã được sắp xếp lại thành công!");
+                showModal("Subtask reordered successfully!");
 
             } catch (error) {
                 console.error("Lỗi khi sắp xếp lại subtask:", error);
-                showModal("Không thể sắp xếp lại subtask.");
+                showModal("Failed to reorder subtask.");
             } finally {
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
             }
@@ -2163,7 +2163,7 @@
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền tạo dự án mới.");
+                showModal("You do not have permission to create new projects.");
                 return;
             }
             projectModalTitle.textContent = "Create New Project";
@@ -2182,11 +2182,11 @@
 
         editProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền chỉnh sửa dự án.");
+                showModal("You do not have permission to edit projects.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để chỉnh sửa.");
+                showModal("Please select a project to edit.");
                 return;
             }
             const projectToEdit = projectsData[currentProjectId];
@@ -2204,24 +2204,24 @@
                 createProjectModal.classList.remove('hidden');
                 newProjectNameInput.focus();
             } else {
-                showModal("Lỗi: Không tìm thấy dữ liệu dự án để chỉnh sửa.");
+                showModal("Error: Project data not found for editing.");
             }
         });
 
         deleteProjectBtn.addEventListener('click', async () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền xóa dự án.");
+                showModal("You do not have permission to delete projects.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để xóa.");
+                showModal("Please select a project to delete.");
                 return;
             }
             const project = projectsData[currentProjectId];
             if (project) {
                 promptDeleteConfirmation(currentProjectId, project.name);
             } else {
-                showModal("Lỗi: Không tìm thấy dữ liệu dự án để xóa.");
+                showModal("Error: Project data not found for deletion.");
             }
         });
 
@@ -2232,7 +2232,7 @@
          */
         function promptDeleteConfirmation(projectId, projectName) {
             projectIdToDelete = projectId;
-            deleteConfirmMessage.textContent = `Bạn có chắc chắn muốn xóa dự án "${projectName}"? Hành động này sẽ xóa tất cả các tác vụ của nó và không thể hoàn tác.`;
+            deleteConfirmMessage.textContent = `Are you sure you want to delete project "${projectName}"? This action will delete all its tasks and cannot be undone.`;
             deleteProjectConfirmModal.classList.remove('hidden');
         }
 
@@ -2269,14 +2269,14 @@
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, projectId));
                 console.log("Project document deleted successfully.");
                 
-                showModal("Dự án đã được xóa thành công!");
+                showModal("Project deleted successfully!");
                 currentProjectId = null;
             } catch (error) {
                 console.error("Lỗi khi xóa dự án:", error);
                 if (error.code === 'permission-denied') {
-                    showModal("Lỗi quyền: Bạn không có quyền xóa dự án này. Vui lòng kiểm tra vai trò admin và các quy tắc bảo mật Firestore của bạn.");
+                    showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules.");
                 } else {
-                    showModal(`Không thể xóa dự án: ${error.message}`);
+                    showModal(`Failed to delete project: ${error.message}`);
                 }
             }
         }
@@ -2291,13 +2291,13 @@
             const sourceProjectIdToCopy = copyTasksFromProjectSelect.value;
 
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền lưu dự án.");
+                showModal("You do not have permission to save projects.");
                 return;
             }
 
             if (projectName && projectStartDate && projectEndDate) {
                 if (new Date(projectStartDate) > new Date(projectEndDate)) {
-                    showModal("Ngày kết thúc không thể trước Ngày bắt đầu.");
+                    showModal("End Date cannot be before Start Date.");
                     return;
                 }
                 try {
@@ -2312,7 +2312,7 @@
                     if (projectIdToModify) {
                         const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, projectIdToModify);
                         await updateDoc(projectRef, projectData);
-                        showModal("Dự án đã được cập nhật thành công!");
+                        showModal("Project updated successfully!");
                     } else {
                         projectData.createdBy = userId;
                         projectData.createdAt = new Date().toISOString();
@@ -2321,7 +2321,7 @@
                         const newProjectId = docRef.id;
                         currentProjectId = newProjectId;
                         projectSelect.value = newProjectId;
-                        showModal("Dự án đã được tạo thành công!");
+                        showModal("Project created successfully!");
 
                         if (sourceProjectIdToCopy) {
                             await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
@@ -2330,10 +2330,10 @@
                     createProjectModal.classList.add('hidden');
                 } catch (error) {
                     console.error("Lỗi khi lưu dự án:", error);
-                    showModal("Không thể lưu dự án.");
+                    showModal("Failed to save project.");
                 }
             } else {
-                showModal("Tên dự án, Ngày bắt đầu và Ngày kết thúc là bắt buộc.");
+                showModal("Project Name, Start Date, and End Date are required.");
             }
         });
 
@@ -2343,7 +2343,7 @@
          */
         async function handleCopyTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền sao chép tác vụ.");
+                showModal("You do not have permission to copy tasks.");
                 return;
             }
 
@@ -2371,13 +2371,13 @@
                         notes: [] // NEW: Copied tasks start with empty notes
                     };
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
-                    showModal("Tác vụ đã được sao chép thành công!");
+                    showModal("Task copied successfully!");
                 } else {
-                    showModal("Không tìm thấy tác vụ để sao chép.");
+                    showModal("Task not found to copy.");
                 }
             } catch (error) {
                 console.error("Lỗi khi sao chép tác vụ:", error);
-                showModal("Không thể sao chép tác vụ.");
+                showModal("Failed to copy task.");
             }
         }
 
@@ -2422,7 +2422,7 @@
                 console.log(`Đã sao chép ${todoTasksToCopy.length} tác vụ 'To Do' từ ${sourceProjectId} sang ${destinationProjectId}`);
             } catch (error) {
                 console.error("Lỗi khi sao chép tác vụ:", error);
-                showModal("Không thể sao chép tác vụ 'To Do'.");
+                showModal("Failed to copy 'To Do' tasks.");
             }
         }
 
@@ -2450,13 +2450,13 @@
         function displayProjectDetails(project) {
             if (project) {
                 displayProjectName.textContent = project.name;
-                displayProjectDescription.textContent = project.description || 'Không có mô tả.';
-                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('vi-VN') : 'Chưa đặt';
-                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('vi-VN') : 'Chưa đặt';
+                displayProjectDescription.textContent = project.description || 'No description.';
+                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set';
+                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set';
                 displayProjectStatus.textContent = project.status || 'Active';
 
                 currentProjectMembers = project.members || [];
-                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'Chưa có thành viên.';
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.';
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
@@ -2504,7 +2504,7 @@
             const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
             for (let i = 0; currentDate <= endDate; i++) {
-                labels.push(currentDate.toLocaleDateString('vi-VN'));
+                labels.push(currentDate.toLocaleDateString('en-US'));
 
                 const idealRemaining = initialTotalTasks - (initialTotalTasks / (totalDays - 1)) * i;
                 idealBurndown.push(Math.max(0, idealRemaining));
@@ -2606,11 +2606,11 @@
         // --- Project Member Management Logic ---
         manageMembersBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền quản lý thành viên.");
+                showModal("You do not have permission to manage members.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để quản lý thành viên.");
+                showModal("Please select a project to manage members.");
                 return;
             }
             displayMembersInModal();
@@ -2625,15 +2625,15 @@
         addMemberBtn.addEventListener('click', async () => {
             const newMemberId = newMemberIdInput.value.trim();
             if (!newMemberId) {
-                showModal("Vui lòng nhập ID người dùng.");
+                showModal("Please enter a User ID.");
                 return;
             }
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền thêm thành viên.");
+                showModal("You do not have permission to add members.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để thêm thành viên.");
+                showModal("Please select a project to add members to.");
                 return;
             }
 
@@ -2643,18 +2643,18 @@
                 if (projectDoc.exists()) {
                     const projectData = projectDoc.data();
                     if (projectData.members && projectData.members.includes(newMemberId)) {
-                        showModal("Người dùng này đã là thành viên của dự án.");
+                        showModal("This user is already a member of the project.");
                         return;
                     }
                     await updateDoc(projectRef, {
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
-                    showModal(`Người dùng ${newMemberId} đã được thêm vào dự án.`);
+                    showModal(`User ${newMemberId} has been added to the project.`);
                 }
             } catch (error) {
                 console.error("Lỗi khi thêm thành viên:", error);
-                showModal("Không thể thêm thành viên.");
+                showModal("Failed to add member.");
             }
         });
 
@@ -2667,7 +2667,7 @@
             const projectMembers = (project && project.members) ? project.members : [];
 
             if (projectMembers.length === 0) {
-                currentMembersList.textContent = 'Chưa có thành viên nào trong dự án này.';
+                currentMembersList.textContent = 'No members in this project yet.';
                 return;
             }
             projectMembers.forEach(memberId => {
@@ -2681,13 +2681,13 @@
 
                 if (isCurrentUserAdmin && memberId !== userId) {
                     const removeButton = document.createElement('button');
-                    removeButton.textContent = 'Xóa';
+                    removeButton.textContent = 'Remove';
                     removeButton.className = 'ml-4 bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 transition';
                     removeButton.onclick = () => removeProjectMember(currentProjectId, memberId);
                     memberItem.appendChild(removeButton);
                 } else if (memberId === userId) {
                     const selfTag = document.createElement('span');
-                    selfTag.textContent = '(Bạn)';
+                    selfTag.textContent = '(You)';
                     selfTag.className = 'ml-2 text-gray-400 text-xs italic';
                     memberIdSpan.appendChild(selfTag);
                 }
@@ -2702,11 +2702,11 @@
          */
         async function removeProjectMember(projectId, memberIdToRemove) {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền xóa thành viên.");
+                showModal("You do not have permission to remove members.");
                 return;
             }
             if (memberIdToRemove === userId) {
-                showModal("Bạn không thể tự xóa mình khỏi dự án thông qua giao diện này.");
+                showModal("You cannot remove yourself from the project through this interface.");
                 return;
             }
             try {
@@ -2714,10 +2714,10 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
-                showModal(`Người dùng ${memberIdToRemove} đã bị xóa khỏi dự án.`);
+                showModal(`User ${memberIdToRemove} removed from the project.`);
             } catch (error) {
                 console.error("Lỗi khi xóa thành viên:", error);
-                showModal("Không thể xóa thành viên.");
+                showModal("Failed to remove member.");
             }
         }
 
@@ -2730,7 +2730,7 @@
             if (email && password) {
                 handleAdminLogin(email, password);
             } else {
-                showModal("Vui lòng nhập cả email và mật khẩu cho admin.");
+                showModal("Please enter both email and password for admin login.");
             }
         });
 
