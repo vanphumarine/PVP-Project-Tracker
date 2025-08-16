@@ -327,7 +327,7 @@
             <textarea id="subtask-note-on-edit-modal" placeholder="Enter a note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
 
             <input type="hidden" id="editing-task-id-subtext">
-            <input type="hidden" id="editing-subtask-id-subtext"> <!-- Changed from index to ID -->
+            <input type="hidden" id="editing-subtask-id-subtext">
             <div class="flex justify-end gap-2">
                 <button id="save-subtask-text-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Changes</button>
                 <button id="cancel-subtask-text-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
@@ -493,7 +493,7 @@
         const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); 
         const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); 
         const editingTaskIdSubtext = document.getElementById('editing-task-id-subtext');
-        const subtaskEditIdInput = document.getElementById('editing-subtask-id-subtext'); // Renamed from editingSubtaskIndexSubtext
+        const subtaskEditIdInput = document.getElementById('editing-subtask-id-subtext');
         const saveSubtaskTextBtn = document.getElementById('save-subtask-text-btn');
         const cancelSubtaskTextBtn = document.getElementById('cancel-subtask-text-btn');
 
@@ -516,8 +516,6 @@
         const commentToast = document.getElementById('comment-toast'); 
         const toastTaskName = document.getElementById('toast-task-name'); 
         const commentSectionContainer = document.getElementById('comment-section-container');
-        // taskNotesSectionContainer, taskNotesList, newTaskNoteInput, addTaskNoteBtn are REMOVED for task-level notes
-
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
         const deleteConfirmMessage = document.getElementById('delete-confirm-message');
@@ -530,8 +528,10 @@
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
-        // Store the subtask ID directly
-        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, subtaskId: null }; 
+        // Stores information about the subtask being dragged.
+        // `subtaskObject` holds a deep copy of the subtask for consistent reference.
+        // `originalIndex` holds its index in the array at the start of the drag.
+        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
 
         // Helper map for subtask colors
         const subtaskColorMap = {
@@ -1114,10 +1114,9 @@
             // Enable/disable comment input and button based on canComment
             newCommentInput.disabled = !canComment;
             addCommentBtn.disabled = !canComment;
-            newCommentInput.placeholder = canComment ? "Add a comment..." : "Log in to add a comment..."; 
+            newCommentInput.placeholder = canComment ? "Add a comment..." : "Login to add a comment..."; 
 
             renderComments(task.comments || []);
-            // No renderTaskNotes here as task-level notes are removed
 
             taskDetailsModal.classList.remove('hidden');
             if (isEditMode && canModifyTaskProperties) {
@@ -1437,7 +1436,7 @@
                 return;
             }
             editingTaskIdSubtext.value = taskId;
-            subtaskEditIdInput.value = subtaskId; // Use subtask ID
+            subtaskEditIdInput.value = subtaskId;
             subtaskEditTextInput.value = currentText;
             subtaskNoteOnEditModal.value = currentNote; 
             
@@ -1458,7 +1457,7 @@
          */
         saveSubtaskTextBtn.addEventListener('click', async () => {
             const taskId = editingTaskIdSubtext.value;
-            const subtaskId = subtaskEditIdInput.value; // Get subtask ID
+            const subtaskId = subtaskEditIdInput.value;
             const newSubtaskText = subtaskEditTextInput.value.trim();
             const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
             const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
@@ -1479,7 +1478,7 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId); // Find by ID
+                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId);
                     if (subtaskIndex > -1) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
                         currentSubtasks[subtaskIndex].note = newSubtaskNote; 
@@ -1748,23 +1747,31 @@
             }
             const subtaskItem = e.target.closest('.subtask-item');
             const taskId = subtaskItem.getAttribute('data-task-id');
-            const subtaskId = subtaskItem.getAttribute('data-subtask-id'); // Get subtask ID
+            const subtaskId = subtaskItem.getAttribute('data-subtask-id');
 
             const task = tasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error("Error: Parent task not found for subtask drag.", { taskId });
+                showModal("Error: Parent task not found for subtask drag.");
+                e.preventDefault();
+                return;
+            }
             
-            const subtaskToDrag = task && task.subtasks && task.subtasks.find(sub => sub.id === subtaskId); // Find by ID
+            // Find the subtask object and its current index in the *current* task's subtasks array
+            const subtaskIndex = task.subtasks.findIndex(sub => sub.id === subtaskId);
+            const subtaskToDrag = task.subtasks[subtaskIndex];
             
             // Validate subtask object and its essential properties
-            if (subtaskToDrag && typeof subtaskToDrag === 'object' && subtaskToDrag !== null && subtaskToDrag.text !== undefined && subtaskToDrag.id !== undefined) {
+            if (subtaskToDrag && typeof subtaskToDrag === 'object' && subtaskToDrag !== null && subtaskToDrag.text !== undefined && subtaskToDrag.id !== undefined && subtaskIndex !== -1) {
                 draggedSubtaskInfo.taskId = taskId;
                 // Create a deep copy of the subtask object to avoid reference issues
                 draggedSubtaskInfo.subtaskObject = JSON.parse(JSON.stringify(subtaskToDrag)); 
-                draggedSubtaskInfo.subtaskId = subtaskId; // Store subtask ID
+                draggedSubtaskInfo.originalIndex = subtaskIndex; // Store the original index for later calculation
                 subtaskItem.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             } else {
-                console.error("Error: Subtask is not a valid object or is missing essential properties (id or text).", { taskId, subtaskId, subtaskToDrag });
-                showModal("Lỗi: Không thể kéo subtask này. Nó có thể không hợp lệ hoặc thiếu nội dung."); 
+                console.error("Error: Subtask is not a valid object or is missing essential properties (id or text), or index is invalid.", { taskId, subtaskId, subtaskToDrag, subtaskIndex });
+                showModal("Error: Cannot drag this subtask. It might be invalid or missing content."); 
                 e.preventDefault(); 
             }
         }
@@ -1777,7 +1784,7 @@
             e.target.classList.remove('dragging');
             document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
             // Reset dragged subtask info
-            draggedSubtaskInfo = { taskId: null, subtaskObject: null, subtaskId: null };
+            draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null };
         }
 
         /**
@@ -1787,7 +1794,7 @@
         function handleSubtaskDragEnter(e) {
             e.preventDefault();
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-id') === draggedSubtaskInfo.subtaskId) return;
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-id') === draggedSubtaskInfo.subtaskObject?.id) return;
 
             // Only highlight if the target is within the same parent task as the dragged subtask
             if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
@@ -1820,31 +1827,32 @@
          */
         async function handleSubtaskDrop(e) {
             e.preventDefault();
-            // Basic validation
-            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskId === null || !currentProjectId) {
-                showModal("Lỗi: Dữ liệu subtask kéo bị thiếu hoặc bạn không có quyền.");
+            // Basic validation for the dragged subtask information
+            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || !draggedSubtaskInfo.subtaskObject || !currentProjectId) {
+                showModal("Error: Missing dragged subtask data or insufficient permissions.");
                 e.target.closest('.subtask-item')?.classList.remove('drag-over-subtask');
                 return;
             }
 
             const targetSubtaskItem = e.target.closest('.subtask-item');
             if (!targetSubtaskItem) {
+                // Not dropping on a valid subtask item, remove highlight and exit
                 e.target.closest('.subtask-item')?.classList.remove('drag-over-subtask');
-                return; // Not dropping on a valid subtask item
+                return; 
             }
 
             const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
-            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id');
+            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id'); 
 
             // Ensure dropping within the same parent task
             if (targetTaskId !== draggedSubtaskInfo.taskId) {
-                showModal("Subtask chỉ có thể được sắp xếp lại trong nhiệm vụ mẹ của chúng.");
+                showModal("Subtasks can only be reordered within their parent task.");
                 targetSubtaskItem.classList.remove('drag-over-subtask');
                 return;
             }
             
             // If dropping onto itself, do nothing
-            if (targetSubtaskId === draggedSubtaskInfo.subtaskId) {
+            if (targetSubtaskId === draggedSubtaskInfo.subtaskObject.id) {
                 targetSubtaskItem.classList.remove('drag-over-subtask');
                 return;
             }
@@ -1854,43 +1862,43 @@
                 // Fetch the latest state of the task document immediately before processing the drop
                 const taskDoc = await getDoc(taskRef);
                 if (!taskDoc.exists()) {
-                    showModal("Lỗi: Không tìm thấy nhiệm vụ mẹ cho việc sắp xếp lại subtask. Có thể đã bị xóa.");
+                    showModal("Error: Parent task not found for subtask reorder. It might have been deleted.");
                     targetSubtaskItem?.classList.remove('drag-over-subtask');
                     return;
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
                 
                 // IMPORTANT: Always sort subtasks by position from Firestore data before manipulating
-                // This ensures consistent ordering even if positions are slightly off due to previous operations
+                // This ensures `findIndex` operates on a consistently ordered array.
                 currentSubtasks.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-                // Find the *actual* index of the dragged and target subtasks in the *current fetched* subtasks array
-                const draggedSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskId);
+                // Find the *actual* current index of the dragged and target subtasks in the *current fetched* subtasks array
+                const draggedSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskObject.id);
                 const targetSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === targetSubtaskId);
 
                 // Robust check: Ensure both subtasks exist in the fetched array
                 if (draggedSubtaskIndexInFetchedArray === -1) {
-                    showModal("Lỗi: Subtask được kéo không còn tồn tại trong dự án. Nó có thể đã bị xóa bởi người dùng khác.");
+                    showModal("Error: Dragged subtask no longer exists in the project. It might have been deleted by another user.");
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
                 if (targetSubtaskIndexInFetchedArray === -1) {
-                    showModal("Lỗi: Subtask đích không tìm thấy trong dự án. Nó có thể đã bị xóa bởi người dùng khác.");
+                    showModal("Error: Target subtask not found in the project. It might have been deleted by another user.");
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
                 
-                // Remove the dragged subtask from its current position
+                // 1. Remove the dragged subtask from its current position in the fetched array
                 const [removedSubtask] = currentSubtasks.splice(draggedSubtaskIndexInFetchedArray, 1);
 
-                // Calculate the new index where the removed subtask should be inserted
-                // This `insertionIndex` refers to the index in the `currentSubtasks` array *after* the removal.
-                let insertionIndex = targetSubtaskIndexInFetchedArray;
+                // 2. Calculate the new index where the removed subtask should be inserted
+                // This `newInsertionIndex` refers to the index in the `currentSubtasks` array *after* the removal.
+                let newInsertionIndex = targetSubtaskIndexInFetchedArray;
 
-                // Adjust insertionIndex if the dragged element was originally before the target element
-                // Because removing an element from an earlier index shifts subsequent elements to the left by one.
+                // Adjust `newInsertionIndex` if the dragged element was originally before the target element
+                // because removing an element from an earlier index shifts subsequent elements to the left by one.
                 if (draggedSubtaskIndexInFetchedArray < targetSubtaskIndexInFetchedArray) {
-                    insertionIndex--;
+                    newInsertionIndex--;
                 }
 
                 // Determine precise insertion point based on mouse position relative to target element
@@ -1899,26 +1907,27 @@
 
                 if (mouseRelativeY > subtaskRect.height / 2) {
                     // If dropping on the bottom half, insert *after* the target element
-                    insertionIndex++;
+                    newInsertionIndex++;
                 }
 
-                // Ensure insertionIndex is within valid bounds (0 to currentSubtasks.length)
-                insertionIndex = Math.max(0, Math.min(insertionIndex, currentSubtasks.length));
+                // Ensure `newInsertionIndex` is within valid bounds (0 to currentSubtasks.length)
+                newInsertionIndex = Math.max(0, Math.min(newInsertionIndex, currentSubtasks.length));
 
-                // Insert the dragged subtask at the calculated position
-                currentSubtasks.splice(insertionIndex, 0, removedSubtask);
+                // 3. Insert the dragged subtask at the calculated position
+                currentSubtasks.splice(newInsertionIndex, 0, removedSubtask);
 
-                // Re-assign positions based on the new order
+                // 4. Re-assign positions based on the new order
                 // Using a larger step (e.g., 1000) for positions leaves gaps,
                 // which helps prevent floating point errors and makes future insertions smoother.
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
 
+                // 5. Update Firestore with the new ordered subtasks array
                 await updateDoc(taskRef, { subtasks: currentSubtasks });
-                showModal("Subtask đã được sắp xếp lại thành công!"); 
+                showModal("Subtask reordered successfully!"); 
 
             } catch (error) {
-                console.error("Lỗi khi sắp xếp lại subtask:", error);
-                showModal("Không thể sắp xếp lại subtask."); 
+                console.error("Error reordering subtask:", error);
+                showModal("Could not reorder subtask."); 
             } finally {
                 // Always remove the drag-over visual indicator
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
@@ -1974,16 +1983,16 @@
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền tạo dự án mới."); 
+                showModal("You do not have permission to create new projects."); 
                 return;
             }
-            projectModalTitle.textContent = "Tạo dự án mới";
+            projectModalTitle.textContent = "Create New Project";
             newProjectNameInput.value = '';
             projectDescriptionInput.value = '';
             projectStartDateInput.value = '';
             projectEndDateInput.value = '';
             projectStatusSelect.value = 'Active';
-            confirmCreateProjectBtn.textContent = "Tạo dự án";
+            confirmCreateProjectBtn.textContent = "Create Project";
             editingProjectIdInput.value = '';
             copyTasksFromProjectSelect.value = '';
 
@@ -1993,46 +2002,46 @@
 
         editProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền chỉnh sửa dự án."); 
+                showModal("You do not have permission to edit projects."); 
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để chỉnh sửa."); 
+                showModal("Please select a project to edit."); 
                 return;
             }
             const projectToEdit = projectsData[currentProjectId];
             if (projectToEdit) {
-                projectModalTitle.textContent = "Chỉnh sửa chi tiết dự án";
+                projectModalTitle.textContent = "Edit Project Details";
                 newProjectNameInput.value = projectToEdit.name || '';
                 projectDescriptionInput.value = projectToEdit.description || '';
                 projectStartDateInput.value = projectToEdit.startDate || '';
                 projectEndDateInput.value = projectToEdit.endDate || '';
                 projectStatusSelect.value = projectToEdit.status || 'Active';
-                confirmCreateProjectBtn.textContent = "Lưu thay đổi";
+                confirmCreateProjectBtn.textContent = "Save Changes";
                 editingProjectIdInput.value = projectToEdit.id;
                 copyTasksFromProjectSelect.value = '';
 
                 createProjectModal.classList.remove('hidden');
                 newProjectNameInput.focus();
             } else {
-                showModal("Lỗi: Không tìm thấy dữ liệu dự án để chỉnh sửa."); 
+                showModal("Error: Project data not found for editing."); 
             }
         });
 
         deleteProjectBtn.addEventListener('click', async () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền xóa dự án."); 
+                showModal("You do not have permission to delete projects."); 
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để xóa."); 
+                showModal("Please select a project to delete."); 
                 return;
             }
             const project = projectsData[currentProjectId];
             if (project) {
                 promptDeleteConfirmation(currentProjectId, project.name);
             } else {
-                showModal("Lỗi: Không tìm thấy dữ liệu dự án để xóa."); 
+                showModal("Error: Project data not found for deletion."); 
             }
         });
 
@@ -2043,7 +2052,7 @@
          */
         function promptDeleteConfirmation(projectId, projectName) {
             projectIdToDelete = projectId;
-            deleteConfirmMessage.textContent = `Bạn có chắc chắn muốn xóa dự án "${projectName}"? Hành động này sẽ xóa tất cả các nhiệm vụ của nó và không thể hoàn tác.`; 
+            deleteConfirmMessage.textContent = `Are you sure you want to delete project "${projectName}"? This action will delete all its tasks and cannot be undone.`; 
             deleteProjectConfirmModal.classList.remove('hidden');
         }
 
@@ -2065,29 +2074,29 @@
          * @param {string} projectId - The ID of the project to delete.
          */
         async function executeProjectDeletion(projectId) {
-            console.log(`Đang cố gắng xóa dự án: ${projectId}`);
+            console.log(`Attempting to delete project: ${projectId}`);
             try {
-                console.log(`Đang truy vấn các nhiệm vụ cho dự án: ${projectId}`);
+                console.log(`Querying tasks for project: ${projectId}`);
                 const tasksQueryRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
                 const tasksSnapshot = await getDocs(tasksQueryRef);
 
-                console.log(`Tìm thấy ${tasksSnapshot.docs.length} nhiệm vụ để xóa.`);
+                console.log(`Found ${tasksSnapshot.docs.length} tasks to delete.`);
                 const deleteTasksPromises = tasksSnapshot.docs.map(taskDoc => deleteDoc(taskDoc.ref));
                 await Promise.all(deleteTasksPromises);
-                console.log("Tất cả các nhiệm vụ đã xóa thành công.");
+                console.log("All tasks deleted successfully.");
 
-                console.log(`Đang xóa tài liệu dự án: ${projectId}`);
+                console.log(`Deleting project document: ${projectId}`);
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, projectId));
-                console.log("Tài liệu dự án đã xóa thành công.");
+                console.log("Project document deleted successfully.");
                 
-                showModal("Dự án đã xóa thành công!"); 
+                showModal("Project deleted successfully!"); 
                 currentProjectId = null;
             } catch (error) {
-                console.error("Lỗi khi xóa dự án:", error);
+                console.error("Error deleting project:", error);
                 if (error.code === 'permission-denied') {
-                    showModal("Lỗi quyền: Bạn không có quyền xóa dự án này. Vui lòng kiểm tra vai trò admin và quy tắc bảo mật Firestore của bạn."); 
+                    showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules."); 
                 } else {
-                    showModal(`Không thể xóa dự án: ${error.message}`); 
+                    showModal(`Failed to delete project: ${error.message}`); 
                 }
             }
         }
@@ -2102,13 +2111,13 @@
             const sourceProjectIdToCopy = copyTasksFromProjectSelect.value;
 
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền lưu dự án."); 
+                showModal("You do not have permission to save projects."); 
                 return;
             }
 
             if (projectName && projectStartDate && projectEndDate) {
                 if (new Date(projectStartDate) > new Date(projectEndDate)) {
-                    showModal("Ngày kết thúc không thể trước ngày bắt đầu."); 
+                    showModal("End Date cannot be before Start Date."); 
                     return;
                 }
                 try {
@@ -2123,7 +2132,7 @@
                     if (projectIdToModify) {
                         const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, projectIdToModify);
                         await updateDoc(projectRef, projectData);
-                        showModal("Dự án đã cập nhật thành công!"); 
+                        showModal("Project updated successfully!"); 
                     } else {
                         projectData.createdBy = userId;
                         projectData.createdAt = new Date().toISOString();
@@ -2132,7 +2141,7 @@
                         const newProjectId = docRef.id;
                         currentProjectId = newProjectId;
                         projectSelect.value = newProjectId;
-                        showModal("Dự án đã tạo thành công!"); 
+                        showModal("Project created successfully!"); 
 
                         if (sourceProjectIdToCopy) {
                             await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
@@ -2140,11 +2149,11 @@
                     }
                     createProjectModal.classList.add('hidden');
                 } catch (error) {
-                    console.error("Lỗi khi lưu dự án:", error);
-                    showModal("Không thể lưu dự án."); 
+                    console.error("Error saving project:", error);
+                    showModal("Could not save project."); 
                 }
             } else {
-                showModal("Tên dự án, Ngày bắt đầu và Ngày kết thúc là bắt buộc."); 
+                showModal("Project Name, Start Date, and End Date are required."); 
             }
         });
 
@@ -2154,7 +2163,7 @@
          */
         async function handleCopyTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("Bạn không có quyền sao chép nhiệm vụ."); 
+                showModal("You do not have permission to copy tasks."); 
                 return;
             }
 
@@ -2185,13 +2194,13 @@
                         notes: [] 
                     };
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
-                    showModal("Nhiệm vụ đã sao chép thành công!"); 
+                    showModal("Task copied successfully!"); 
                 } else {
-                    showModal("Không tìm thấy nhiệm vụ để sao chép."); 
+                    showModal("Task not found to copy."); 
                 }
             } catch (error) {
-                console.error("Lỗi khi sao chép nhiệm vụ:", error);
-                showModal("Không thể sao chép nhiệm vụ."); 
+                console.error("Error copying task:", error);
+                showModal("Could not copy task."); 
             }
         }
 
@@ -2236,10 +2245,10 @@
                 const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
                 
                 await Promise.all(addTasksPromises);
-                console.log(`Đã sao chép ${todoTasksToCopy.length} nhiệm vụ 'To Do' từ ${sourceProjectId} sang ${destinationProjectId}`); 
+                console.log(`Copied ${todoTasksToCopy.length} 'To Do' tasks from ${sourceProjectId} to ${destinationProjectId}`); 
             } catch (error) {
-                console.error("Lỗi khi sao chép nhiệm vụ:", error);
-                showModal("Không thể sao chép nhiệm vụ 'To Do'."); 
+                console.error("Error copying tasks:", error);
+                showModal("Could not copy 'To Do' tasks."); 
             }
         }
 
@@ -2267,13 +2276,13 @@
         function displayProjectDetails(project) {
             if (project) {
                 displayProjectName.textContent = project.name;
-                displayProjectDescription.textContent = project.description || 'Không có mô tả.'; 
-                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Chưa đặt'; 
-                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Chưa đặt'; 
+                displayProjectDescription.textContent = project.description || 'No description.'; 
+                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set'; 
+                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set'; 
                 displayProjectStatus.textContent = project.status || 'Active';
 
                 currentProjectMembers = project.members || [];
-                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'Chưa có thành viên nào.'; 
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.'; 
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
@@ -2372,7 +2381,7 @@
                     labels: burndownData.labels,
                     datasets: [
                         {
-                            label: 'Đường lý tưởng',
+                            label: 'Ideal Line',
                             data: burndownData.idealBurndown,
                             borderColor: 'rgb(75, 192, 192)',
                             tension: 0.1,
@@ -2380,7 +2389,7 @@
                             borderDash: [5, 5]
                         },
                         {
-                            label: 'Đường thực tế',
+                            label: 'Actual Line',
                             data: burndownData.actualBurndown,
                             borderColor: 'rgb(255, 99, 132)',
                             tension: 0.1,
@@ -2394,7 +2403,7 @@
                     plugins: {
                         title: {
                             display: false,
-                            text: 'Biểu đồ Burndown dự án'
+                            text: 'Project Burndown Chart'
                         }
                     },
                     scales: {
@@ -2402,7 +2411,7 @@
                             type: 'category',
                             title: {
                                 display: true,
-                                text: 'Ngày'
+                                text: 'Date'
                             },
                             grid: {
                                 display: false
@@ -2412,7 +2421,7 @@
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: 'Nhiệm vụ còn lại'
+                                text: 'Tasks Remaining'
                             }
                         }
                     }
@@ -2423,11 +2432,11 @@
         // --- Project Member Management Logic ---
         manageMembersBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền quản lý thành viên."); 
+                showModal("You do not have permission to manage members."); 
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để quản lý thành viên."); 
+                showModal("Please select a project to manage members."); 
                 return;
             }
             displayMembersInModal();
@@ -2442,15 +2451,15 @@
         addMemberBtn.addEventListener('click', async () => {
             const newMemberId = newMemberIdInput.value.trim();
             if (!newMemberId) {
-                showModal("Vui lòng nhập ID người dùng."); 
+                showModal("Please enter a User ID."); 
                 return;
             }
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền thêm thành viên."); 
+                showModal("You do not have permission to add members."); 
                 return;
             }
             if (!currentProjectId) {
-                showModal("Vui lòng chọn một dự án để thêm thành viên."); 
+                showModal("Please select a project to add members to."); 
                 return;
             }
 
@@ -2460,18 +2469,18 @@
                 if (projectDoc.exists()) {
                     const projectData = projectDoc.data();
                     if (projectData.members && projectData.members.includes(newMemberId)) {
-                        showModal("Người dùng này đã là thành viên của dự án."); 
+                        showModal("This user is already a member of the project."); 
                         return;
                     }
                     await updateDoc(projectRef, {
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
-                    showModal(`Người dùng ${newMemberId} đã được thêm vào dự án.`); 
+                    showModal(`User ${newMemberId} added to the project.`); 
                 }
             } catch (error) {
-                console.error("Lỗi khi thêm thành viên:", error);
-                showModal("Không thể thêm thành viên."); 
+                console.error("Error adding member:", error);
+                showModal("Could not add member."); 
             }
         });
 
@@ -2484,7 +2493,7 @@
             const projectMembers = (project && project.members) ? project.members : [];
 
             if (projectMembers.length === 0) {
-                currentMembersList.textContent = 'Chưa có thành viên nào trong dự án này.'; 
+                currentMembersList.textContent = 'No members in this project yet.'; 
                 return;
             }
             projectMembers.forEach(memberId => {
@@ -2498,13 +2507,13 @@
 
                 if (isCurrentUserAdmin && memberId !== userId) {
                     const removeButton = document.createElement('button');
-                    removeButton.textContent = 'Xóa'; 
+                    removeButton.textContent = 'Remove'; 
                     removeButton.className = 'ml-4 bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 transition';
                     removeButton.onclick = () => removeProjectMember(currentProjectId, memberId);
                     memberItem.appendChild(removeButton);
                 } else if (memberId === userId) {
                     const selfTag = document.createElement('span');
-                    selfTag.textContent = '(Bạn)'; 
+                    selfTag.textContent = '(You)'; 
                     selfTag.className = 'ml-2 text-gray-400 text-xs italic';
                     memberIdSpan.appendChild(selfTag);
                 }
@@ -2519,11 +2528,11 @@
          */
         async function removeProjectMember(projectId, memberIdToRemove) {
             if (!isCurrentUserAdmin) {
-                showModal("Bạn không có quyền xóa thành viên."); 
+                showModal("You do not have permission to remove members."); 
                 return;
             }
             if (memberIdToRemove === userId) {
-                showModal("Bạn không thể tự xóa mình khỏi dự án thông qua giao diện này."); 
+                showModal("You cannot remove yourself from the project via this interface."); 
                 return;
             }
             try {
@@ -2531,10 +2540,10 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
-                showModal(`Người dùng ${memberIdToRemove} đã bị xóa khỏi dự án.`); 
+                showModal(`User ${memberIdToRemove} removed from the project.`); 
             } catch (error) {
-                console.error("Lỗi khi xóa thành viên:", error);
-                showModal("Không thể xóa thành viên."); 
+                console.error("Error removing member:", error);
+                showModal("Could not remove member."); 
             }
         }
 
@@ -2547,7 +2556,7 @@
             if (email && password) {
                 handleAdminLogin(email, password);
             } else {
-                showModal("Vui lòng nhập cả email và mật khẩu cho admin."); 
+                showModal("Please enter both email and password for admin login."); 
             }
         });
 
