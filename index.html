@@ -530,7 +530,10 @@
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
-        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
+        // Corrected structure for draggedSubtaskInfo to only store necessary properties,
+        // specifically the parent taskId and a deep copy of the subtask object itself.
+        // The originalIndex is removed as it can become stale.
+        let draggedSubtaskInfo = { taskId: null, subtaskObject: null }; 
 
         // Helper map for subtask colors
         const subtaskColorMap = {
@@ -1152,7 +1155,8 @@
                 });
                 taskDetailsModal.classList.add('hidden');
                 showModal("Task updated successfully!"); 
-            } catch (error) {
+            }
+            catch (error) {
                 console.error("Error updating task details:", error);
                 showModal("Could not update task details."); 
             }
@@ -1748,7 +1752,6 @@
                 draggedSubtaskInfo.taskId = taskId;
                 // Create a deep copy of the subtask object to avoid reference issues
                 draggedSubtaskInfo.subtaskObject = JSON.parse(JSON.stringify(subtaskToDrag)); 
-                draggedSubtaskInfo.originalIndex = subtaskIndex; 
                 subtaskItem.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             } else {
@@ -1765,7 +1768,8 @@
         function handleSubtaskDragEnd(e) {
             e.target.classList.remove('dragging');
             document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
-            draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null };
+            // Reset dragged subtask info
+            draggedSubtaskInfo = { taskId: null, subtaskObject: null };
         }
 
         /**
@@ -1775,8 +1779,14 @@
         function handleSubtaskDragEnter(e) {
             e.preventDefault();
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
+            // Check if the target is the dragged item itself (by comparing its current DOM index with the original index of the dragged object)
+            // This is a bit tricky since we no longer store originalIndex in draggedSubtaskInfo directly.
+            // A more robust way is to compare data-id of the element being dragged and the target.
+            // However, subtasks don't have unique data-id. We rely on parent task id.
+            // For subtasks, we assume drag-enter target won't be the dragged item itself immediately.
+            if (!targetSubtaskItem) return;
 
+            // Only highlight if the target is within the same parent task as the dragged subtask
             if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
                 targetSubtaskItem.classList.add('drag-over-subtask');
             }
@@ -1788,7 +1798,7 @@
          */
         function handleSubtaskDragLeave(e) {
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (targetSubtaskItem && targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
+            // Remove highlight from any subtask that is no longer being dragged over
             targetSubtaskItem?.classList.remove('drag-over-subtask');
         }
 
@@ -1821,6 +1831,7 @@
             }
 
             const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
+            // This `targetSubtaskDOMIndex` is the index of the target subtask in the current DOM rendering
             const targetSubtaskDOMIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index')); 
 
             if (targetTaskId !== draggedSubtaskInfo.taskId) {
@@ -1838,20 +1849,21 @@
                     return;
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
-                // IMPORTANT: Ensure subtasks are sorted by position before finding index
+                // IMPORTANT: Always sort subtasks by position from Firestore data before manipulating
                 currentSubtasks.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-                // Find the actual index of the dragged subtask in the *current* sorted array
-                // Using a unique combination of properties for robustness, including position
-                const originalIndexInCurrentArray = currentSubtasks.findIndex(sub => 
-                    sub.text === draggedSubtaskInfo.subtaskObject.text && 
-                    sub.isCompleted === draggedSubtaskInfo.subtaskObject.isCompleted &&
-                    (sub.note === draggedSubtaskInfo.subtaskObject.note || (!sub.note && !draggedSubtaskInfo.subtaskObject.note)) && 
-                    sub.color === draggedSubtaskInfo.subtaskObject.color &&
-                    sub.position === draggedSubtaskInfo.subtaskObject.position // Add position for stricter match
-                );
+                // Find the ACTUAL index of the dragged subtask in the current Firestore data based on its content and position
+                const indexOfSubtaskToRemove = currentSubtasks.findIndex(sub => {
+                    // Compare based on properties that define the subtask's identity
+                    // Including position makes this comparison very robust, assuming positions are unique enough
+                    return sub.text === draggedSubtaskInfo.subtaskObject.text &&
+                           sub.isCompleted === draggedSubtaskInfo.subtaskObject.isCompleted &&
+                           (sub.note === draggedSubtaskInfo.subtaskObject.note || (!sub.note && !draggedSubtaskInfo.subtaskObject.note)) &&
+                           sub.color === draggedSubtaskInfo.subtaskObject.color &&
+                           sub.position === draggedSubtaskInfo.subtaskObject.position; 
+                });
                 
-                if (originalIndexInCurrentArray === -1) {
+                if (indexOfSubtaskToRemove === -1) {
                     showModal("Error: Dragged subtask not found in the task's current subtask list. It might have been modified or deleted by another user."); 
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
@@ -1868,17 +1880,17 @@
 
                 // Adjust dropIndex if we removed an element from an earlier position
                 let adjustedDropIndex = dropIndex;
-                if (originalIndexInCurrentArray < adjustedDropIndex) {
+                if (indexOfSubtaskToRemove < adjustedDropIndex) {
                     adjustedDropIndex--; 
                 }
                 
                 // If dropping onto itself or effectively the same position, do nothing
-                if (originalIndexInCurrentArray === adjustedDropIndex) {
+                if (indexOfSubtaskToRemove === adjustedDropIndex) {
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return; 
                 }
 
-                const [removedSubtask] = currentSubtasks.splice(originalIndexInCurrentArray, 1);
+                const [removedSubtask] = currentSubtasks.splice(indexOfSubtaskToRemove, 1);
                 currentSubtasks.splice(adjustedDropIndex, 0, removedSubtask);
 
                 // Re-assign positions based on the new order
