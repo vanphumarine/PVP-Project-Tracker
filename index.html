@@ -548,7 +548,7 @@
 
         // NEW: Mock nickname map
         const userNicknames = {
-           "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
+            "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
             "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung",
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Mr.Rune",
 	    "OTBxGbC5JZbh1bIRdhuMnq4i1CF3": "Mr.Chinh",
@@ -1386,7 +1386,8 @@
                 commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; 
                 
                 const commentHeader = document.createElement('div');
-                commentHeader.className = 'flex justify-between items-center mb-1 pr-12'; // Added pr-12 to make space for buttons
+                // Increased pr to 20 for more space
+                commentHeader.className = 'flex justify-between items-center mb-1 pr-20'; 
                 
                 const commenterIdSpan = document.createElement('span');
                 commenterIdSpan.className = 'font-semibold text-blue-700';
@@ -1402,7 +1403,8 @@
                 commentItem.appendChild(commentHeader);
 
                 const commentTextP = document.createElement('p');
-                commentTextP.className = 'text-gray-800 break-words pr-6'; // Kept pr-6, maybe remove if too much space
+                // Removed pr-6 from commentTextP, as pr-20 on header should be sufficient
+                commentTextP.className = 'text-gray-800 break-words'; 
                 commentTextP.textContent = comment.text;
                 commentItem.appendChild(commentTextP);
 
@@ -1524,7 +1526,8 @@
                 noteItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-purple-300 relative';
                 
                 const noteHeader = document.createElement('div');
-                noteHeader.className = 'flex justify-between items-center mb-1 pr-12'; // Added pr-12 for space
+                // Increased pr to 20 for more space
+                noteHeader.className = 'flex justify-between items-center mb-1 pr-20'; 
                 
                 const noteInfoSpan = document.createElement('span');
                 noteInfoSpan.className = 'font-semibold text-purple-700';
@@ -1540,7 +1543,8 @@
                 noteItem.appendChild(noteHeader);
 
                 const noteTextP = document.createElement('p');
-                noteTextP.className = 'text-gray-800 break-words pr-6';
+                // Removed pr-6 from noteTextP
+                noteTextP.className = 'text-gray-800 break-words';
                 noteTextP.textContent = note.text;
                 noteItem.appendChild(noteTextP);
 
@@ -2329,18 +2333,19 @@
             toastCommentText.textContent = `"${commentText}"`;
 
             commentToast.classList.remove('collapsed'); // Ensure it's expanded
-            commentToast.classList.add('show');
+            commentToast.classList.add('show'); // Make it visible (opacity 1)
 
             toastTimeout = setTimeout(() => {
-                commentToast.classList.remove('show'); // Hide visually for animation
-                commentToast.classList.add('collapsed'); // Collapse
+                // Only collapse, do NOT remove 'show' so it remains on screen but hidden
+                commentToast.classList.add('collapsed');
             }, 5000); // Collapse after 5 seconds
         }
 
         // Toggle button for toast
         toggleToastButton.addEventListener('click', () => {
             commentToast.classList.toggle('collapsed');
-            commentToast.classList.add('show'); // Ensure it's visible if toggled from hidden state
+            // Ensure the toast remains visible (opacity 1) even when toggling collapsed state
+            commentToast.classList.add('show'); 
             clearTimeout(toastTimeout); // Prevent auto-collapse if user manually expands
         });
 
