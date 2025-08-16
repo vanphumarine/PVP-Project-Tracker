@@ -418,7 +418,7 @@
  		apiKey: "AIzaSyAN57LfBD0P8hqP6ysOJ7Wtc9uYDKy3eCU",
   		authDomain: "pvp-project-tracker.firebaseapp.com",
   		projectId: "pvp-project-tracker",
-  		storageBucket: "pvp-project-tracker.firebasestorage.app",
+  		storageBucket: "pvp-project-tracker.firebaseol.app",
   		messagingSenderId: "399186770907",
   		appId: "1:399186770907:web:dfcf167526d2d0014d05fe",
   		measurementId: "G-SW4ZCDVDGK"
@@ -1372,7 +1372,7 @@
         /**
          * Handles toggling the completion status of a subtask.
          * @param {string} taskId - The ID of the parent task.
-         * @param {string} subtaskId - The ID of the subtask.
+         * @param {string} subtaskId - The ID of the subtask to toggle.
          */
         async function handleToggleSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
@@ -1385,10 +1385,15 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     let currentSubtasks = taskDoc.data().subtasks || [];
-                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId); // Find by ID
-                    if (subtaskIndex > -1) {
-                        currentSubtasks[subtaskIndex].isCompleted = !currentSubtasks[subtaskIndex].isCompleted;
-                        await updateDoc(taskRef, { subtasks: currentSubtasks });
+                    const subtaskToUpdate = currentSubtasks.find(sub => sub.id === subtaskId); // Find by unique ID
+
+                    if (subtaskToUpdate) {
+                        subtaskToUpdate.isCompleted = !subtaskToUpdate.isCompleted; // Toggle status
+                        // Replace the old subtask object with the updated one in the array
+                        const updatedSubtasks = currentSubtasks.map(sub => 
+                            sub.id === subtaskId ? subtaskToUpdate : sub
+                        );
+                        await updateDoc(taskRef, { subtasks: updatedSubtasks });
                     }
                 }
             } catch (error) {
