@@ -327,7 +327,7 @@
             <textarea id="subtask-note-on-edit-modal" placeholder="Enter a note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
 
             <input type="hidden" id="editing-task-id-subtext">
-            <input type="hidden" id="editing-subtask-index-subtext">
+            <input type="hidden" id="editing-subtask-id-subtext"> <!-- Changed from index to ID -->
             <div class="flex justify-end gap-2">
                 <button id="save-subtask-text-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Changes</button>
                 <button id="cancel-subtask-text-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
@@ -493,7 +493,7 @@
         const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); 
         const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); 
         const editingTaskIdSubtext = document.getElementById('editing-task-id-subtext');
-        const editingSubtaskIndexSubtext = document.getElementById('editing-subtask-index-subtext');
+        const subtaskEditIdInput = document.getElementById('editing-subtask-id-subtext'); // Renamed from editingSubtaskIndexSubtext
         const saveSubtaskTextBtn = document.getElementById('save-subtask-text-btn');
         const cancelSubtaskTextBtn = document.getElementById('cancel-subtask-text-btn');
 
@@ -530,10 +530,8 @@
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
-        // Corrected structure for draggedSubtaskInfo to only store necessary properties,
-        // specifically the parent taskId and a deep copy of the subtask object itself.
-        // The originalIndex is removed as it can become stale.
-        let draggedSubtaskInfo = { taskId: null, subtaskObject: null }; 
+        // Store the subtask ID directly
+        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, subtaskId: null }; 
 
         // Helper map for subtask colors
         const subtaskColorMap = {
@@ -979,7 +977,8 @@
                     const subtaskItem = document.createElement('div');
                     subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
                     subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
-                    subtaskItem.setAttribute('data-subtask-index', index); // Index in current DOM order for drag-drop
+                    // Use subtask.id for stable identification
+                    subtaskItem.setAttribute('data-subtask-id', subtask.id); 
 
                     if (canModifyTask) {
                         subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
@@ -1001,7 +1000,7 @@
                     subtaskCheckbox.disabled = !canModifyTask;
                     subtaskCheckbox.addEventListener('change', (e) => {
                         e.stopPropagation(); // Stop propagation to prevent task card click
-                        handleToggleSubtask(task.id, index);
+                        handleToggleSubtask(task.id, subtask.id); // Pass subtask.id
                     });
 
                     const subtaskTextSpan = document.createElement('span');
@@ -1022,7 +1021,7 @@
                         editSubtaskTextButton.title = 'Edit Subtask'; 
                         editSubtaskTextButton.onclick = (e) => {
                             e.stopPropagation();
-                            openSubtaskEditTextModal(task.id, index, subtask.text, subtask.note || '', subtask.color || 'default');
+                            openSubtaskEditTextModal(task.id, subtask.id, subtask.text, subtask.note || '', subtask.color || 'default'); // Pass subtask.id
                         };
                         subtaskActionsDiv.appendChild(editSubtaskTextButton);
 
@@ -1031,7 +1030,7 @@
                         deleteSubtaskButton.className = 'text-xs font-bold text-red-400 hover:text-red-600 p-1 rounded';
                         deleteSubtaskButton.onclick = (e) => {
                             e.stopPropagation();
-                            handleDeleteSubtask(task.id, index);
+                            handleDeleteSubtask(task.id, subtask.id); // Pass subtask.id
                         };
                         subtaskActionsDiv.appendChild(deleteSubtaskButton); 
 
@@ -1352,7 +1351,15 @@
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     // Assign position to new subtask to ensure it's at the end
                     const newSubtaskPosition = currentSubtasks.length > 0 ? Math.max(...currentSubtasks.map(s => s.position || 0)) + 1000 : 0;
-                    const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition }]; 
+                    const newSubtask = { 
+                        id: crypto.randomUUID(), // Assign unique ID
+                        text: subtaskText.trim(), 
+                        isCompleted: false, 
+                        note: '', 
+                        color: 'default', 
+                        position: newSubtaskPosition 
+                    }; 
+                    const updatedSubtasks = [...currentSubtasks, newSubtask]; 
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
@@ -1364,9 +1371,9 @@
         /**
          * Handles toggling the completion status of a subtask.
          * @param {string} taskId - The ID of the parent task.
-         * @param {number} subtaskIndex - The index of the subtask in the array.
+         * @param {string} subtaskId - The ID of the subtask.
          */
-        async function handleToggleSubtask(taskId, subtaskIndex) {
+        async function handleToggleSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to change subtask status."); 
                 return;
@@ -1377,7 +1384,8 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
+                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId); // Find by ID
+                    if (subtaskIndex > -1) {
                         currentSubtasks[subtaskIndex].isCompleted = !currentSubtasks[subtaskIndex].isCompleted;
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                     }
@@ -1391,9 +1399,9 @@
         /**
          * Handles deleting a subtask from a task.
          * @param {string} taskId - The ID of the parent task.
-         * @param {number} subtaskIndex - The index of the subtask to delete.
+         * @param {string} subtaskId - The ID of the subtask to delete.
          */
-        async function handleDeleteSubtask(taskId, subtaskIndex) {
+        async function handleDeleteSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to delete subtasks."); 
                 return;
@@ -1404,12 +1412,10 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
-                        const updatedSubtasks = currentSubtasks.filter((_, i) => i !== subtaskIndex);
-                        // Re-assign positions after deletion to keep them ordered
-                        const reindexedSubtasks = updatedSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
-                        await updateDoc(taskRef, { subtasks: reindexedSubtasks });
-                    }
+                    const updatedSubtasks = currentSubtasks.filter(sub => sub.id !== subtaskId); // Filter by ID
+                    // Re-assign positions after deletion to keep them ordered
+                    const reindexedSubtasks = updatedSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
+                    await updateDoc(taskRef, { subtasks: reindexedSubtasks });
                 }
             } catch (error) {
                 console.error("Error deleting subtask:", error);
@@ -1420,18 +1426,18 @@
         /**
          * Handles opening the subtask edit modal (text, note, color).
          * @param {string} taskId - The ID of the parent task.
-         * @param {number} subtaskIndex - The index of the subtask.
+         * @param {string} subtaskId - The ID of the subtask.
          * @param {string} currentText - The current subtask text.
          * @param {string} currentNote - The current subtask note.
          * @param {string} currentColor - The current subtask color.
          */
-        function openSubtaskEditTextModal(taskId, subtaskIndex, currentText, currentNote, currentColor) {
+        function openSubtaskEditTextModal(taskId, subtaskId, currentText, currentNote, currentColor) {
             if (!isCurrentUserProjectMember()) {
                 showModal("You do not have permission to edit subtasks."); 
                 return;
             }
             editingTaskIdSubtext.value = taskId;
-            editingSubtaskIndexSubtext.value = subtaskIndex;
+            subtaskEditIdInput.value = subtaskId; // Use subtask ID
             subtaskEditTextInput.value = currentText;
             subtaskNoteOnEditModal.value = currentNote; 
             
@@ -1452,12 +1458,12 @@
          */
         saveSubtaskTextBtn.addEventListener('click', async () => {
             const taskId = editingTaskIdSubtext.value;
-            const subtaskIndex = parseInt(editingSubtaskIndexSubtext.value);
+            const subtaskId = subtaskEditIdInput.value; // Get subtask ID
             const newSubtaskText = subtaskEditTextInput.value.trim();
             const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
             const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
 
-            if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
+            if (!taskId || !subtaskId || !currentProjectId || !newSubtaskText) {
                 showModal("Error: Subtask information not found or content is empty."); 
                 return;
             }
@@ -1473,7 +1479,8 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
+                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId); // Find by ID
+                    if (subtaskIndex > -1) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
                         currentSubtasks[subtaskIndex].note = newSubtaskNote; 
                         currentSubtasks[subtaskIndex].color = newSubtaskColor; 
@@ -1481,7 +1488,7 @@
                         subtaskEditTextModal.classList.add('hidden');
                         showModal("Subtask changes saved successfully!"); 
                     } else {
-                        showModal("Error: Invalid subtask index."); 
+                        showModal("Error: Subtask not found."); 
                     }
                 } else {
                     showModal("Error: Task not found."); 
@@ -1741,21 +1748,22 @@
             }
             const subtaskItem = e.target.closest('.subtask-item');
             const taskId = subtaskItem.getAttribute('data-task-id');
-            const subtaskIndex = parseInt(subtaskItem.getAttribute('data-subtask-index'));
+            const subtaskId = subtaskItem.getAttribute('data-subtask-id'); // Get subtask ID
 
             const task = tasks.find(t => t.id === taskId);
             
-            const subtaskToDrag = task && task.subtasks && task.subtasks[subtaskIndex];
+            const subtaskToDrag = task && task.subtasks && task.subtasks.find(sub => sub.id === subtaskId); // Find by ID
             
             // Validate subtask object and its essential properties
-            if (subtaskToDrag && typeof subtaskToDrag === 'object' && subtaskToDrag !== null && subtaskToDrag.text !== undefined) {
+            if (subtaskToDrag && typeof subtaskToDrag === 'object' && subtaskToDrag !== null && subtaskToDrag.text !== undefined && subtaskToDrag.id !== undefined) {
                 draggedSubtaskInfo.taskId = taskId;
                 // Create a deep copy of the subtask object to avoid reference issues
                 draggedSubtaskInfo.subtaskObject = JSON.parse(JSON.stringify(subtaskToDrag)); 
+                draggedSubtaskInfo.subtaskId = subtaskId; // Store subtask ID
                 subtaskItem.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             } else {
-                console.error("Error: Subtask at index is not a valid object or is missing essential properties.", { taskId, subtaskIndex, subtaskToDrag });
+                console.error("Error: Subtask is not a valid object or is missing essential properties (id or text).", { taskId, subtaskId, subtaskToDrag });
                 showModal("Error: Cannot drag this subtask. It might be invalid or missing content."); 
                 e.preventDefault(); 
             }
@@ -1769,7 +1777,7 @@
             e.target.classList.remove('dragging');
             document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
             // Reset dragged subtask info
-            draggedSubtaskInfo = { taskId: null, subtaskObject: null };
+            draggedSubtaskInfo = { taskId: null, subtaskObject: null, subtaskId: null };
         }
 
         /**
@@ -1779,12 +1787,7 @@
         function handleSubtaskDragEnter(e) {
             e.preventDefault();
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            // Check if the target is the dragged item itself (by comparing its current DOM index with the original index of the dragged object)
-            // This is a bit tricky since we no longer store originalIndex in draggedSubtaskInfo directly.
-            // A more robust way is to compare data-id of the element being dragged and the target.
-            // However, subtasks don't have unique data-id. We rely on parent task id.
-            // For subtasks, we assume drag-enter target won't be the dragged item itself immediately.
-            if (!targetSubtaskItem) return;
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-id') === draggedSubtaskInfo.subtaskId) return;
 
             // Only highlight if the target is within the same parent task as the dragged subtask
             if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
@@ -1817,7 +1820,7 @@
          */
         async function handleSubtaskDrop(e) {
             e.preventDefault();
-            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskObject === null || !currentProjectId) {
+            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskId === null || !currentProjectId) {
                 showModal("Error: Dragged subtask data is missing or you don't have permission."); 
                 e.target.closest('.subtask-item')?.classList.remove('drag-over-subtask');
                 return;
@@ -1831,8 +1834,7 @@
             }
 
             const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
-            // This `targetSubtaskDOMIndex` is the index of the target subtask in the current DOM rendering
-            const targetSubtaskDOMIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index')); 
+            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id'); 
 
             if (targetTaskId !== draggedSubtaskInfo.taskId) {
                 showModal("Subtasks can only be reordered within their parent task."); 
@@ -1840,6 +1842,12 @@
                 return;
             }
             
+            // If dropping onto itself, do nothing
+            if (targetSubtaskId === draggedSubtaskInfo.subtaskId) {
+                targetSubtaskItem.classList.remove('drag-over-subtask');
+                return;
+            }
+
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, draggedSubtaskInfo.taskId);
             try {
                 const taskDoc = await getDoc(taskRef);
@@ -1852,46 +1860,35 @@
                 // IMPORTANT: Always sort subtasks by position from Firestore data before manipulating
                 currentSubtasks.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-                // Find the ACTUAL index of the dragged subtask in the current Firestore data based on its content and position
-                const indexOfSubtaskToRemove = currentSubtasks.findIndex(sub => {
-                    // Compare based on properties that define the subtask's identity
-                    // Including position makes this comparison very robust, assuming positions are unique enough
-                    return sub.text === draggedSubtaskInfo.subtaskObject.text &&
-                           sub.isCompleted === draggedSubtaskInfo.subtaskObject.isCompleted &&
-                           (sub.note === draggedSubtaskInfo.subtaskObject.note || (!sub.note && !draggedSubtaskInfo.subtaskObject.note)) &&
-                           sub.color === draggedSubtaskInfo.subtaskObject.color &&
-                           sub.position === draggedSubtaskInfo.subtaskObject.position; 
-                });
-                
-                if (indexOfSubtaskToRemove === -1) {
-                    showModal("Error: Dragged subtask not found in the task's current subtask list. It might have been modified or deleted by another user."); 
+                const indexOfSubtaskToRemove = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskId); 
+                const indexOfTargetSubtask = currentSubtasks.findIndex(sub => sub.id === targetSubtaskId);
+
+                if (indexOfSubtaskToRemove === -1 || indexOfTargetSubtask === -1) {
+                    showModal("Error: Dragged or target subtask not found in the task's current subtask list. It might have been modified or deleted by another user."); 
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
+                
+                // Remove the dragged subtask
+                const [removedSubtask] = currentSubtasks.splice(indexOfSubtaskToRemove, 1);
 
+                // Determine the new insertion index based on mouse position
                 const subtaskRect = targetSubtaskItem.getBoundingClientRect();
                 const mouseRelativeY = e.clientY - subtaskRect.top;
-                let dropIndex = targetSubtaskDOMIndex; 
+                let newIndex = indexOfTargetSubtask;
 
-                // Determine if dropping before or after the target subtask
                 if (mouseRelativeY > subtaskRect.height / 2) {
-                    dropIndex = targetSubtaskDOMIndex + 1; 
+                    // Drop after the target subtask
+                    newIndex = indexOfTargetSubtask + 1;
                 }
 
-                // Adjust dropIndex if we removed an element from an earlier position
-                let adjustedDropIndex = dropIndex;
-                if (indexOfSubtaskToRemove < adjustedDropIndex) {
-                    adjustedDropIndex--; 
-                }
-                
-                // If dropping onto itself or effectively the same position, do nothing
-                if (indexOfSubtaskToRemove === adjustedDropIndex) {
-                    targetSubtaskItem.classList.remove('drag-over-subtask');
-                    return; 
+                // Adjust the insertion index if we removed an element from an earlier position
+                if (indexOfSubtaskToRemove < newIndex) {
+                    newIndex--;
                 }
 
-                const [removedSubtask] = currentSubtasks.splice(indexOfSubtaskToRemove, 1);
-                currentSubtasks.splice(adjustedDropIndex, 0, removedSubtask);
+                // Insert the dragged subtask at the new position
+                currentSubtasks.splice(newIndex, 0, removedSubtask);
 
                 // Re-assign positions based on the new order
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
@@ -2146,6 +2143,15 @@
 
                 if (taskDoc.exists()) {
                     const originalTaskData = taskDoc.data();
+                    const copiedSubtasks = (originalTaskData.subtasks || []).map(sub => ({
+                        id: crypto.randomUUID(), // Assign new unique ID to copied subtask
+                        text: sub.text,
+                        isCompleted: false, // Reset completion status for copied subtasks
+                        note: sub.note || '',
+                        color: sub.color || 'default', 
+                        position: sub.position || Date.now() + Math.random() // Re-assign position
+                    }));
+
                     const copiedTaskData = {
                         text: `Copy of ${originalTaskData.text}`,
                         status: 'todo',
@@ -2153,13 +2159,7 @@
                         position: Date.now(),
                         color: originalTaskData.color || '#818CF8',
                         deadline: originalTaskData.deadline || null,
-                        subtasks: originalTaskData.subtasks.map(sub => ({
-                            text: sub.text,
-                            isCompleted: false,
-                            note: sub.note || '',
-                            color: sub.color || 'default', 
-                            position: sub.position || Date.now() + Math.random() 
-                        })),
+                        subtasks: copiedSubtasks,
                         comments: [],
                         notes: [] 
                     };
@@ -2189,6 +2189,15 @@
                     .filter(doc => doc.data().status === 'todo')
                     .map(doc => {
                         const taskData = doc.data();
+                        const copiedSubtasks = (taskData.subtasks || []).map(sub => ({
+                            id: crypto.randomUUID(), // Assign new unique ID to copied subtask
+                            text: sub.text,
+                            isCompleted: false, // Reset completion status for copied subtasks
+                            note: sub.note || '',
+                            color: sub.color || 'default', 
+                            position: sub.position || Date.now() + Math.random() // Re-assign position
+                        }));
+
                         return {
                             text: taskData.text,
                             status: 'todo',
@@ -2196,13 +2205,7 @@
                             position: Date.now() + Math.random(),
                             color: taskData.color || '#818CF8',
                             deadline: taskData.deadline || null,
-                            subtasks: taskData.subtasks.map(sub => ({
-                                text: sub.text,
-                                isCompleted: false,
-                                note: sub.note || '',
-                                color: sub.color || 'default', 
-                                position: sub.position || Date.now() + Math.random() 
-                            })),
+                            subtasks: copiedSubtasks,
                             comments: [],
                             notes: [] 
                         };
