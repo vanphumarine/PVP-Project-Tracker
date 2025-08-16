@@ -20,7 +20,7 @@
         .kanban-column {
             min-height: 400px;
         }
-        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED9t cho admin */
+        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED7t cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
             /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
@@ -100,32 +100,36 @@
             padding: 15px 20px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            /* Initial state: hidden and collapsed */
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, transform 0.3s ease-in-out;
+            transform: translateX(calc(100% + 20px)); /* Start completely off-screen */
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, transform 0.5s ease-in-out;
             z-index: 11000; /* Higher than modals */
             display: flex; /* Use flexbox for layout */
             flex-direction: column; /* Stack content vertically */
             align-items: flex-start; /* Align content to the start */
             max-width: 300px; /* Limit width */
+            cursor: pointer; /* Indicate it's clickable even when collapsed */
         }
         .toast-notification.show {
             opacity: 1;
             visibility: visible;
+            transform: translateX(0); /* Fully visible and expanded */
         }
-        /* Collapsed state for the toast */
-        .toast-notification.collapsed {
+        /* Collapsed state for the toast when it is shown */
+        .toast-notification.show.collapsed {
             transform: translateX(calc(100% - 40px)); /* Shift left to hide most content */
-            opacity: 0.7;
-            padding-right: 10px; /* Reduce padding when collapsed */
+            opacity: 0.7; /* Keep it semi-transparent when collapsed */
         }
         .toast-notification .toast-content {
-            display: block; /* By default, content is visible */
-            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-            max-height: 100px; /* Max height for content */
-            overflow: hidden; /* Hide overflow when collapsed */
+            display: block;
+            max-height: 100px; /* Max height for content when expanded */
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, padding 0.3s ease-in-out;
+            width: 100%; /* Ensure content takes full width when expanded */
         }
-        .toast-notification.collapsed .toast-content {
+        .toast-notification.show.collapsed .toast-content {
             max-height: 0; /* Collapse content */
             opacity: 0;
             padding: 0;
@@ -140,7 +144,7 @@
             align-self: flex-end; /* Align button to the right within the flex container */
             transition: transform 0.3s ease-in-out;
         }
-        .toast-notification.collapsed .toggle-button {
+        .toast-notification.show.collapsed .toggle-button {
             transform: rotate(180deg); /* Rotate arrow when collapsed */
         }
 
@@ -496,7 +500,8 @@
         <button class="toggle-button">▲</button>
         <div class="toast-content">
             <p>New comment on project: <span id="toast-project-name" class="font-semibold"></span></p>
-            <p>Task: <span id="toast-task-name" class="font-semibold"></span></p>
+            <!-- Updated toast content with task status -->
+            <p>Task: <span id="toast-task-name" class="font-semibold"></span> (Status: <span id="toast-task-status" class="font-semibold capitalize"></span>)</p>
             <p><span id="toast-comment-text" class="italic"></span></p>
         </div>
     </div>
@@ -523,7 +528,7 @@
   		storageBucket: "pvp-project-tracker.firebasestorage.app",
   		messagingSenderId: "399186770907",
   		appId: "1:399186770907:web:dfcf167526d2d0014d05fe",
-  		measurementId: "G-SW4ZCDVDGK"
+  		measurementId: "G-SW4CDVDGK"
         };
         // =====================================================================================
         // END FIREBASE CONFIGURATION
@@ -645,6 +650,8 @@
         const taskNotesList = document.getElementById('task-notes-list'); // NEW for task notes list
         const newTaskNoteInput = document.getElementById('new-task-note-input'); // NEW for task note input
         const addTaskNoteBtn = document.getElementById('add-task-note-btn'); // NEW for add task note button
+        // NEW: Added for task status in toast
+        const toastTaskStatus = document.getElementById('toast-task-status');
 
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
@@ -997,7 +1004,8 @@
                     if (newCommentCount > oldCommentCount && newTask.id !== currentOpenTaskDetailsId) {
                         const newComment = newTask.comments[newCommentCount - 1]; // Get the latest comment
                         const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
-                        showCommentToast(projectName, newTask.text, newComment.text);
+                        // Pass task status to the toast
+                        showCommentToast(projectName, newTask.text, newTask.status, newComment.text); 
                     }
                 });
 
@@ -1972,7 +1980,7 @@
         
         /**
          * Handles the start of a drag operation for a task.
-         * @param {Event} e - The dragstart event.
+         * @param {Event} } e - The dragstart event.
          */
         function handleDragStart(e) {
             if (!isCurrentUserProjectMember()) {
@@ -2323,30 +2331,41 @@
          * Shows a toast notification for a new comment.
          * @param {string} projectName - The name of the project.
          * @param {string} taskName - The name of the task.
+         * @param {string} taskStatus - The status (Kanban column) of the task.
          * @param {string} commentText - The text of the new comment.
          */
-        function showCommentToast(projectName, taskName, commentText) {
+        function showCommentToast(projectName, taskName, taskStatus, commentText) {
             clearTimeout(toastTimeout); // Clear any existing timeout
             
             toastProjectName.textContent = projectName;
             toastTaskName.textContent = taskName;
+            toastTaskStatus.textContent = taskStatus; // Set the task status
             toastCommentText.textContent = `"${commentText}"`;
 
-            commentToast.classList.remove('collapsed'); // Ensure it's expanded
-            commentToast.classList.add('show'); // Make it visible (opacity 1)
+            // Ensure the toast is always 'show' (visible) when active, whether expanded or collapsed
+            commentToast.classList.add('show'); 
+            commentToast.classList.remove('collapsed'); // Start expanded
 
             toastTimeout = setTimeout(() => {
-                // Only collapse, do NOT remove 'show' so it remains on screen but hidden
-                commentToast.classList.add('collapsed');
-            }, 5000); // Collapse after 5 seconds
+                commentToast.classList.add('collapsed'); // Collapse after 5 seconds
+            }, 5000); 
         }
 
-        // Toggle button for toast
-        toggleToastButton.addEventListener('click', () => {
+        // Event listener for clicking anywhere on the toast (except the toggle button itself)
+        commentToast.addEventListener('click', (e) => {
+            // Check if the click target is NOT the toggle button itself
+            if (e.target !== toggleToastButton) {
+                commentToast.classList.toggle('collapsed');
+                // When manually interacting, clear the auto-collapse timeout
+                clearTimeout(toastTimeout); 
+            }
+        });
+
+        // Toggle button for toast (specifically for clicking the button)
+        toggleToastButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent the click from bubbling up to the toast's general click listener
             commentToast.classList.toggle('collapsed');
-            // Ensure the toast remains visible (opacity 1) even when toggling collapsed state
-            commentToast.classList.add('show'); 
-            clearTimeout(toastTimeout); // Prevent auto-collapse if user manually expands
+            clearTimeout(toastTimeout); // Prevent auto-collapse if user manually toggles
         });
 
 
