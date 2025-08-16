@@ -3,80 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanban Task Tracker (Realtime Sync)</title>
-    <!-- Tailwind CSS CDN để sử dụng các lớp tiện ích -->
+    <title>Project Tracker Realtime</title>
+    <!-- Tailwind CSS CDN to use utility classes -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter cho giao diện hiện đại -->
+    <!-- Google Fonts - Inter for modern interface -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN để vẽ biểu đồ -->
+    <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS cơ bản cho font chữ và màu nền */
+        /* Basic CSS for font and background color */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Nền màu xám nhạt */
+            background-color: #f3f4f6; /* Light gray background */
         }
-        /* Chiều cao tối thiểu cho cột Kanban để đảm bảo sự nhất quán về mặt hình ảnh */
+        /* Minimum height for Kanban columns to ensure visual consistency */
         .kanban-column {
             min-height: 400px;
         }
-        /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
+        /* Task card styling and hover effects for admin */
         .task-card {
-            transition: all 0.2s ease-in-out; /* Chuyển đổi mượt mà khi kéo/di chuột */
+            transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
+            border-left-width: 8px; /* Increased color border width */
         }
         .task-card.is-admin {
-            cursor: grab; /* Chỉ ra có thể kéo được cho admin */
+            cursor: grab; /* Indicates draggable for admin */
         }
         .task-card.is-admin:hover {
-            transform: translateY(-2px); /* Nâng nhẹ khi di chuột */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Bóng mềm khi di chuột */
+            transform: translateY(-2px); /* Slightly lift on hover */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Soft shadow on hover */
         }
-        /* Kiểu dáng cho thẻ tác vụ đang được kéo */
+        /* Styling for the task card being dragged */
         .task-card.dragging {
-            opacity: 0.5; /* Làm mờ */
-            transform: rotate(3deg); /* Xoay nhẹ */
+            opacity: 0.5; /* Fade out */
+            transform: rotate(3deg); /* Rotate slightly */
         }
-        /* Container cho hiệu ứng pháo hoa ăn mừng */
+        /* Highlight drop location when dragging/dropping task */
+        .task-card.drag-over-target {
+            border: 2px dashed #6366f1; /* Purple dashed border */
+            padding-top: 2rem; /* Create space at the top to indicate insertion point */
+            padding-bottom: 2rem; /* Create space at the bottom */
+        }
+        .kanban-column.drag-over-empty {
+            border: 2px dashed #6366f1; /* Dashed border for empty column */
+        }
+
+        /* Container for confetti celebration effect */
         #confetti-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* Cho phép tương tác với các phần tử bên dưới */
-            overflow: hidden; /* Ẩn pháo hoa tràn ra ngoài */
-            z-index: 9999; /* Đảm bảo nó nằm trên cùng */
+            pointer-events: none; /* Allow interaction with elements below */
+            overflow: hidden; /* Hide overflowing confetti */
+            z-index: 9999; /* Ensure it's on top */
         }
-        /* Kiểu dáng và animation cho từng mảnh pháo hoa */
+        /* Styling and animation for each confetti piece */
         .confetti {
             position: absolute;
             width: 10px; height: 10px;
-            background-color: #f00; /* Màu đỏ mặc định, sẽ được ghi đè */
-            opacity: 0; /* Bắt đầu vô hình */
-            animation: fall 4s linear forwards; /* Animation rơi */
+            background-color: #f00; /* Default red, will be overridden */
+            opacity: 0; /* Start invisible */
+            animation: fall 4s linear forwards; /* Falling animation */
         }
-        /* Keyframe animation cho pháo hoa rơi */
+        /* Keyframe animation for falling confetti */
         @keyframes fall {
-            0% { transform: translateY(0) rotate(0deg); opacity: 1; } /* Bắt đầu từ trên cùng, hiển thị */
-            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } /* Rơi xuống dưới cùng, mờ dần */
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; } /* Start from top, visible */
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } /* Fall to bottom, fade out */
         }
-        /* Nền modal cho hiệu ứng phủ */
+        /* Modal backdrop for overlay effect */
         .modal-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5); /* Lớp phủ đen bán trong suốt */
-            display: flex; justify-content: center; align-items: center; /* Căn giữa nội dung */
-            z-index: 10000; /* Đảm bảo nó nằm trên tất cả các phần tử khác */
+            background-color: rgba(0,0,0,0.5); /* Semi-transparent black overlay */
+            display: flex; justify-content: center; align-items: center; /* Center content */
+            z-index: 10000; /* Ensure it's on top of all other elements */
         }
-        /* Kiểu dáng hộp nội dung modal */
+        /* Modal content box styling */
         .modal-content {
             background-color: white; padding: 2rem; border-radius: 0.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* Bóng lớn */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* Large shadow */
             text-align: center;
         }
-        /* Kiểu dáng nút modal */
+        /* Modal button styling */
         .modal-button {
             margin-top: 1.5rem; padding: 0.5rem 1.5rem; border-radius: 0.375rem;
             background-color: #4f46e5; color: white; font-weight: 500; cursor: pointer;
             transition: background-color 0.2s;
         }
         .modal-button:hover {
-            background-color: #4338ca; /* Tối hơn khi di chuột */
+            background-color: #4338ca; /* Darker on hover */
+        }
+        /* Notification Toast */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+            z-index: 11000; /* Higher than modals */
+        }
+        .toast-notification.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Subtask drag-over effect */
+        .subtask-item.drag-over-subtask {
+            border-bottom: 2px dashed #6366f1; /* Purple dashed border */
+            padding-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -85,7 +121,7 @@
     <!-- Login Screen -->
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
         <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-            <h2 class="text-3xl font-bold mb-6 text-gray-900">Welcome to Kanban Task Tracker</h2>
+            <h2 class="text-3xl font-bold mb-6 text-gray-900">Welcome to Project Tracker Realtime</h2>
             <p class="text-gray-600 mb-6">Choose how you want to access the application.</p>
             
             <div class="mb-6">
@@ -104,90 +140,122 @@
 
     <!-- Main Kanban App (initially hidden) -->
     <div id="app" class="p-4 md:p-8 min-h-screen hidden">
-        <header class="text-center mb-8 flex flex-col items-center">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Kanban Task Tracker (Realtime Sync)</h1>
-            <p class="text-lg text-gray-600 mt-2">Organize your work with real-time updates and role-based access.</p>
-            <!-- Hiển thị thông tin người dùng -->
-            <div id="auth-info" class="mt-4 text-sm text-gray-500 flex flex-col items-center gap-2">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Project Tracker Realtime</h1>
+        </header>
+
+        <!-- Top Controls: Project Selection/Creation & Auth Info -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 max-w-5xl mx-auto">
+            <!-- Left: Project Selection and Label -->
+            <div class="flex items-center gap-2 flex-wrap justify-center md:justify-start">
+                <label for="project-select" class="text-lg font-medium text-gray-700 whitespace-nowrap">Select Project:</label>
+                <select id="project-select" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition max-w-xs w-full md:w-auto">
+                    <option value="">Select a Project</option>
+                </select>
+                <button id="create-project-btn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Create New Project</button>
+            </div>
+            
+            <!-- Right: Auth Info & Logout Button -->
+            <div id="auth-info" class="text-sm text-gray-500 flex flex-row items-center gap-4 flex-wrap justify-center md:justify-end mt-4 md:mt-0">
                 <p>User ID: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
                 <button id="logout-btn" class="bg-red-500 text-white text-sm px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
             </div>
-        </header>
-
-        <!-- Project Selection and Creation -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <select id="project-select" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition max-w-xs w-full">
-                <option value="">Select a Project</option>
-            </select>
-            <button id="create-project-btn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Create New Project</button>
         </div>
 
-        <!-- Current Project Details Display -->
-        <div id="current-project-details" class="max-w-3xl mx-auto mb-8 bg-blue-100 p-6 rounded-lg shadow-md hidden text-left border-l-4 border-blue-500">
-            <h2 class="text-2xl font-bold text-blue-800 mb-2" id="display-project-name"></h2>
-            <p class="text-gray-700 mb-4" id="display-project-description"></p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                <p><strong class="text-blue-700">Start Date:</strong> <span id="display-project-start-date"></span></p>
-                <p><strong class="text-blue-700">End Date:</strong> <span id="display-project-end-date"></span></p>
-                <p><strong class="text-blue-700">Status:</strong> <span id="display-project-status" class="font-semibold"></span></p>
-                <p><strong class="text-blue-700">Members:</strong> <span id="display-project-members" class="font-semibold"></span></p>
+        <!-- Project Details and Add Task Form - Side by Side (on md and larger screens) -->
+        <!-- Increased max-w to 7xl for wider layout, and removed md:w-1/2 from children to let them grow -->
+        <div class="flex flex-col md:flex-row justify-center items-start gap-6 mb-8 max-w-7xl mx-auto">
+            <!-- Current Project Details Display (left side on desktop) -->
+            <div id="current-project-details" class="w-full bg-blue-100 p-6 rounded-lg shadow-md hidden text-left border-l-4 border-blue-500">
+                <h2 class="text-2xl font-bold text-blue-800 mb-2" id="display-project-name"></h2>
+                <p class="text-gray-700 mb-4" id="display-project-description"></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                    <p><strong class="text-blue-700">Start Date:</strong> <span id="display-project-start-date"></span></p>
+                    <p><strong class="text-blue-700">End Date:</strong> <span id="display-project-end-date"></span></p>
+                    <p><strong class="text-blue-700">Status:</strong> <span id="display-project-status" class="font-semibold"></span></p>
+                    <p><strong class="text-blue-700">Members:</strong> <span id="display-project-members" class="font-semibold"></span></p>
+                </div>
+                <!-- Action buttons for project, displayed based on permissions -->
+                <div class="text-right mt-4 flex justify-end gap-2">
+                    <button id="edit-project-btn" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors duration-300">Edit Project</button>
+                    <button id="manage-members-btn" class="bg-purple-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-purple-600 transition-colors duration-300">Manage Members</button>
+                    <button id="delete-project-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors duration-300">Delete Project</button>
+                </div>
             </div>
-            <!-- Các nút hành động cho dự án, hiển thị tùy theo quyền -->
-            <div class="text-right mt-4 flex justify-end gap-2">
-                <button id="edit-project-btn" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors duration-300">Edit Project</button>
-                <button id="manage-members-btn" class="bg-purple-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-purple-600 transition-colors duration-300">Manage Members</button>
-                <button id="delete-project-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors duration-300">Delete Project</button>
+
+            <!-- Form to add new task (right side on desktop) -->
+            <div id="add-task-container" class="w-full bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">Add a New Task</h2>
+                <form id="add-task-form" class="flex flex-col gap-4">
+                    <input type="text" id="task-input" placeholder="Enter a new task..." class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" required>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex items-center gap-2">
+                            <label for="task-color-input" class="text-gray-700">Color:</label>
+                            <input type="color" id="task-color-input" class="p-1 border border-gray-300 rounded-md w-16 h-10 cursor-pointer">
+                        </div>
+                        <div class="flex items-center gap-2 flex-grow">
+                            <label for="task-deadline-input" class="text-gray-700 whitespace-nowrap">Deadline:</label>
+                            <input type="date" id="task-deadline-input" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Add Task</button>
+                </form>
             </div>
         </div>
 
-        <!-- Burndown Chart Section -->
-        <div id="burndown-chart-section" class="max-w-4xl mx-auto mb-8 bg-white p-6 rounded-lg shadow-md hidden">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project Burndown Chart</h2>
-            <div class="relative h-96">
-                <canvas id="burndownChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Form để thêm tác vụ mới -->
-        <div id="add-task-container" class="max-w-xl mx-auto mb-8 bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-semibold mb-4">Add a New Task</h2>
-            <form id="add-task-form" class="flex flex-col sm:flex-row gap-4">
-                <input type="text" id="task-input" placeholder="Enter a new task..." class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" required>
-                <button type="submit" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Add Task</button>
-            </form>
-        </div>
-
-        <!-- Bố cục chính của bảng Kanban -->
-        <main class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
-            <!-- Cột To Do -->
+        <!-- Main Kanban board layout -->
+        <main class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 w-full mx-auto">
+            <!-- To Do column -->
             <div id="todo" data-status="todo" class="kanban-column bg-white/50 backdrop-blur-sm rounded-xl shadow-lg p-4">
                 <h3 class="text-xl font-bold text-gray-700 mb-4 border-b-4 border-red-400 pb-2">To Do</h3>
                 <div id="todo-tasks" class="task-list space-y-4 min-h-[200px]"></div>
             </div>
-            <!-- Cột In Progress -->
+            <!-- In Progress column -->
             <div id="inprogress" data-status="inprogress" class="kanban-column bg-white/50 backdrop-blur-sm rounded-xl shadow-lg p-4">
                 <h3 class="text-xl font-bold text-gray-700 mb-4 border-b-4 border-yellow-400 pb-2">In Progress</h3>
                 <div id="inprogress-tasks" class="task-list space-y-4 min-h-[200px]"></div>
             </div>
-            <!-- Cột Done -->
+            <!-- Done column -->
             <div id="done" data-status="done" class="kanban-column bg-white/50 backdrop-blur-sm rounded-xl shadow-lg p-4">
                 <h3 class="text-xl font-bold text-gray-700 mb-4 border-b-4 border-green-400 pb-2">Done</h3>
                 <div id="done-tasks" class="task-list space-y-4 min-h-[200px]"></div>
             </div>
         </main>
+
+        <!-- Burndown Chart Section -->
+        <div id="burndown-chart-section" class="w-full mx-auto my-8 bg-white p-6 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project Burndown Chart</h2>
+            <div class="relative h-96">
+                <canvas id="burndownChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <!-- Container pháo hoa cho animation khi tác vụ hoàn thành -->
+    <!-- Confetti container for completion animation -->
     <div id="confetti-container"></div>
-    <!-- Modal tùy chỉnh cho thông báo/cảnh báo -->
+    <!-- Custom modal for notifications/alerts -->
     <div id="custom-modal" class="modal-backdrop hidden">
         <div class="modal-content">
             <p id="modal-message"></p>
             <button id="modal-close-btn" class="modal-button">OK</button>
         </div>
     </div>
-    <!-- Modal để nhập tên dự án mới và các thông tin chi tiết -->
+
+    <!-- NEW: Modal for project deletion confirmation -->
+    <div id="delete-project-confirm-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <p id="delete-confirm-message" class="mb-4"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-delete-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Yes, Delete</button>
+                <button id="confirm-delete-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">No, Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for new project details and creation -->
     <div id="create-project-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
             <h3 class="text-xl font-semibold mb-4 text-gray-800" id="project-modal-title">Create New Project</h3>
@@ -210,7 +278,15 @@
                 <option value="Completed">Completed</option>
                 <option value="Archived">Archived</option>
             </select>
-            <!-- Thêm input ẩn để lưu ID dự án khi chỉnh sửa -->
+
+            <!-- NEW: Option to copy tasks from another project -->
+            <label for="copy-tasks-from-project-select" class="block text-sm font-medium text-gray-700 mb-1">Copy "To Do" Tasks From (Optional)</label>
+            <select id="copy-tasks-from-project-select" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-6">
+                <option value="">Do Not Copy Tasks</option>
+                <!-- Project options will be dynamically loaded here -->
+            </select>
+            
+            <!-- Hidden input to store project ID when editing -->
             <input type="hidden" id="editing-project-id">
 
             <div class="flex justify-end gap-2">
@@ -220,21 +296,60 @@
         </div>
     </div>
 
-    <!-- Modal để thêm/chỉnh sửa ghi chú cho subtask -->
-    <div id="subtask-note-modal" class="modal-backdrop hidden">
+    <!-- RENAMED: Modal to edit existing task note -->
+    <div id="task-note-edit-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Subtask Note</h3>
-            <textarea id="subtask-note-textarea" placeholder="Enter note for this subtask..." rows="5" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
-            <input type="hidden" id="editing-task-id">
-            <input type="hidden" id="editing-subtask-index">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Chỉnh sửa Ghi chú Công việc</h3>
+            <textarea id="task-note-textarea-modal" placeholder="Nhập ghi chú cho công việc này..." rows="5" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+            <input type="hidden" id="editing-task-id-note-modal">
+            <input type="hidden" id="editing-note-index-modal">
             <div class="flex justify-end gap-2">
-                <button id="save-subtask-note-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Note</button>
-                <button id="cancel-subtask-note-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
+                <button id="save-task-note-modal-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Lưu Ghi chú</button>
+                <button id="cancel-task-note-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Hủy bỏ</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal để quản lý thành viên dự án -->
+    <!-- NEW: Modal to edit subtask text and color -->
+    <div id="subtask-edit-text-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Subtask</h3>
+            <label for="subtask-edit-text-input" class="block text-sm font-medium text-gray-700 mb-1">Subtask Text</label>
+            <input type="text" id="subtask-edit-text-input" placeholder="Enter subtask text..." class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4">
+            
+            <label class="block text-sm font-medium text-gray-700 mb-2">Highlight Color</label>
+            <div class="flex gap-4 mb-4 justify-center">
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="subtask-color" value="default" checked class="form-radio h-4 w-4 text-gray-600">
+                    <span class="ml-2 text-gray-700">Default</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="subtask-color" value="green" class="form-radio h-4 w-4 text-green-500">
+                    <span class="ml-2 text-green-700 font-semibold">Green</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="subtask-color" value="yellow" class="form-radio h-4 w-4 text-yellow-500">
+                    <span class="ml-2 text-yellow-700 font-semibold">Yellow</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="subtask-color" value="red" class="form-radio h-4 w-4 text-red-500">
+                    <span class="ml-2 text-red-700 font-semibold">Red</span>
+                </label>
+            </div>
+
+            <label for="subtask-note-on-edit-modal" class="block text-sm font-medium text-gray-700 mb-1">Subtask Note (Optional)</label>
+            <textarea id="subtask-note-on-edit-modal" placeholder="Enter note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+
+            <input type="hidden" id="editing-task-id-subtext">
+            <input type="hidden" id="editing-subtask-index-subtext">
+            <div class="flex justify-end gap-2">
+                <button id="save-subtask-text-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Changes</button>
+                <button id="cancel-subtask-text-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal to manage project members -->
     <div id="manage-members-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">Manage Project Members</h3>
@@ -254,37 +369,68 @@
         </div>
     </div>
 
-    <!-- NEW: Modal để xem chi tiết tác vụ và thêm bình luận -->
+    <!-- NEW: Modal to view task details and add comments / edit tasks -->
     <div id="task-details-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">Task Details</h3>
             
-            <label for="task-details-text-display" class="block text-sm font-medium text-gray-700 mb-1">Task:</label>
-            <p id="task-details-text-display" class="p-3 border border-gray-300 rounded-md bg-gray-50 mb-4 break-words"></p>
+            <label for="task-details-text-input" class="block text-sm font-medium text-gray-700 mb-1">Task Description:</label>
+            <textarea id="task-details-text-input" placeholder="Task description..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-2"></textarea>
+            
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <div class="flex items-center gap-2">
+                    <label for="task-details-color-input" class="text-gray-700">Color:</label>
+                    <input type="color" id="task-details-color-input" class="p-1 border border-gray-300 rounded-md w-16 h-10 cursor-pointer">
+                </div>
+                <div class="flex items-center gap-2 flex-grow">
+                    <label for="task-details-deadline-input" class="text-gray-700 whitespace-nowrap">Deadline:</label>
+                    <input type="date" id="task-details-deadline-input" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+            </div>
 
-            <div class="mb-4">
+            <button id="save-task-details-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300 mb-4">Save Task Changes</button>
+
+            <!-- NEW: Task Notes Section -->
+            <div id="task-notes-section-container" class="mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">Task Notes:</h4>
+                <div id="task-notes-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200 mb-2">
+                    <!-- Task Notes will be loaded here -->
+                </div>
+                <div class="flex flex-col gap-2">
+                    <textarea id="new-task-note-input" placeholder="Thêm ghi chú mới..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
+                    <button id="add-task-note-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Thêm Ghi chú Công việc</button>
+                </div>
+            </div>
+
+            <!-- Existing Comments Section -->
+            <div id="comment-section-container" class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Comments:</label>
                 <div id="comments-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200 mb-2">
                     <!-- Comments will be loaded here -->
                 </div>
                 <div class="flex flex-col gap-2">
-                    <textarea id="new-comment-input" placeholder="Add a comment..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
-                    <button id="add-comment-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">Add Comment</button>
+                    <textarea id="new-comment-input" placeholder="Thêm bình luận..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
+                    <button id="add-comment-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">Thêm Bình luận</button>
                 </div>
             </div>
             <input type="hidden" id="task-id-for-comments">
 
             <div class="flex justify-end gap-2">
-                <button id="close-task-details-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
+                <button id="close-task-details-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Đóng</button>
             </div>
         </div>
+    </div>
+    
+    <!-- Toast Notification for New Comments -->
+    <div id="comment-toast" class="toast-notification">
+        New comment on task: <span id="toast-task-name" class="font-semibold"></span>
     </div>
 
 
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
@@ -311,7 +457,7 @@
         const appId = firebaseConfig.projectId;
         
         let app, db, auth, userId;
-        let projectsCollectionRef, tasksCollectionRef, adminConfigRef;
+        let projectsCollectionRef, adminConfigRef;
         let unsubscribeFromTasks; // To unsubscribe from real-time task listener
         let unsubscribeFromProjects; // To unsubscribe from real-time project listener
         let isCurrentUserAdmin = false; // Flag to determine user role (Super Admin of the application)
@@ -319,6 +465,7 @@
         let projectsData = {}; // Stores all fetched project data, by ID
         let currentProjectMembers = []; // Stores the list of members for the current project
         let userRole = 'Guest'; // Current user's role (Guest/Admin)
+        let currentOpenTaskDetailsId = null; // To track which task detail modal is open
 
         // Variable to store the Burndown chart instance
         let burndownChartInstance = null;
@@ -337,6 +484,8 @@
         const taskFormContainer = document.getElementById('add-task-container');
         const taskForm = document.getElementById('add-task-form');
         const taskInput = document.getElementById('task-input');
+        const taskColorInput = document.getElementById('task-color-input'); // NEW
+        const taskDeadlineInput = document.getElementById('task-deadline-input'); // NEW
         const columns = document.querySelectorAll('.kanban-column');
         const projectSelect = document.getElementById('project-select');
         const createProjectBtn = document.getElementById('create-project-btn');
@@ -357,6 +506,7 @@
         const confirmCreateProjectBtn = document.getElementById('confirm-create-project-btn');
         const cancelCreateProjectBtn = document.getElementById('cancel-create-project-btn');
         const editingProjectIdInput = document.getElementById('editing-project-id');
+        const copyTasksFromProjectSelect = document.getElementById('copy-tasks-from-project-select'); 
 
         const displayProjectName = document.getElementById('display-project-name');
         const displayProjectDescription = document.getElementById('display-project-description');
@@ -364,12 +514,22 @@
         const displayProjectEndDate = document.getElementById('display-project-end-date');
         const displayProjectStatus = document.getElementById('display-project-status');
 
-        const subtaskNoteModal = document.getElementById('subtask-note-modal');
-        const subtaskNoteTextarea = document.getElementById('subtask-note-textarea');
-        const editingTaskIdInput = document.getElementById('editing-task-id');
-        const editingSubtaskIndexInput = document.getElementById('editing-subtask-index');
-        const saveSubtaskNoteBtn = document.getElementById('save-subtask-note-btn');
-        const cancelSubtaskNoteBtn = document.getElementById('cancel-subtask-note-btn');
+        // RENAMED for task notes edit
+        const taskNoteEditModal = document.getElementById('task-note-edit-modal'); 
+        const taskNoteTextareaModal = document.getElementById('task-note-textarea-modal');
+        const editingTaskIdNoteModal = document.getElementById('editing-task-id-note-modal');
+        const editingNoteIndexModal = document.getElementById('editing-note-index-modal');
+        const saveTaskNoteModalBtn = document.getElementById('save-task-note-modal-btn');
+        const cancelTaskNoteModalBtn = document.getElementById('cancel-task-note-modal-btn');
+
+        const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); // Repurposed for subtask edit & color
+        const subtaskEditTextInput = document.getElementById('subtask-edit-text-input');
+        const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); // NEW for subtask color
+        const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); // NEW for subtask note on edit modal
+        const editingTaskIdSubtext = document.getElementById('editing-task-id-subtext');
+        const editingSubtaskIndexSubtext = document.getElementById('editing-subtask-index-subtext');
+        const saveSubtaskTextBtn = document.getElementById('save-subtask-text-btn');
+        const cancelSubtaskTextBtn = document.getElementById('cancel-subtask-text-btn');
 
         const manageMembersModal = document.getElementById('manage-members-modal');
         const currentMembersList = document.getElementById('current-members-list');
@@ -378,30 +538,59 @@
         const closeMembersModalBtn = document.getElementById('close-members-modal-btn');
 
         const taskDetailsModal = document.getElementById('task-details-modal');
-        const taskDetailsTextDisplay = document.getElementById('task-details-text-display');
+        const taskDetailsTextInput = document.getElementById('task-details-text-input');
+        const taskDetailsColorInput = document.getElementById('task-details-color-input');
+        const taskDetailsDeadlineInput = document.getElementById('task-details-deadline-input');
+        const saveTaskDetailsBtn = document.getElementById('save-task-details-btn');
         const commentsList = document.getElementById('comments-list');
         const newCommentInput = document.getElementById('new-comment-input');
         const addCommentBtn = document.getElementById('add-comment-btn');
         const taskIdForComments = document.getElementById('task-id-for-comments');
         const closeTaskDetailsModalBtn = document.getElementById('close-task-details-modal-btn');
+        const commentToast = document.getElementById('comment-toast'); 
+        const toastTaskName = document.getElementById('toast-task-name'); 
+        const commentSectionContainer = document.getElementById('comment-section-container');
+        const taskNotesSectionContainer = document.getElementById('task-notes-section-container'); // NEW for task notes section
+        const taskNotesList = document.getElementById('task-notes-list'); // NEW for task notes list
+        const newTaskNoteInput = document.getElementById('new-task-note-input'); // NEW for task note input
+        const addTaskNoteBtn = document.getElementById('add-task-note-btn'); // NEW for add task note button
 
 
-        let tasks = []; // Array to hold task data
+        const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
+        const deleteConfirmMessage = document.getElementById('delete-confirm-message');
+        const confirmDeleteYesBtn = document.getElementById('confirm-delete-yes-btn');
+        const confirmDeleteNoBtn = document.getElementById('confirm-delete-no-btn');
+        let projectIdToDelete = null;
+
+        let tasks = [];
+        let draggedTaskId = null;
+        let draggedTaskStatus = null;
+        let draggedTaskOriginalPosition = null;
+
+        // Adjusted for subtask object and its original index
+        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
+
+        // Helper map for subtask colors
+        const subtaskColorMap = {
+            'green': 'text-green-700 bg-green-100 border-green-400',
+            'yellow': 'text-yellow-700 bg-yellow-100 border-yellow-400',
+            'red': 'text-red-700 bg-red-100 border-red-400',
+            'default': 'text-gray-700 bg-gray-100 border-gray-300'
+        };
 
         /**
-         * Shows the login screen.
+         * Displays the login screen.
          */
         function showLoginScreen() {
             loginScreen.classList.remove('hidden');
             mainApp.classList.add('hidden');
-            // Clear auth info when logging out or showing login screen
             displayUserId.textContent = '';
             displayUserRole.textContent = '';
             logoutBtn.classList.add('hidden');
         }
 
         /**
-         * Shows the main Kanban application.
+         * Displays the main Kanban application.
          */
         function showKanbanBoard() {
             loginScreen.classList.add('hidden');
@@ -414,8 +603,6 @@
          */
         async function initializeFirebase() {
             try {
-                // Check if Firebase config is complete
-                // Loại bỏ kiểm tra quá chặt chẽ, chỉ đảm bảo apiKey đã được điền.
                 if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_")) {
                     showModal("Firebase configuration is missing or incomplete. Please update the firebaseConfig object in index.html with your project information.");
                     showLoginScreen();
@@ -426,7 +613,7 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 setLogLevel('debug'); // Enable debug logging for Firebase
-                setupAuthListener(); // Set up the authentication listener
+                setupAuthListener();
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
                 showModal("Could not connect to the database. Please check your Firebase configuration and network connection, then refresh the page.");
@@ -436,24 +623,21 @@
 
         /**
          * Sets up the listener for Firebase authentication state changes.
-         * Decides whether to show the login screen or the main application.
+         * Decides whether to display the login screen or the main application.
          */
         function setupAuthListener() {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    userId = user.uid; // Get the current user's ID
-                    // Define Firestore references after successful authentication
-                    projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); // Collection for projects
+                    userId = user.uid;
+                    projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); 
                     adminConfigRef = doc(db, `artifacts/${appId}/public/data/config`, 'admin');
                     
-                    await checkAdminStatus(); // Check if the current user is an admin
-                    updateUIAfterAuth(); // Update UI based on the determined role
+                    await checkAdminStatus();
+                    updateUIAfterAuth();
 
-                    // Set up the listener for projects
                     setupProjectsListener();
-                    showKanbanBoard(); // Show the Kanban application
+                    showKanbanBoard();
                 } else {
-                    // If no user is authenticated, show the login screen
                     showLoginScreen();
                 }
             });
@@ -467,23 +651,22 @@
         async function handleAdminLogin(email, password) {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                // OnAuthStateChanged will automatically handle the rest
             } catch (error) {
                 console.error("Admin Login Failed:", error);
-                let errorMessage = "Login failed. Please check your email and password.";
+                let errorMessage = "Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu của bạn.";
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                    errorMessage = "Invalid email or password.";
+                    errorMessage = "Email hoặc mật khẩu không hợp lệ.";
                 } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = "Invalid email format.";
+                    errorMessage = "Định dạng email không hợp lệ.";
                 } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = "Network error. Please check your internet connection.";
+                    errorMessage = "Lỗi mạng. Vui lòng kiểm tra kết nối internet của bạn.";
                 } else if (error.code === 'auth/too-many-requests') {
-                    errorMessage = "Too many failed login attempts. Please try again later.";
+                    errorMessage = "Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau.";
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMessage = "Email/Password authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
+                    errorMessage = "Xác thực Email/Password chưa được bật trong Firebase. Vui lòng bật nó trong cài đặt dự án Firebase của bạn.";
                 }
                 else {
-                    errorMessage = `Login failed: ${error.message}`;
+                    errorMessage = `Đăng nhập thất bại: ${error.message}`;
                 }
                 showModal(errorMessage);
             }
@@ -495,16 +678,15 @@
         async function handleGuestLogin() {
             try {
                 const userCredential = await signInAnonymously(auth);
-                // OnAuthStateChanged will automatically handle the rest
             } catch (error) {
                 console.error("Guest Login Failed:", error);
-                let errorMessage = "Could not log in as guest. Please refresh the page or try again.";
+                let errorMessage = "Không thể đăng nhập với tư cách khách. Vui lòng làm mới trang hoặc thử lại.";
                 if (error.code === 'auth/network-request-failed') {
-                    errorMessage = "Network error. Please check your internet connection.";
+                    errorMessage = "Lỗi mạng. Vui lòng kiểm tra kết nối internet của bạn.";
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
+                    errorMessage = "Xác thực ẩn danh chưa được bật trong Firebase. Vui lòng bật nó trong cài đặt dự án Firebase của bạn.";
                 } else {
-                    errorMessage = `Guest login failed: ${error.message}`;
+                    errorMessage = `Đăng nhập khách thất bại: ${error.message}`;
                 }
                 showModal(errorMessage);
             }
@@ -516,11 +698,10 @@
         async function handleLogout() {
             try {
                 await signOut(auth);
-                showModal("You have been logged out.");
-                // OnAuthStateChanged will automatically handle displaying the login screen
+                showModal("Bạn đã đăng xuất.");
             } catch (error) {
                 console.error("Logout Failed:", error);
-                showModal("Logout failed.");
+                showModal("Đăng xuất thất bại.");
             }
         }
 
@@ -537,26 +718,23 @@
                     const adminId = adminDoc.data().adminId;
                     isCurrentUserAdmin = (userId === adminId);
                 } else {
-                    // If no admin is configured yet:
-                    // Only assign admin if the current user is NOT an anonymous account.
-                    // This ensures the first admin must be an Email/Password account.
                     if (auth.currentUser && !auth.currentUser.isAnonymous) {
                         await setDoc(adminDocRef, { adminId: userId });
                         isCurrentUserAdmin = true;
-                        showModal("You are the first admin! You can now create and manage projects.");
+                        showModal("Bạn là admin đầu tiên! Bây giờ bạn có thể tạo và quản lý dự án.");
                     } else {
-                        isCurrentUserAdmin = false; // Anonymous users cannot be the first admin
+                        isCurrentUserAdmin = false;
                     }
                 }
             }
             catch (error) {
                 console.error("Error checking admin status:", error);
                 if (error.code === 'permission-denied') {
-                    showModal("Permission denied when checking admin status. Please verify Firestore Security Rules.");
+                    showModal("Quyền bị từ chối khi kiểm tra trạng thái admin. Vui lòng xác minh Quy tắc bảo mật Firestore.");
                 } else {
-                    showModal(`Error during admin check: ${error.message}. You will have viewer access.`);
+                    showModal(`Lỗi trong quá trình kiểm tra admin: ${error.message}. Bạn sẽ có quyền truy cập của người xem.`);
                 }
-                isCurrentUserAdmin = false; // Default to viewer if error occurs
+                isCurrentUserAdmin = false;
             }
         }
         
@@ -570,15 +748,13 @@
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
 
-            // Control visibility/interactivity of admin-only functions
             const canManageProjects = isCurrentUserAdmin;
             createProjectBtn.disabled = !canManageProjects;
             editProjectBtn.disabled = !canManageProjects;
             manageMembersBtn.disabled = !canManageProjects;
             deleteProjectBtn.disabled = !canManageProjects;
-            taskFormContainer.classList.toggle('hidden', !canManageProjects); // Hide Add Task form for viewers
+            taskFormContainer.classList.toggle('hidden', !canManageProjects);
 
-            // Kanban columns and chart are always visible after authentication
             document.querySelector('main').classList.remove('hidden');
             burndownChartSection.classList.remove('hidden');
         }
@@ -589,70 +765,76 @@
          * @returns {boolean} True if the user is a member or super admin, otherwise false.
          */
         function isCurrentUserProjectMember() {
-            if (isCurrentUserAdmin) return true; // Super admin always has rights
+            if (isCurrentUserAdmin) return true;
             if (!currentProjectId) return false;
             const project = projectsData[currentProjectId];
             if (!project || !project.members) return false;
-            // Check if the current userId is in the members list
             return project.members.includes(userId);
         }
 
         /**
          * Sets up a real-time listener for the list of projects from Firestore.
+         * This listener also populates the "Copy tasks from" dropdown in the project creation modal.
          */
         function setupProjectsListener() {
-            if (unsubscribeFromProjects) unsubscribeFromProjects(); // Unsubscribe from old listener
-            unsubscribeFromProjects = onSnapshot(projectsCollectionRef, (snapshot) => {
-                projectSelect.innerHTML = '<option value="">Select a Project</option>'; // Clear old options
-                projectsData = {}; // Reset stored project data
+            if (unsubscribeFromProjects) unsubscribeFromProjects();
+
+            const projectsQuery = query(collection(db, `artifacts/${appId}/public/data/projects`), orderBy('createdAt', 'desc'));
+
+            unsubscribeFromProjects = onSnapshot(projectsQuery, (snapshot) => {
+                projectSelect.innerHTML = '<option value="">Select a Project</option>';
+                copyTasksFromProjectSelect.innerHTML = '<option value="">Do Not Copy Tasks</option>';
+                projectsData = {};
                 let firstProjectId = null;
                 
                 snapshot.docs.forEach(projectDoc => {
                     const project = { id: projectDoc.id, ...projectDoc.data() };
-                    projectsData[project.id] = project; // Store project data in projectsData variable
+                    projectsData[project.id] = project;
+                    
                     const option = document.createElement('option');
                     option.value = project.id;
                     option.textContent = project.name;
                     projectSelect.appendChild(option);
+
+                    const copyOption = document.createElement('option');
+                    copyOption.value = project.id;
+                    copyOption.textContent = project.name;
+                    copyTasksFromProjectSelect.appendChild(copyOption);
 
                     if (!firstProjectId) {
                         firstProjectId = project.id;
                     }
                 });
 
-                // Automatically select the first project if no project is currently selected
                 if (!currentProjectId && firstProjectId) {
                     projectSelect.value = firstProjectId;
                     currentProjectId = firstProjectId;
-                    setupRealtimeListener(currentProjectId); // Set up task listener for the first project
-                    displayProjectDetails(projectsData[currentProjectId]); // Display details for the first project
+                    setupRealtimeListener(currentProjectId);
+                    displayProjectDetails(projectsData[currentProjectId]);
                 } else if (currentProjectId && !snapshot.docs.some(doc => doc.id === currentProjectId)) {
-                    // If the current project no longer exists, switch to the first project or clear
                     currentProjectId = firstProjectId;
                     projectSelect.value = firstProjectId || "";
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe from old task listener
+                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
                     renderTasks(); // Clear tasks from UI
                     if (firstProjectId) {
                          setupRealtimeListener(firstProjectId);
                          displayProjectDetails(projectsData[firstProjectId]);
                     } else {
-                        displayProjectDetails(null); // No project to display
+                        displayProjectDetails(null); // Clear project details
                     }
                 } else if (currentProjectId) {
-                     projectSelect.value = currentProjectId; // Ensure dropdown shows the correct selected project
-                     displayProjectDetails(projectsData[currentProjectId]); // Update project details
+                     projectSelect.value = currentProjectId;
+                     displayProjectDetails(projectsData[currentProjectId]);
                 } else {
-                    // No projects available, display empty
-                    if (unsubscribeFromTasks) unsubscribeFromTasks();
-                    renderTasks();
-                    displayProjectDetails(null);
+                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
+                    renderTasks(); // Clear tasks from UI
+                    displayProjectDetails(null); // Clear project details
                 }
 
-                // Show/hide Kanban columns and add task form if a project is selected
                 const mainContent = document.querySelector('main');
                 if (snapshot.empty) {
                     mainContent.classList.add('hidden');
-                    burndownChartSection.classList.add('hidden'); // Hide chart if no projects
+                    burndownChartSection.classList.add('hidden');
                 } else {
                     mainContent.classList.remove('hidden');
                 }
@@ -668,19 +850,34 @@
          * @param {string} projectId - The ID of the project to fetch tasks for.
          */
         function setupRealtimeListener(projectId) {
-            if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe from old listener
-            tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
-            unsubscribeFromTasks = onSnapshot(tasksCollectionRef, (snapshot) => {
-                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderTasks(); // Render tasks every time data changes
-                // After tasks are rendered, calculate and render the Burndown chart
+            if (unsubscribeFromTasks) unsubscribeFromTasks();
+            
+            const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
+            const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
+
+            let previousTasksComments = {}; // For new comment toast
+
+            unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
+                const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                newTasks.forEach(newTask => {
+                    const oldTask = tasks.find(t => t.id === newTask.id);
+                    const oldCommentCount = oldTask ? (oldTask.comments ? oldTask.comments.length : 0) : 0;
+                    const newCommentCount = newTask.comments ? newTask.comments.length : 0;
+
+                    if (newCommentCount > oldCommentCount && newTask.id !== currentOpenTaskDetailsId) {
+                        showCommentToast(newTask.text);
+                    }
+                });
+                tasks = newTasks;
+                renderTasks();
                 const project = projectsData[currentProjectId];
                 if (project && project.startDate && project.endDate) {
                     const burndownData = calculateBurndownData(tasks, project.startDate, project.endDate);
                     renderBurndownChart(burndownData);
-                    burndownChartSection.classList.remove('hidden'); // Show chart section
+                    burndownChartSection.classList.remove('hidden');
                 } else {
-                    burndownChartSection.classList.add('hidden'); // Hide if not enough data
+                    burndownChartSection.classList.add('hidden');
                 }
             }, (error) => {
                 console.error("Error fetching tasks for project:", error);
@@ -692,9 +889,7 @@
          * Renders all tasks into their respective Kanban columns.
          */
         function renderTasks() {
-            // Clear existing tasks from all columns
             document.querySelectorAll('.task-list').forEach(list => list.innerHTML = ''); 
-            // Add each task to its correct column
             tasks.forEach(task => {
                 const column = document.getElementById(`${task.status}-tasks`);
                 if (column) {
@@ -706,45 +901,96 @@
 
         /**
          * Creates a DOM element for a task.
-         * Adds drag-and-drop and delete functionality if the user is an admin or project member.
+         * Adds drag-and-drop, delete, and copy functionality if the user is an admin or project member.
          * @param {Object} task - The task object from Firestore.
          * @returns {HTMLElement} The created task DOM element.
          */
         function createTaskElement(task) {
             const div = document.createElement('div');
-            // Add cursor-pointer to indicate it's clickable to open modal
-            // Add is-admin class and draggable attribute only if the current user is an admin or project member
             const canModifyTask = isCurrentUserProjectMember();
-            div.className = `task-card bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-400 cursor-pointer ${canModifyTask ? 'is-admin' : ''}`; 
+            div.className = `task-card bg-white p-4 rounded-lg shadow-sm ${canModifyTask ? 'is-admin' : ''}`; 
+            div.style.borderLeftColor = task.color || '#818CF8';
             div.setAttribute('data-id', task.id);
-            div.addEventListener('click', (e) => {
-                // Ensure not to trigger when clicking on child buttons
-                if (!e.target.closest('button') && !e.target.closest('input')) {
-                    openTaskDetailsModal(task);
-                }
-            });
+            div.setAttribute('data-position', task.position);
+            div.setAttribute('data-status', task.status);
 
             if (canModifyTask) {
-                div.setAttribute('draggable', 'true'); // Make task draggable
+                div.setAttribute('draggable', 'true');
                 div.addEventListener('dragstart', handleDragStart);
                 div.addEventListener('dragend', handleDragEnd);
+                div.addEventListener('dragenter', handleDragEnter);
+                div.addEventListener('dragleave', handleDragLeave);
+                div.addEventListener('dragover', handleDragOverTask);
+                div.addEventListener('drop', handleDropTask);
+            }
+
+            // Click listener for the entire task card (for viewers, and for admins when not editing)
+            div.addEventListener('click', (e) => {
+                // For viewers, clicking anywhere opens in view/comment mode
+                // For admins/members, clicking anywhere *except* action buttons or subtask checkboxes
+                // should open in view mode (no comment input/button).
+                // The edit button itself handles opening in edit mode for admins/members.
+                // Subtask checkbox click should not open the modal.
+                // Added check for input field here
+                if (e.target.closest('button') || e.target.closest('input[type="checkbox"]') || e.target.closest('input[type="text"]')) {
+                    e.stopPropagation(); // Prevent card click event if a button, checkbox or text input was clicked
+                    return;
+                }
+                openTaskDetailsModal(task, false); // Always open in view mode by default for general clicks
+            });
+
+
+            // Task Actions (Edit, Delete, Copy) - Placed at top right
+            const taskActionsDiv = document.createElement('div');
+            taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
+            div.style.position = 'relative';
+
+            if (canModifyTask) { // Only show these for admins/project members
+                const editTaskButton = document.createElement('button');
+                editTaskButton.textContent = '✏️';
+                editTaskButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
+                editTaskButton.title = 'Edit Task';
+                editTaskButton.onclick = (e) => {
+                    e.stopPropagation(); // Prevent card click event
+                    openTaskDetailsModal(task, true); // Open in edit mode
+                };
+                taskActionsDiv.appendChild(editTaskButton);
+
+                if (task.status === 'todo') {
+                    const copyButton = document.createElement('button');
+                    copyButton.textContent = '📋';
+                    copyButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
+                    copyButton.title = 'Copy Task';
+                    copyButton.onclick = (e) => {
+                        e.stopPropagation();
+                        handleCopyTask(task.id);
+                    };
+                    taskActionsDiv.appendChild(copyButton);
+                }
 
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = '×';
-                deleteButton.className = 'float-right font-bold text-red-500 hover:text-red-700 text-xl leading-none px-2 rounded-full';
+                deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-1 rounded-full';
                 deleteButton.onclick = (e) => {
-                    e.stopPropagation(); // Prevent drag/modal event from triggering
+                    e.stopPropagation();
                     handleDeleteTask(task.id);
                 };
-                div.appendChild(deleteButton);
+                taskActionsDiv.appendChild(deleteButton);
             }
+            div.appendChild(taskActionsDiv);
 
             const text = document.createElement('p');
             text.textContent = task.text;
-            text.className = 'text-gray-800 font-semibold mb-2';
+            text.className = 'text-gray-800 font-semibold mb-1 pr-12';
             div.appendChild(text);
 
-            // Display comment count if any
+            if (task.deadline) {
+                const deadlineText = document.createElement('p');
+                deadlineText.className = 'text-xs text-gray-600 italic mb-2';
+                deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('en-US')}`;
+                div.appendChild(deadlineText);
+            }
+
             if (task.comments && task.comments.length > 0) {
                 const commentsCount = document.createElement('p');
                 commentsCount.className = 'text-xs text-gray-500 italic mt-1';
@@ -752,19 +998,34 @@
                 div.appendChild(commentsCount);
             }
 
-            // --- Subtasks/Checklist section ---
             const subtasksContainer = document.createElement('div');
             subtasksContainer.className = 'mt-3 pt-3 border-t border-gray-200';
             
-            if (task.subtasks && task.subtasks.length > 0) {
+            // Sort subtasks by position before rendering
+            const sortedSubtasks = (task.subtasks || []).sort((a, b) => (a.position || 0) - (b.position || 0));
+
+            if (sortedSubtasks.length > 0) {
                 const subtasksHeader = document.createElement('p');
                 subtasksHeader.className = 'text-sm font-semibold text-gray-600 mb-2';
                 subtasksHeader.textContent = 'Subtasks:';
                 subtasksContainer.appendChild(subtasksHeader);
 
-                task.subtasks.forEach((subtask, index) => {
+                sortedSubtasks.forEach((subtask, index) => {
                     const subtaskItem = document.createElement('div');
-                    subtaskItem.className = 'flex items-center justify-between text-sm mb-1';
+                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
+                    subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
+                    subtaskItem.setAttribute('data-subtask-index', index); // For subtask drag-drop
+                    // No need to set data-subtask-position here as handleSubtaskDragStart now copies the object
+
+                    if (canModifyTask) {
+                        subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
+                        subtaskItem.addEventListener('dragstart', handleSubtaskDragStart);
+                        subtaskItem.addEventListener('dragend', handleSubtaskDragEnd);
+                        subtaskItem.addEventListener('dragenter', handleSubtaskDragEnter);
+                        subtaskItem.addEventListener('dragleave', handleSubtaskDragLeave);
+                        subtaskItem.addEventListener('dragover', handleSubtaskDragOver);
+                        subtaskItem.addEventListener('drop', handleSubtaskDrop);
+                    }
                     
                     const subtaskContent = document.createElement('label');
                     subtaskContent.className = 'flex items-center flex-grow cursor-pointer';
@@ -773,33 +1034,34 @@
                     subtaskCheckbox.type = 'checkbox';
                     subtaskCheckbox.checked = subtask.isCompleted;
                     subtaskCheckbox.className = 'mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500';
-                    subtaskCheckbox.disabled = !canModifyTask; // Only project member can interact
-                    subtaskCheckbox.addEventListener('change', () => handleToggleSubtask(task.id, index));
+                    subtaskCheckbox.disabled = !canModifyTask;
+                    subtaskCheckbox.addEventListener('change', (e) => {
+                        e.stopPropagation(); // Stop propagation to prevent task card click
+                        handleToggleSubtask(task.id, index);
+                    });
 
                     const subtaskTextSpan = document.createElement('span');
                     subtaskTextSpan.textContent = subtask.text;
-                    subtaskTextSpan.className = subtask.isCompleted ? 'line-through text-gray-500' : 'text-gray-700';
+                    subtaskTextSpan.className = subtask.isCompleted ? 'line-through text-gray-500' : ''; // Apply strikethrough
 
                     subtaskContent.appendChild(subtaskCheckbox);
                     subtaskContent.appendChild(subtaskTextSpan);
                     subtaskItem.appendChild(subtaskContent);
 
-                    // --- Note Button for Subtask ---
-                    if (canModifyTask) { // Only project member can manage notes/delete subtasks
-                        const subtaskActionsDiv = document.createElement('div'); // Declare subtasksActionsDiv
+                    if (canModifyTask) {
+                        const subtaskActionsDiv = document.createElement('div'); 
                         subtaskActionsDiv.className = 'flex items-center gap-1';
 
-                        const noteButton = document.createElement('button');
-                        noteButton.textContent = '📝'; // Pencil emoji
-                        noteButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
-                        noteButton.title = subtask.note ? `View Note: ${subtask.note}` : 'Add Note';
-                        noteButton.onclick = (e) => {
+                        const editSubtaskTextButton = document.createElement('button');
+                        editSubtaskTextButton.textContent = '📝';
+                        editSubtaskTextButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
+                        editSubtaskTextButton.title = 'Edit Subtask';
+                        editSubtaskTextButton.onclick = (e) => {
                             e.stopPropagation();
-                            openSubtaskNoteModal(task.id, index, subtask.note || '');
+                            openSubtaskEditTextModal(task.id, index, subtask.text, subtask.note || '', subtask.color || 'default');
                         };
-                        subtaskActionsDiv.appendChild(noteButton); // Corrected variable name
+                        subtaskActionsDiv.appendChild(editSubtaskTextButton);
 
-                        // Delete subtask button
                         const deleteSubtaskButton = document.createElement('button');
                         deleteSubtaskButton.textContent = 'x';
                         deleteSubtaskButton.className = 'text-xs font-bold text-red-400 hover:text-red-600 p-1 rounded';
@@ -807,23 +1069,22 @@
                             e.stopPropagation();
                             handleDeleteSubtask(task.id, index);
                         };
-                        subtaskActionsDiv.appendChild(deleteSubtaskButton); // Corrected variable name
+                        subtaskActionsDiv.appendChild(deleteSubtaskButton); 
 
                         subtaskItem.appendChild(subtaskActionsDiv);
                     }
                     subtasksContainer.appendChild(subtaskItem);
                     
-                    // Display subtask note if it exists and is not empty
                     if (subtask.note && subtask.note.trim() !== '') {
                         const subtaskNoteDisplay = document.createElement('p');
                         subtaskNoteDisplay.className = 'text-xs text-gray-500 italic ml-6 mb-1 break-words';
-                        subtaskNoteDisplay.textContent = subtask.note;
+                        subtaskNoteDisplay.textContent = `Note: ${subtask.note}`;
                         subtasksContainer.appendChild(subtaskNoteDisplay);
                     }
                 });
             }
 
-            if (canModifyTask) { // Only project member can add subtasks
+            if (canModifyTask) {
                 const addSubtaskDiv = document.createElement('div');
                 addSubtaskDiv.className = 'flex mt-2 gap-2';
 
@@ -831,11 +1092,24 @@
                 newSubtaskInput.type = 'text';
                 newSubtaskInput.placeholder = 'Add subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
+                newSubtaskInput.addEventListener('keypress', (e) => {
+                    e.stopPropagation(); // Stop propagation here
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSubtask(task.id, newSubtaskInput.value);
+                    }
+                });
+                newSubtaskInput.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Stop propagation here
+                });
 
                 const addSubtaskButton = document.createElement('button');
                 addSubtaskButton.textContent = '+';
                 addSubtaskButton.className = 'bg-indigo-500 text-white p-2 rounded-md hover:bg-indigo-600 transition';
-                addSubtaskButton.onclick = () => handleAddSubtask(task.id, newSubtaskInput.value);
+                addSubtaskButton.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    handleAddSubtask(task.id, newSubtaskInput.value);
+                };
 
                 addSubtaskDiv.appendChild(newSubtaskInput);
                 addSubtaskDiv.appendChild(addSubtaskButton);
@@ -850,64 +1124,147 @@
         /**
          * Opens the task details modal and populates it with data.
          * @param {Object} task - The task object to display/comment on.
+         * @param {boolean} [isEditMode=false] - Whether to open the modal in edit mode.
          */
-        function openTaskDetailsModal(task) {
-            taskDetailsTextDisplay.textContent = task.text || '';
-            taskIdForComments.value = task.id; // Store task ID for commenting
+        function openTaskDetailsModal(task, isEditMode = false) {
+            currentOpenTaskDetailsId = task.id;
+            taskIdForComments.value = task.id; // This input also holds task ID for notes section
 
-            renderComments(task.comments || []); // Render existing comments
+            taskDetailsTextInput.value = task.text || '';
+            taskDetailsColorInput.value = task.color || '#818CF8';
+            taskDetailsDeadlineInput.value = task.deadline || '';
 
-            // Both admin and viewer can comment
-            newCommentInput.disabled = false;
-            addCommentBtn.disabled = false;
-            newCommentInput.placeholder = "Add a comment...";
+            const canModifyTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
+            const canComment = !!userId; // Any logged-in user can comment
+            const canAddOrEditNotes = isCurrentUserProjectMember(); // Only project members can add/edit notes
+
+            // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
+            saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canModifyTaskProperties));
+
+            // Commenting section visibility
+            commentSectionContainer.classList.toggle('hidden', !canComment);
+
+            // Task Notes section visibility: Only visible if a project member AND in edit mode, OR if a Viewer and not logged in (which should be hidden by canAddOrEditNotes)
+            // Simplified: only show if current user is a project member and in edit mode
+            taskNotesSectionContainer.classList.toggle('hidden', !canAddOrEditNotes || !isEditMode);
+
+
+            // Enable/disable comment input and button based on canComment
+            newCommentInput.disabled = !canComment;
+            addCommentBtn.disabled = !canComment;
+            newCommentInput.placeholder = canComment ? "Thêm bình luận..." : "Đăng nhập để thêm bình luận...";
+
+            // Task note input and button are disabled based on canAddOrEditNotes
+            newTaskNoteInput.disabled = !canAddOrEditNotes;
+            addTaskNoteBtn.disabled = !canAddOrEditNotes;
+            newTaskNoteInput.placeholder = canAddOrEditNotes ? "Thêm ghi chú mới..." : "Chỉ thành viên dự án mới có thể thêm ghi chú...";
+            
+            // Task details input fields read-only/disabled status
+            taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
+            taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties;
+            taskDetailsDeadlineInput.disabled = !isEditMode || !canModifyTaskProperties;
+
+
+            renderComments(task.comments || []);
+            renderTaskNotes(task.notes || []); // NEW
 
             taskDetailsModal.classList.remove('hidden');
-            newCommentInput.focus();
+            // Focus based on user role and mode
+            if (isEditMode && canModifyTaskProperties) { // Admin in edit mode, focus on task text
+                taskDetailsTextInput.focus();
+            } else if (canComment) { // Viewer or Admin in view mode, focus on comments
+                newCommentInput.focus();
+            }
         }
+
+        /**
+         * Handles saving edited task details (text, color, deadline).
+         */
+        saveTaskDetailsBtn.addEventListener('click', async () => {
+            const taskId = taskIdForComments.value;
+            const newText = taskDetailsTextInput.value.trim();
+            const newColor = taskDetailsColorInput.value;
+            const newDeadline = taskDetailsDeadlineInput.value;
+
+            if (!taskId || !currentProjectId || !newText) {
+                showModal("Vui lòng nhập nội dung tác vụ.");
+                return;
+            }
+            if (!isCurrentUserProjectMember()) {
+                showModal("Bạn không có quyền chỉnh sửa tác vụ này.");
+                return;
+            }
+
+            try {
+                const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+                await updateDoc(taskRef, {
+                    text: newText,
+                    color: newColor,
+                    deadline: newDeadline || null
+                });
+                taskDetailsModal.classList.add('hidden');
+                showModal("Tác vụ đã được cập nhật thành công!");
+            } catch (error) {
+                console.error("Lỗi khi cập nhật chi tiết tác vụ:", error);
+                showModal("Không thể cập nhật chi tiết tác vụ.");
+            }
+        });
 
         /**
          * Renders the list of comments in the task details modal.
          * @param {Array<Object>} commentsArray - Array of comment objects.
          */
         function renderComments(commentsArray) {
-            commentsList.innerHTML = ''; // Clear old comments
+            commentsList.innerHTML = '';
             if (commentsArray.length === 0) {
-                commentsList.textContent = 'No comments yet.';
+                commentsList.textContent = 'Chưa có bình luận nào.';
                 commentsList.classList.add('text-gray-500', 'italic');
                 return;
             }
             commentsList.classList.remove('text-gray-500', 'italic');
-            commentsArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // Sort by time
+            commentsArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            commentsArray.forEach(comment => {
+            commentsArray.forEach((comment, index) => {
                 const commentItem = document.createElement('div');
-                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300';
+                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; // Added relative for delete button positioning
                 
                 const commentHeader = document.createElement('div');
                 commentHeader.className = 'flex justify-between items-center mb-1';
                 
                 const commenterIdSpan = document.createElement('span');
                 commenterIdSpan.className = 'font-semibold text-blue-700';
-                commenterIdSpan.textContent = comment.commenterId.substring(0, 8) + '...'; // Shorten user ID
+                commenterIdSpan.textContent = comment.commenterId.substring(0, 8) + '...';
                 commentHeader.appendChild(commenterIdSpan);
 
                 const timestampSpan = document.createElement('span');
                 timestampSpan.className = 'text-xs text-gray-500';
                 const date = new Date(comment.timestamp);
-                timestampSpan.textContent = date.toLocaleDateString('en-US') + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                timestampSpan.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                 commentHeader.appendChild(timestampSpan);
 
                 commentItem.appendChild(commentHeader);
 
                 const commentTextP = document.createElement('p');
-                commentTextP.className = 'text-gray-800 break-words';
+                commentTextP.className = 'text-gray-800 break-words pr-6'; // Added padding for delete button
                 commentTextP.textContent = comment.text;
                 commentItem.appendChild(commentTextP);
 
+                // Add delete button for comments (only if current user is author or admin)
+                if (isCurrentUserAdmin || comment.commenterId === userId) {
+                    const deleteCommentButton = document.createElement('button');
+                    deleteCommentButton.textContent = '×';
+                    deleteCommentButton.className = 'absolute top-1 right-1 text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
+                    deleteCommentButton.title = 'Xóa bình luận';
+                    deleteCommentButton.onclick = (e) => {
+                        e.stopPropagation();
+                        handleDeleteComment(taskIdForComments.value, index);
+                    };
+                    commentItem.appendChild(deleteCommentButton);
+                }
+
                 commentsList.appendChild(commentItem);
             });
-            commentsList.scrollTop = commentsList.scrollHeight; // Scroll to bottom to show latest comment
+            commentsList.scrollTop = commentsList.scrollHeight;
         }
 
         /**
@@ -918,11 +1275,11 @@
             const commentText = newCommentInput.value.trim();
 
             if (!taskId || !currentProjectId || !commentText) {
-                showModal("Please enter a comment.");
+                showModal("Vui lòng nhập bình luận.");
                 return;
             }
-            if (!userId) { // Ensure user is authenticated
-                showModal("You must be logged in to add a comment.");
+            if (!userId) {
+                showModal("Bạn phải đăng nhập để thêm bình luận.");
                 return;
             }
 
@@ -934,18 +1291,263 @@
                     timestamp: new Date().toISOString()
                 };
                 await updateDoc(taskRef, {
-                    comments: arrayUnion(newComment) // Add new comment to array
+                    comments: arrayUnion(newComment)
                 });
-                newCommentInput.value = ''; // Clear input field
-                // UI will automatically update via onSnapshot
+                newCommentInput.value = '';
             } catch (error) {
-                console.error("Error adding comment:", error);
-                showModal("Failed to add comment.");
+                console.error("Lỗi khi thêm bình luận:", error);
+                showModal("Không thể thêm bình luận.");
             }
         });
 
+        /**
+         * Deletes a specific comment from a task.
+         * @param {string} taskId - The ID of the task containing the comment.
+         * @param {number} commentIndex - The index of the comment to delete in the comments array.
+         */
+        async function handleDeleteComment(taskId, commentIndex) {
+            if (!currentProjectId) {
+                showModal("Chưa chọn dự án.");
+                return;
+            }
+
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+            
+            try {
+                const taskDoc = await getDoc(taskRef);
+                if (taskDoc.exists()) {
+                    const currentComments = taskDoc.data().comments || [];
+
+                    if (commentIndex >= 0 && commentIndex < currentComments.length) {
+                        // Check if current user is admin OR the author of the comment
+                        if (isCurrentUserAdmin || currentComments[commentIndex].commenterId === userId) {
+                            const updatedComments = currentComments.filter((_, i) => i !== commentIndex);
+                            await updateDoc(taskRef, { comments: updatedComments });
+                            showModal("Bình luận đã được xóa thành công!");
+                        } else {
+                            showModal("Bạn không có quyền xóa bình luận này.");
+                        }
+                    } else {
+                        showModal("Lỗi: Không tìm thấy bình luận.");
+                    }
+                } else {
+                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                }
+            } catch (error) {
+                console.error("Lỗi khi xóa bình luận:", error);
+                showModal("Không thể xóa bình luận.");
+            }
+        }
+
+        /**
+         * NEW: Renders the list of task notes in the task details modal.
+         * @param {Array<Object>} notesArray - Array of note objects.
+         */
+        function renderTaskNotes(notesArray) {
+            taskNotesList.innerHTML = '';
+            if (notesArray.length === 0) {
+                taskNotesList.textContent = 'Chưa có ghi chú nào.';
+                taskNotesList.classList.add('text-gray-500', 'italic');
+                return;
+            }
+            taskNotesList.classList.remove('text-gray-500', 'italic');
+            notesArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            notesArray.forEach((note, index) => {
+                const noteItem = document.createElement('div');
+                noteItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-purple-300 relative';
+                
+                const noteHeader = document.createElement('div');
+                noteHeader.className = 'flex justify-between items-center mb-1';
+                
+                const noteInfoSpan = document.createElement('span');
+                noteInfoSpan.className = 'font-semibold text-purple-700';
+                noteInfoSpan.textContent = `Ghi chú ${index + 1}: Bởi ${note.authorId.substring(0, 8)}...`;
+                noteHeader.appendChild(noteInfoSpan);
+
+                const timestampSpan = document.createElement('span');
+                timestampSpan.className = 'text-xs text-gray-500';
+                const date = new Date(note.timestamp);
+                timestampSpan.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                noteHeader.appendChild(timestampSpan);
+
+                noteItem.appendChild(noteHeader);
+
+                const noteTextP = document.createElement('p');
+                noteTextP.className = 'text-gray-800 break-words pr-6';
+                noteTextP.textContent = note.text;
+                noteItem.appendChild(noteTextP);
+
+                if (isCurrentUserAdmin || note.authorId === userId) {
+                    const noteActionsDiv = document.createElement('div');
+                    noteActionsDiv.className = 'absolute top-1 right-1 flex gap-1';
+
+                    const editNoteButton = document.createElement('button');
+                    editNoteButton.textContent = '✏️';
+                    editNoteButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
+                    editNoteButton.title = 'Chỉnh sửa ghi chú';
+                    editNoteButton.onclick = (e) => {
+                        e.stopPropagation();
+                        openTaskNoteEditModal(taskIdForComments.value, index, note.text);
+                    };
+                    noteActionsDiv.appendChild(editNoteButton);
+
+                    const deleteNoteButton = document.createElement('button');
+                    deleteNoteButton.textContent = '×';
+                    deleteNoteButton.className = 'text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
+                    deleteNoteButton.title = 'Xóa ghi chú';
+                    deleteNoteButton.onclick = (e) => {
+                        e.stopPropagation();
+                        handleDeleteTaskNote(taskIdForComments.value, index);
+                    };
+                    noteActionsDiv.appendChild(deleteNoteButton);
+                    noteItem.appendChild(noteActionsDiv);
+                }
+
+                taskNotesList.appendChild(noteItem);
+            });
+            taskNotesList.scrollTop = taskNotesList.scrollHeight;
+        }
+
+        /**
+         * NEW: Adds a note to the current task.
+         */
+        addTaskNoteBtn.addEventListener('click', async () => {
+            const taskId = taskIdForComments.value;
+            const noteText = newTaskNoteInput.value.trim();
+
+            if (!taskId || !currentProjectId || !noteText) {
+                showModal("Vui lòng nhập ghi chú.");
+                return;
+            }
+            if (!userId) {
+                showModal("Bạn phải đăng nhập để thêm ghi chú.");
+                return;
+            }
+            if (!isCurrentUserProjectMember()) { // Explicit check
+                showModal("Bạn không có quyền thêm ghi chú công việc.");
+                return;
+            }
+
+            try {
+                const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+                const newTaskNote = {
+                    text: noteText,
+                    authorId: userId,
+                    timestamp: new Date().toISOString()
+                };
+                await updateDoc(taskRef, {
+                    notes: arrayUnion(newTaskNote)
+                });
+                newTaskNoteInput.value = '';
+            } catch (error) {
+                console.error("Lỗi khi thêm ghi chú công việc:", error);
+                showModal("Không thể thêm ghi chú công việc.");
+            }
+        });
+
+        /**
+         * NEW: Deletes a specific note from a task.
+         * @param {string} taskId - The ID of the task containing the note.
+         * @param {number} noteIndex - The index of the note to delete in the notes array.
+         */
+        async function handleDeleteTaskNote(taskId, noteIndex) {
+            if (!currentProjectId) {
+                showModal("Chưa chọn dự án.");
+                return;
+            }
+
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+            
+            try {
+                const taskDoc = await getDoc(taskRef);
+                if (taskDoc.exists()) {
+                    const currentNotes = taskDoc.data().notes || [];
+
+                    if (noteIndex >= 0 && noteIndex < currentNotes.length) {
+                        if (isCurrentUserAdmin || currentNotes[noteIndex].authorId === userId) {
+                            const updatedNotes = currentNotes.filter((_, i) => i !== noteIndex);
+                            await updateDoc(taskRef, { notes: updatedNotes });
+                            showModal("Ghi chú đã được xóa thành công!");
+                        } else {
+                            showModal("Bạn không có quyền xóa ghi chú này.");
+                        }
+                    } else {
+                        showModal("Lỗi: Không tìm thấy ghi chú.");
+                    }
+                } else {
+                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                }
+            } catch (error) {
+                console.error("Lỗi khi xóa ghi chú:", error);
+                showModal("Không thể xóa ghi chú.");
+            }
+        }
+
+        // NEW: Handles opening the modal to edit an existing task note.
+        function openTaskNoteEditModal(taskId, noteIndex, currentNoteText) {
+            if (!isCurrentUserProjectMember()) {
+                showModal("Bạn không có quyền chỉnh sửa ghi chú công việc.");
+                return;
+            }
+            editingTaskIdNoteModal.value = taskId;
+            editingNoteIndexModal.value = noteIndex;
+            taskNoteTextareaModal.value = currentNoteText;
+            taskNoteEditModal.classList.remove('hidden');
+            taskNoteTextareaModal.focus();
+        }
+
+        // NEW: Handles saving the edited task note to Firestore.
+        saveTaskNoteModalBtn.addEventListener('click', async () => {
+            const taskId = editingTaskIdNoteModal.value;
+            const noteIndex = parseInt(editingNoteIndexModal.value);
+            const newNoteContent = taskNoteTextareaModal.value.trim();
+
+            if (!taskId || isNaN(noteIndex) || !currentProjectId || !newNoteContent) {
+                showModal("Lỗi: Không tìm thấy thông tin ghi chú công việc hoặc nội dung rỗng.");
+                return;
+            }
+
+            if (!isCurrentUserProjectMember()) {
+                showModal("Bạn không có quyền lưu thay đổi ghi chú công việc.");
+                return;
+            }
+
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+            
+            try {
+                const taskDoc = await getDoc(taskRef);
+                if (taskDoc.exists()) {
+                    const currentNotes = taskDoc.data().notes || [];
+                    if (noteIndex >= 0 && noteIndex < currentNotes.length) {
+                        if (isCurrentUserAdmin || currentNotes[noteIndex].authorId === userId) {
+                            currentNotes[noteIndex].text = newNoteContent;
+                            await updateDoc(taskRef, { notes: currentNotes });
+                            taskNoteEditModal.classList.add('hidden');
+                            showModal("Ghi chú công việc đã được cập nhật thành công!");
+                        } else {
+                            showModal("Bạn không có quyền chỉnh sửa ghi chú công việc này.");
+                        }
+                    } else {
+                        showModal("Lỗi: Chỉ số ghi chú công việc không hợp lệ.");
+                    }
+                } else {
+                    showModal("Lỗi: Không tìm thấy tác vụ.");
+                }
+            } catch (error) {
+                console.error("Lỗi khi lưu ghi chú công việc:", error);
+                showModal("Lỗi khi lưu ghi chú công việc.");
+            }
+        });
+
+        cancelTaskNoteModalBtn.addEventListener('click', () => {
+            taskNoteEditModal.classList.add('hidden');
+        });
+
+
         closeTaskDetailsModalBtn.addEventListener('click', () => {
-            taskDetailsModal.classList.add('hidden'); // Hide task details modal
+            taskDetailsModal.classList.add('hidden');
+            currentOpenTaskDetailsId = null;
         });
 
 
@@ -956,25 +1558,34 @@
          */
         async function handleAddTask(e) {
             e.preventDefault();
-            if (!isCurrentUserProjectMember() || !currentProjectId) { // Block if not project member or no project selected
-                showModal("You do not have permission to add tasks.");
+            if (!isCurrentUserProjectMember() || !currentProjectId) {
+                showModal("Bạn không có quyền thêm tác vụ.");
                 return;
             }
             const taskText = taskInput.value.trim();
+            const taskColor = taskColorInput.value;
+            const taskDeadline = taskDeadlineInput.value;
+
             if (taskText) {
                 try {
-                    // Add new task with 'todo' status, createdAt and empty subtasks array to Firestore
+                    const newTaskPosition = Date.now(); 
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), { 
                         text: taskText, 
                         status: 'todo',
-                        createdAt: new Date().toISOString(), // Add task creation time
-                        subtasks: [], // Initialize empty subtasks array
-                        comments: [] // NEW: Initialize empty comments array
+                        createdAt: new Date().toISOString(),
+                        position: newTaskPosition,
+                        color: taskColor || '#818CF8',
+                        deadline: taskDeadline || null,
+                        subtasks: [],
+                        comments: [],
+                        notes: [] // NEW: Initialize notes array
                     });
-                    taskInput.value = ''; // Clear input field
+                    taskInput.value = '';
+                    taskColorInput.value = '#818CF8';
+                    taskDeadlineInput.value = '';
                 } catch (error) {
-                    console.error("Error adding task: ", error);
-                    showModal("Failed to add task.");
+                    console.error("Lỗi khi thêm tác vụ: ", error);
+                    showModal("Không thể thêm tác vụ.");
                 }
             }
         }
@@ -986,7 +1597,7 @@
          */
         async function handleAddSubtask(taskId, subtaskText) {
             if (!isCurrentUserProjectMember() || !currentProjectId || !subtaskText.trim()) {
-                showModal("You do not have permission to add subtasks.");
+                showModal("Bạn không có quyền thêm subtask.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -995,13 +1606,13 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    // Add default empty 'note' field for the new subtask
-                    const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '' }]; 
+                    const newSubtaskPosition = Date.now(); // Position for new subtask
+                    const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition }]; 
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
-                console.error("Error adding subtask:", error);
-                showModal("Failed to add subtask.");
+                console.error("Lỗi khi thêm subtask:", error);
+                showModal("Không thể thêm subtask.");
             }
         }
 
@@ -1011,8 +1622,10 @@
          * @param {number} subtaskIndex - The index of the subtask in the array.
          */
         async function handleToggleSubtask(taskId, subtaskIndex) {
+            // Note: e.stopPropagation() is handled in createTaskElement for the checkbox event listener itself.
+            // This function is only called to update Firestore.
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("You do not have permission to change subtask status.");
+                showModal("Bạn không có quyền thay đổi trạng thái subtask.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1027,8 +1640,8 @@
                     }
                 }
             } catch (error) {
-                console.error("Error toggling subtask:", error);
-                showModal("Failed to change subtask status.");
+                console.error("Lỗi khi chuyển đổi subtask:", error);
+                showModal("Không thể thay đổi trạng thái subtask.");
             }
         }
 
@@ -1039,7 +1652,7 @@
          */
         async function handleDeleteSubtask(taskId, subtaskIndex) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("You do not have permission to delete subtasks.");
+                showModal("Bạn không có quyền xóa subtask.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
@@ -1054,44 +1667,59 @@
                     }
                 }
             } catch (error) {
-                console.error("Error deleting subtask:", error);
-                showModal("Failed to delete subtask.");
+                console.error("Lỗi khi xóa subtask:", error);
+                showModal("Không thể xóa subtask.");
             }
         }
 
         /**
-         * Handles opening the subtask note editing modal.
+         * NEW: Handles opening the subtask edit modal (text, note, color).
          * @param {string} taskId - The ID of the parent task.
          * @param {number} subtaskIndex - The index of the subtask.
-         * @param {string} currentNote - The current note content.
+         * @param {string} currentText - The current subtask text.
+         * @param {string} currentNote - The current subtask note.
+         * @param {string} currentColor - The current subtask color.
          */
-        function openSubtaskNoteModal(taskId, subtaskIndex, currentNote) {
+        function openSubtaskEditTextModal(taskId, subtaskIndex, currentText, currentNote, currentColor) {
             if (!isCurrentUserProjectMember()) {
-                showModal("You do not have permission to edit notes.");
+                showModal("Bạn không có quyền chỉnh sửa subtask.");
                 return;
             }
-            editingTaskIdInput.value = taskId;
-            editingSubtaskIndexInput.value = subtaskIndex;
-            subtaskNoteTextarea.value = currentNote;
-            subtaskNoteModal.classList.remove('hidden');
-            subtaskNoteTextarea.focus();
+            editingTaskIdSubtext.value = taskId;
+            editingSubtaskIndexSubtext.value = subtaskIndex;
+            subtaskEditTextInput.value = currentText;
+            subtaskNoteOnEditModal.value = currentNote; // Populate note field
+            
+            // Set the correct color radio button
+            subtaskColorRadios.forEach(radio => {
+                if (radio.value === currentColor) {
+                    radio.checked = true;
+                } else {
+                    radio.checked = false;
+                }
+            });
+
+            subtaskEditTextModal.classList.remove('hidden');
+            subtaskEditTextInput.focus();
         }
 
         /**
-         * Handles saving the subtask note to Firestore.
+         * NEW: Handles saving the edited subtask (text, note, color) to Firestore.
          */
-        saveSubtaskNoteBtn.addEventListener('click', async () => {
-            const taskId = editingTaskIdInput.value;
-            const subtaskIndex = parseInt(editingSubtaskIndexInput.value);
-            const newNoteContent = subtaskNoteTextarea.value.trim();
+        saveSubtaskTextBtn.addEventListener('click', async () => {
+            const taskId = editingTaskIdSubtext.value;
+            const subtaskIndex = parseInt(editingSubtaskIndexSubtext.value);
+            const newSubtaskText = subtaskEditTextInput.value.trim();
+            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); // Get new note
+            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; // Get selected color
 
-            if (!taskId || isNaN(subtaskIndex) || !currentProjectId) {
-                showModal("Error: Subtask information not found.");
+            if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
+                showModal("Lỗi: Không tìm thấy thông tin subtask hoặc nội dung rỗng.");
                 return;
             }
 
             if (!isCurrentUserProjectMember()) {
-                showModal("You do not have permission to save notes.");
+                showModal("Bạn không có quyền lưu thay đổi subtask.");
                 return;
             }
 
@@ -1102,50 +1730,57 @@
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
-                        currentSubtasks[subtaskIndex].note = newNoteContent;
+                        currentSubtasks[subtaskIndex].text = newSubtaskText;
+                        currentSubtasks[subtaskIndex].note = newSubtaskNote; // Save note
+                        currentSubtasks[subtaskIndex].color = newSubtaskColor; // Save color
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
-                        subtaskNoteModal.classList.add('hidden');
-                        showModal("Note saved successfully.");
+                        subtaskEditTextModal.classList.add('hidden');
+                        showModal("Thay đổi subtask đã được lưu thành công!");
                     } else {
-                        showModal("Error: Invalid subtask index.");
+                        showModal("Lỗi: Chỉ số subtask không hợp lệ.");
                     }
                 } else {
-                    showModal("Error: Task not found.");
+                    showModal("Lỗi: Không tìm thấy tác vụ.");
                 }
             } catch (error) {
-                console.error("Error saving subtask note:", error);
-                showModal("Failed to save subtask note.");
+                console.error("Lỗi khi lưu thay đổi subtask:", error);
+                showModal("Không thể lưu thay đổi subtask.");
             }
         });
 
-        cancelSubtaskNoteBtn.addEventListener('click', () => {
-            subtaskNoteModal.classList.add('hidden'); // Hide subtask note modal
+        cancelSubtaskTextBtn.addEventListener('click', () => {
+            subtaskEditTextModal.classList.add('hidden');
         });
+
 
         /**
          * Updates the status of a task in Firestore.
          * Triggers confetti if the task is moved to 'done'.
          * @param {string} taskId - The ID of the task to update.
          * @param {string} newStatus - The new status ('todo', 'inprogress', 'done').
+         * @param {number} [newPosition] - Optional: the new position for reordering within the column.
          */
-        async function handleUpdateTaskStatus(taskId, newStatus) {
+        async function handleUpdateTaskStatus(taskId, newStatus, newPosition = null) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("You do not have permission to move tasks.");
+                showModal("Bạn không có quyền di chuyển tác vụ.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
             try {
                 const updateData = { status: newStatus };
                 if (newStatus === 'done') {
-                    updateData.completedAt = new Date().toISOString(); // Add completion time
-                    triggerConfetti(); // Celebrate when task is completed
+                    updateData.completedAt = new Date().toISOString();
+                    triggerConfetti();
                 } else {
-                    updateData.completedAt = null; // Clear completion time if not "done"
+                    updateData.completedAt = null;
+                }
+                if (newPosition !== null) {
+                    updateData.position = newPosition;
                 }
                 await updateDoc(taskRef, updateData);
             } catch (error) {
-                console.error("Error updating task: ", error);
-                showModal("Failed to update task status.");
+                console.error("Lỗi khi cập nhật tác vụ: ", error);
+                showModal("Không thể cập nhật trạng thái tác vụ.");
             }
         }
 
@@ -1155,77 +1790,330 @@
          */
         async function handleDeleteTask(taskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
-                showModal("You do not have permission to delete tasks.");
+                showModal("Bạn không có quyền xóa tác vụ.");
                 return;
             }
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
             try {
                 await deleteDoc(taskRef);
             } catch (error) {
-                console.error("Error deleting task: ", error);
-                showModal("Failed to delete task.");
+                console.error("Lỗi khi xóa tác vụ: ", error);
+                showModal("Không thể xóa tác vụ.");
             }
         }
 
-        // --- Drag and Drop Logic ---
-        let draggedItemId = null; // Stores the ID of the task being dragged
-
+        // --- Drag and Drop Logic (for status change & reordering) ---
+        
         /**
-         * Handles the start of a drag operation.
-         * Stores the ID of the dragged task and applies dragging styles.
+         * Handles the start of a drag operation for a task.
          * @param {Event} e - The dragstart event.
          */
         function handleDragStart(e) {
-            if (!isCurrentUserProjectMember()) { // Prevent drag if not project member
+            if (!isCurrentUserProjectMember()) {
                 e.preventDefault();
                 return;
             }
-            draggedItemId = e.target.getAttribute('data-id');
-            e.target.classList.add('dragging'); // Add dragging class for visual feedback
+            draggedTaskId = e.target.getAttribute('data-id');
+            draggedTaskStatus = e.target.getAttribute('data-status');
+            draggedTaskOriginalPosition = parseFloat(e.target.getAttribute('data-position'));
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
         }
 
         /**
          * Handles the end of a drag operation.
-         * Removes dragging styles.
          * @param {Event} e - The dragend event.
          */
         function handleDragEnd(e) {
-            e.target.classList.remove('dragging'); // Remove dragging class
-            draggedItemId = null; // Clear dragged item ID
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.task-card.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
+            document.querySelectorAll('.kanban-column.drag-over-empty').forEach(el => el.classList.remove('drag-over-empty'));
+            draggedTaskId = null;
+            draggedTaskStatus = null;
+            draggedTaskOriginalPosition = null;
         }
 
         /**
-         * Prevents default behavior for dragover to allow dropping.
+         * Handles dragover event on Kanban columns (for status change).
          * @param {Event} e - The dragover event.
          */
-        function handleDragOver(e) {
-            e.preventDefault(); // Essential to allow dropping
+        function handleDragOverColumn(e) {
+            e.preventDefault();
+            if (!isCurrentUserProjectMember()) return;
+            const column = e.currentTarget;
+            const taskList = column.querySelector('.task-list');
+            if (taskList && taskList.children.length === 0) {
+                column.classList.add('drag-over-empty');
+            } else {
+                column.classList.remove('drag-over-empty');
+            }
+            e.dataTransfer.dropEffect = 'move';
         }
 
         /**
-         * Handles dropping a task into a column.
-         * Updates the task status in Firestore.
+         * Handles drop event on Kanban columns (for status change).
          * @param {Event} e - The drop event.
          */
-        function handleDrop(e) {
+        async function handleDropColumn(e) {
             e.preventDefault();
-            if (!isCurrentUserProjectMember()) { // Prevent drop if not project member
-                return;
-            }
-            if (!draggedItemId || !currentProjectId) return;
+            if (!isCurrentUserProjectMember()) return;
+            if (!draggedTaskId || !currentProjectId) return;
 
-            const targetColumn = e.target.closest('.kanban-column');
-            if (targetColumn) {
-                const newStatus = targetColumn.getAttribute('data-status'); // Get status of the target column
-                handleUpdateTaskStatus(draggedItemId, newStatus); // Update task status
+            const targetColumn = e.currentTarget;
+            const newStatus = targetColumn.getAttribute('data-status');
+
+            if (newStatus !== draggedTaskStatus) {
+                try {
+                    const tasksInNewColumn = tasks.filter(t => t.status === newStatus);
+                    const newPosition = tasksInNewColumn.length > 0 ? 
+                                        Math.max(...tasksInNewColumn.map(t => t.position)) + 1 : 
+                                        Date.now();
+                    await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
+                } catch (error) {
+                    console.error("Lỗi khi thay đổi trạng thái tác vụ:", error);
+                    showModal("Không thể thay đổi trạng thái tác vụ.");
+                }
+            }
+            targetColumn.classList.remove('drag-over-empty');
+        }
+
+        /**
+         * Handles dragenter event on a task card (for reordering highlight).
+         * @param {Event} e - The dragenter event.
+         */
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (!isCurrentUserProjectMember() || e.target.getAttribute('data-id') === draggedTaskId) return;
+
+            const targetTask = e.target.closest('.task-card');
+            if (targetTask && targetTask.getAttribute('data-status') === draggedTaskStatus) {
+                targetTask.classList.add('drag-over-target');
             }
         }
 
-        // Add drag-and-drop event listeners to each Kanban column
+        /**
+         * Handles dragleave event on a task card (for reordering highlight).
+         * @param {Event} e - The dragleave event.
+         */
+        function handleDragLeave(e) {
+            if (e.target.getAttribute('data-id') === draggedTaskId) return;
+            e.target.closest('.task-card')?.classList.remove('drag-over-target');
+        }
+
+        /**
+         * Handles dragover event on a task card (for reordering).
+         * @param {Event} e - The dragover event.
+         */
+        function handleDragOverTask(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        /**
+         * Handles drop event on a task card (for reordering within a column).
+         * @param {Event} e - The drop event.
+         */
+        async function handleDropTask(e) {
+            e.preventDefault();
+            if (!isCurrentUserProjectMember() || !draggedTaskId || !currentProjectId) return;
+
+            const targetTaskElement = e.target.closest('.task-card');
+            if (!targetTaskElement || targetTaskElement.getAttribute('data-id') === draggedTaskId) {
+                return;
+            }
+
+            const targetTaskId = targetTaskElement.getAttribute('data-id');
+            const targetTaskStatus = targetTaskElement.getAttribute('data-status');
+            
+            if (targetTaskStatus !== draggedTaskStatus) {
+                return;
+            }
+
+            const targetTask = tasks.find(t => t.id === targetTaskId);
+            const draggedTask = tasks.find(t => t.id === draggedTaskId);
+
+            if (!targetTask || !draggedTask) {
+                showModal("Lỗi: Không tìm thấy tác vụ kéo hoặc tác vụ đích.");
+                return;
+            }
+
+            const siblingTasks = tasks
+                .filter(t => t.status === draggedTaskStatus && t.id !== draggedTaskId)
+                .sort((a, b) => a.position - b.position);
+
+            const targetIndex = siblingTasks.findIndex(t => t.id === targetTaskId);
+
+            let newPosition;
+            const taskRect = targetTaskElement.getBoundingClientRect();
+            const mouseRelativeY = e.clientY - taskRect.top;
+
+            if (siblingTasks.length === 0) {
+                newPosition = Date.now();
+            } else if (mouseRelativeY < taskRect.height / 2) {
+                const prevTask = siblingTasks[targetIndex - 1];
+                if (prevTask) {
+                    newPosition = (prevTask.position + targetTask.position) / 2;
+                } else {
+                    newPosition = targetTask.position / 2;
+                }
+            } else {
+                const nextTask = siblingTasks[targetIndex + 1];
+                if (nextTask) {
+                    newPosition = (targetTask.position + nextTask.position) / 2;
+                } else {
+                    newPosition = targetTask.position + 1;
+                }
+            }
+            
+            if (newPosition === draggedTaskOriginalPosition) {
+                targetTaskElement.classList.remove('drag-over-target');
+                return;
+            }
+
+            const existingPositions = tasks.filter(t => t.status === draggedTaskStatus).map(t => t.position);
+            while (existingPositions.includes(newPosition)) {
+                newPosition += 0.000001;
+            }
+
+            await handleUpdateTaskStatus(draggedTaskId, draggedTaskStatus, newPosition);
+            targetTaskElement.classList.remove('drag-over-target');
+        }
+
         columns.forEach(column => {
-            column.addEventListener('dragover', handleDragOver);
-            column.addEventListener('drop', handleDrop);
+            column.addEventListener('dragover', handleDragOverColumn);
+            column.addEventListener('drop', handleDropColumn);
         });
+
+        // --- NEW: Subtask Drag and Drop Logic ---
+
+        /**
+         * Handles the start of a drag operation for a subtask.
+         * @param {Event} e - The dragstart event.
+         */
+        function handleSubtaskDragStart(e) {
+            if (!isCurrentUserProjectMember()) {
+                e.preventDefault();
+                return;
+            }
+            const subtaskItem = e.target.closest('.subtask-item');
+            const taskId = subtaskItem.getAttribute('data-task-id');
+            const subtaskIndex = parseInt(subtaskItem.getAttribute('data-subtask-index'));
+
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.subtasks && task.subtasks[subtaskIndex]) {
+                draggedSubtaskInfo.taskId = taskId;
+                draggedSubtaskInfo.subtaskObject = { ...task.subtasks[subtaskIndex] }; // Deep copy
+                draggedSubtaskInfo.originalIndex = subtaskIndex;
+                subtaskItem.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            } else {
+                e.preventDefault(); // Invalid subtask
+            }
+        }
+
+        /**
+         * Handles the end of a drag operation for a subtask.
+         * @param {Event} e - The dragend event.
+         */
+        function handleSubtaskDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
+            draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null };
+        }
+
+        /**
+         * Handles dragenter event on a subtask (for reordering highlight).
+         * @param {Event} e - The dragenter event.
+         */
+        function handleSubtaskDragEnter(e) {
+            e.preventDefault();
+            const targetSubtaskItem = e.target.closest('.subtask-item');
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
+
+            // Ensure it's the same parent task
+            if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
+                targetSubtaskItem.classList.add('drag-over-subtask');
+            }
+        }
+
+        /**
+         * Handles dragleave event on a subtask (for reordering highlight).
+         * @param {Event} e - The dragleave event.
+         */
+        function handleSubtaskDragLeave(e) {
+            const targetSubtaskItem = e.target.closest('.subtask-item');
+            if (targetSubtaskItem && targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
+            targetSubtaskItem?.classList.remove('drag-over-subtask');
+        }
+
+        /**
+         * Handles dragover event on a subtask (for reordering).
+         * @param {Event} e - The dragover event.
+         */
+        function handleSubtaskDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        /**
+         * Handles drop event on a subtask (for reordering within a task).
+         * @param {Event} e - The drop event.
+         */
+        async function handleSubtaskDrop(e) {
+            e.preventDefault();
+            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskObject === null || !currentProjectId) return;
+
+            const targetSubtaskItem = e.target.closest('.subtask-item');
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-task-id') !== draggedSubtaskInfo.taskId) {
+                showModal("Subtasks only be reordered within their parent task.");
+                targetSubtaskItem?.classList.remove('drag-over-subtask');
+                return;
+            }
+
+            const targetSubtaskIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index'));
+            
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, draggedSubtaskInfo.taskId);
+            try {
+                const taskDoc = await getDoc(taskRef);
+                if (!taskDoc.exists()) {
+                    showModal("Lỗi: Không tìm thấy tác vụ cha cho việc sắp xếp lại subtask.");
+                    targetSubtaskItem?.classList.remove('drag-over-subtask');
+                    return;
+                }
+                let currentSubtasks = taskDoc.data().subtasks || [];
+                
+                // Prevent dropping onto itself
+                if (draggedSubtaskInfo.originalIndex === targetSubtaskIndex) {
+                    targetSubtaskItem.classList.remove('drag-over-subtask');
+                    return;
+                }
+
+                // 1. Remove the dragged subtask from its original position
+                const [removedSubtask] = currentSubtasks.splice(draggedSubtaskInfo.originalIndex, 1);
+
+                // 2. Insert the dragged subtask at the new calculated position
+                let newIndex = targetSubtaskIndex;
+                // Adjust index if we removed an item from an earlier position
+                if (draggedSubtaskInfo.originalIndex < targetSubtaskIndex) {
+                    newIndex = targetSubtaskIndex - 1; 
+                }
+                currentSubtasks.splice(newIndex, 0, removedSubtask);
+
+                // 3. Re-assign positions based on the new order
+                // This is crucial to keep the client-side sorting in sync with Firestore's (conceptual) order
+                currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
+
+                await updateDoc(taskRef, { subtasks: currentSubtasks });
+                showModal("Subtask đã được sắp xếp lại thành công!");
+
+            } catch (error) {
+                console.error("Lỗi khi sắp xếp lại subtask:", error);
+                showModal("Không thể sắp xếp lại subtask.");
+            } finally {
+                targetSubtaskItem?.classList.remove('drag-over-subtask');
+            }
+        }
+
 
         // --- Confetti Animation ---
         /**
@@ -1238,12 +2126,11 @@
             for (let i = 0; i < 100; i++) {
                 const confetti = document.createElement('div');
                 confetti.classList.add('confetti');
-                confetti.style.left = `${Math.random() * 100}vw`; // Random horizontal position
-                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]; // Random color
-                confetti.style.animationDuration = `${Math.random() * 2 + 3}s`; // Random duration (3-5s)
-                confetti.style.animationDelay = `${Math.random() * 1}s`; // Random delay
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = `${Math.random() * 2 + 3}s`;
+                confetti.style.animationDelay = `${Math.random() * 1}s`;
                 container.appendChild(confetti);
-                // Remove confetti after animation to clean up DOM
                 setTimeout(() => confetti.remove(), 5000); 
             }
         }
@@ -1259,86 +2146,141 @@
          */
         function showModal(message) {
             modalMessage.textContent = message;
-            modal.classList.remove('hidden'); // Show the modal
+            modal.classList.remove('hidden');
         }
 
-        // Event listener to close the modal
         modalCloseBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
+        // --- Comment Notification Toast ---
+        function showCommentToast(taskName) {
+            toastTaskName.textContent = taskName;
+            commentToast.classList.add('show');
+            setTimeout(() => {
+                commentToast.classList.remove('show');
+            }, 5000);
+        }
+
         // --- Project Management Logic ---
-        // "Create New Project" button
         createProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to create new projects.");
+                showModal("Bạn không có quyền tạo dự án mới.");
                 return;
             }
-            // Reset input fields in the modal
-            projectModalTitle.textContent = "Create New Project"; // Reset modal title
+            projectModalTitle.textContent = "Create New Project";
             newProjectNameInput.value = '';
             projectDescriptionInput.value = '';
             projectStartDateInput.value = '';
             projectEndDateInput.value = '';
-            projectStatusSelect.value = 'Active'; // Set default status
-            confirmCreateProjectBtn.textContent = "Create Project"; // Reset button text
-            editingProjectIdInput.value = ''; // Clear editing project ID
+            projectStatusSelect.value = 'Active';
+            confirmCreateProjectBtn.textContent = "Create Project";
+            editingProjectIdInput.value = '';
+            copyTasksFromProjectSelect.value = '';
 
-            createProjectModal.classList.remove('hidden'); // Show create project modal
+            createProjectModal.classList.remove('hidden');
             newProjectNameInput.focus();
         });
 
-        // "Edit Project" button
         editProjectBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to edit projects.");
+                showModal("Bạn không có quyền chỉnh sửa dự án.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Please select a project to edit.");
+                showModal("Vui lòng chọn một dự án để chỉnh sửa.");
                 return;
             }
             const projectToEdit = projectsData[currentProjectId];
             if (projectToEdit) {
-                projectModalTitle.textContent = "Edit Project Details"; // Change modal title
+                projectModalTitle.textContent = "Edit Project Details";
                 newProjectNameInput.value = projectToEdit.name || '';
                 projectDescriptionInput.value = projectToEdit.description || '';
                 projectStartDateInput.value = projectToEdit.startDate || '';
                 projectEndDateInput.value = projectToEdit.endDate || '';
                 projectStatusSelect.value = projectToEdit.status || 'Active';
-                confirmCreateProjectBtn.textContent = "Save Changes"; // Change button text to "Save Changes"
-                editingProjectIdInput.value = projectToEdit.id; // Store editing project ID in hidden input
+                confirmCreateProjectBtn.textContent = "Save Changes";
+                editingProjectIdInput.value = projectToEdit.id;
+                copyTasksFromProjectSelect.value = '';
 
-                createProjectModal.classList.remove('hidden'); // Show modal
+                createProjectModal.classList.remove('hidden');
                 newProjectNameInput.focus();
             } else {
-                showModal("Error: Project data not found for editing.");
+                showModal("Lỗi: Không tìm thấy dữ liệu dự án để chỉnh sửa.");
             }
         });
 
-        // "Delete Project" button
         deleteProjectBtn.addEventListener('click', async () => {
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to delete projects.");
+                showModal("Bạn không có quyền xóa dự án.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Please select a project to delete.");
+                showModal("Vui lòng chọn một dự án để xóa.");
                 return;
             }
-            // Using a simple confirm here, consider replacing with a custom modal for better UX
-            if (confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
-                try {
-                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, currentProjectId));
-                    showModal("Project deleted successfully.");
-                    currentProjectId = null; // Clear current project
-                    // The project listener will automatically update the UI
-                } catch (error) {
-                    console.error("Error deleting project:", error);
-                    showModal("Failed to delete project.");
-                }
+            const project = projectsData[currentProjectId];
+            if (project) {
+                promptDeleteConfirmation(currentProjectId, project.name);
+            } else {
+                showModal("Lỗi: Không tìm thấy dữ liệu dự án để xóa.");
             }
         });
 
-        // Confirm create/edit project button
+        /**
+         * Displays a custom confirmation modal for project deletion.
+         * @param {string} projectId - The ID of the project to delete.
+         * @param {string} projectName - The name of the project to display in the message.
+         */
+        function promptDeleteConfirmation(projectId, projectName) {
+            projectIdToDelete = projectId;
+            deleteConfirmMessage.textContent = `Bạn có chắc chắn muốn xóa dự án "${projectName}"? Hành động này sẽ xóa tất cả các tác vụ của nó và không thể hoàn tác.`;
+            deleteProjectConfirmModal.classList.remove('hidden');
+        }
+
+        confirmDeleteYesBtn.addEventListener('click', async () => {
+            deleteProjectConfirmModal.classList.add('hidden');
+            if (projectIdToDelete) {
+                await executeProjectDeletion(projectIdToDelete);
+                projectIdToDelete = null;
+            }
+        });
+
+        confirmDeleteNoBtn.addEventListener('click', () => {
+            deleteProjectConfirmModal.classList.add('hidden');
+            projectIdToDelete = null;
+        });
+
+        /**
+         * Executes the actual project deletion from Firestore.
+         * @param {string} projectId - The ID of the project to delete.
+         */
+        async function executeProjectDeletion(projectId) {
+            console.log(`Attempting to delete project: ${projectId}`);
+            try {
+                console.log(`Querying tasks for project: ${projectId}`);
+                const tasksQueryRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
+                const tasksSnapshot = await getDocs(tasksQueryRef);
+
+                console.log(`Found ${tasksSnapshot.docs.length} tasks to delete.`);
+                const deleteTasksPromises = tasksSnapshot.docs.map(taskDoc => deleteDoc(taskDoc.ref));
+                await Promise.all(deleteTasksPromises);
+                console.log("All tasks deleted successfully.");
+
+                console.log(`Deleting project document: ${projectId}`);
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/projects`, projectId));
+                console.log("Project document deleted successfully.");
+                
+                showModal("Dự án đã được xóa thành công!");
+                currentProjectId = null;
+            } catch (error) {
+                console.error("Lỗi khi xóa dự án:", error);
+                if (error.code === 'permission-denied') {
+                    showModal("Lỗi quyền: Bạn không có quyền xóa dự án này. Vui lòng kiểm tra vai trò admin và các quy tắc bảo mật Firestore của bạn.");
+                } else {
+                    showModal(`Không thể xóa dự án: ${error.message}`);
+                }
+            }
+        }
+
         confirmCreateProjectBtn.addEventListener('click', async () => {
             const projectName = newProjectNameInput.value.trim();
             const projectDescription = projectDescriptionInput.value.trim();
@@ -1346,15 +2288,16 @@
             const projectEndDate = projectEndDateInput.value;
             const projectStatus = projectStatusSelect.value;
             const projectIdToModify = editingProjectIdInput.value;
+            const sourceProjectIdToCopy = copyTasksFromProjectSelect.value;
 
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to save projects.");
+                showModal("Bạn không có quyền lưu dự án.");
                 return;
             }
 
             if (projectName && projectStartDate && projectEndDate) {
                 if (new Date(projectStartDate) > new Date(projectEndDate)) {
-                    showModal("End Date cannot be before Start Date.");
+                    showModal("Ngày kết thúc không thể trước Ngày bắt đầu.");
                     return;
                 }
                 try {
@@ -1366,43 +2309,137 @@
                         status: projectStatus,
                     };
 
-                    if (projectIdToModify) { // Edit mode
+                    if (projectIdToModify) {
                         const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, projectIdToModify);
                         await updateDoc(projectRef, projectData);
-                        showModal("Project updated successfully!");
-                    } else { // Create new mode
+                        showModal("Dự án đã được cập nhật thành công!");
+                    } else {
                         projectData.createdBy = userId;
                         projectData.createdAt = new Date().toISOString();
-                        projectData.members = [userId]; // Creator is automatically the first member
-                        const docRef = await addDoc(projectsCollectionRef, projectData);
-                        currentProjectId = docRef.id; // Set new project as current
-                        projectSelect.value = currentProjectId; // Select new project in dropdown
-                        showModal("Project created successfully!");
+                        projectData.members = [userId];
+                        const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/projects`), projectData);
+                        const newProjectId = docRef.id;
+                        currentProjectId = newProjectId;
+                        projectSelect.value = newProjectId;
+                        showModal("Dự án đã được tạo thành công!");
+
+                        if (sourceProjectIdToCopy) {
+                            await copyTodoTasks(sourceProjectIdToCopy, newProjectId);
+                        }
                     }
                     createProjectModal.classList.add('hidden');
-                    // UI will be updated by project listener
                 } catch (error) {
-                    console.error("Error saving project:", error);
-                    showModal("Failed to save project.");
+                    console.error("Lỗi khi lưu dự án:", error);
+                    showModal("Không thể lưu dự án.");
                 }
             } else {
-                showModal("Project Name, Start Date, and End Date are required.");
+                showModal("Tên dự án, Ngày bắt đầu và Ngày kết thúc là bắt buộc.");
             }
         });
 
+        /**
+         * Function to copy a single task to the current project
+         * @param {string} taskId - The ID of the task to copy.
+         */
+        async function handleCopyTask(taskId) {
+            if (!isCurrentUserProjectMember() || !currentProjectId) {
+                showModal("Bạn không có quyền sao chép tác vụ.");
+                return;
+            }
+
+            try {
+                const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+                const taskDoc = await getDoc(taskRef);
+
+                if (taskDoc.exists()) {
+                    const originalTaskData = taskDoc.data();
+                    const copiedTaskData = {
+                        text: `Copy of ${originalTaskData.text}`,
+                        status: 'todo',
+                        createdAt: new Date().toISOString(),
+                        position: Date.now(),
+                        color: originalTaskData.color || '#818CF8',
+                        deadline: originalTaskData.deadline || null,
+                        subtasks: originalTaskData.subtasks.map(sub => ({
+                            text: sub.text,
+                            isCompleted: false,
+                            note: sub.note || '',
+                            color: sub.color || 'default', // NEW: Copy subtask color
+                            position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
+                        })),
+                        comments: [],
+                        notes: [] // NEW: Copied tasks start with empty notes
+                    };
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
+                    showModal("Tác vụ đã được sao chép thành công!");
+                } else {
+                    showModal("Không tìm thấy tác vụ để sao chép.");
+                }
+            } catch (error) {
+                console.error("Lỗi khi sao chép tác vụ:", error);
+                showModal("Không thể sao chép tác vụ.");
+            }
+        }
+
+
+        /**
+         * Function to copy "To Do" tasks from a source project to a destination project (used in create project modal)
+         * @param {string} sourceProjectId - The ID of the project to copy tasks from.
+         * @param {string} destinationProjectId - The ID of the project to copy tasks to.
+         */
+        async function copyTodoTasks(sourceProjectId, destinationProjectId) {
+            try {
+                const sourceTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${sourceProjectId}/tasks`);
+                const sourceTasksSnapshot = await getDocs(sourceTasksCollectionRef);
+                
+                const todoTasksToCopy = sourceTasksSnapshot.docs
+                    .filter(doc => doc.data().status === 'todo')
+                    .map(doc => {
+                        const taskData = doc.data();
+                        return {
+                            text: taskData.text,
+                            status: 'todo',
+                            createdAt: new Date().toISOString(),
+                            position: Date.now() + Math.random(),
+                            color: taskData.color || '#818CF8',
+                            deadline: taskData.deadline || null,
+                            subtasks: taskData.subtasks.map(sub => ({
+                                text: sub.text,
+                                isCompleted: false,
+                                note: sub.note || '',
+                                color: sub.color || 'default', // NEW: Copy subtask color
+                                position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
+                            })),
+                            comments: [],
+                            notes: [] // NEW: Copied tasks start with empty notes
+                        };
+                    });
+
+                const destinationTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${destinationProjectId}/tasks`);
+                const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
+                
+                await Promise.all(addTasksPromises);
+                console.log(`Đã sao chép ${todoTasksToCopy.length} tác vụ 'To Do' từ ${sourceProjectId} sang ${destinationProjectId}`);
+            } catch (error) {
+                console.error("Lỗi khi sao chép tác vụ:", error);
+                showModal("Không thể sao chép tác vụ 'To Do'.");
+            }
+        }
+
+
         cancelCreateProjectBtn.addEventListener('click', () => {
-            createProjectModal.classList.add('hidden'); // Hide create/edit project modal
+            createProjectModal.classList.add('hidden');
         });
 
         projectSelect.addEventListener('change', (e) => {
             currentProjectId = e.target.value;
             if (currentProjectId) {
-                setupRealtimeListener(currentProjectId); // Set up task listener for the selected project
-                displayProjectDetails(projectsData[currentProjectId]); // Display project details
+                setupRealtimeListener(currentProjectId);
+                displayProjectDetails(projectsData[currentProjectId]);
             } else {
-                if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
-                renderTasks(); // Clear tasks from UI
-                displayProjectDetails(null); // Clear project details
+                if (unsubscribeFromTasks) unsubscribeFromTasks();
+                renderTasks();
+                displayProjectDetails(null);
             }
         });
 
@@ -1413,19 +2450,18 @@
         function displayProjectDetails(project) {
             if (project) {
                 displayProjectName.textContent = project.name;
-                displayProjectDescription.textContent = project.description || 'No description.';
-                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set';
-                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set';
+                displayProjectDescription.textContent = project.description || 'Không có mô tả.';
+                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('vi-VN') : 'Chưa đặt';
+                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('vi-VN') : 'Chưa đặt';
                 displayProjectStatus.textContent = project.status || 'Active';
 
                 currentProjectMembers = project.members || [];
-                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.';
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'Chưa có thành viên.';
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
-                burndownChartSection.classList.remove('hidden'); // Show chart section
+                burndownChartSection.classList.remove('hidden');
 
-                // Control visibility/interactivity of project action buttons based on admin role
                 const canModifyProject = isCurrentUserAdmin;
                 editProjectBtn.classList.toggle('hidden', !canModifyProject);
                 manageMembersBtn.classList.toggle('hidden', !canModifyProject);
@@ -1433,8 +2469,8 @@
 
             } else {
                 currentProjectDetailsDiv.classList.add('hidden');
-                currentProjectMembers = []; // Reset members when no project
-                burndownChartSection.classList.add('hidden'); // Hide chart section
+                currentProjectMembers = [];
+                burndownChartSection.classList.add('hidden');
                 editProjectBtn.classList.add('hidden');
                 manageMembersBtn.classList.add('hidden');
                 deleteProjectBtn.classList.add('hidden');
@@ -1468,7 +2504,7 @@
             const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
             for (let i = 0; currentDate <= endDate; i++) {
-                labels.push(currentDate.toLocaleDateString('en-US'));
+                labels.push(currentDate.toLocaleDateString('vi-VN'));
 
                 const idealRemaining = initialTotalTasks - (initialTotalTasks / (totalDays - 1)) * i;
                 idealBurndown.push(Math.max(0, idealRemaining));
@@ -1570,11 +2606,11 @@
         // --- Project Member Management Logic ---
         manageMembersBtn.addEventListener('click', () => {
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to manage members.");
+                showModal("Bạn không có quyền quản lý thành viên.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Please select a project to manage members.");
+                showModal("Vui lòng chọn một dự án để quản lý thành viên.");
                 return;
             }
             displayMembersInModal();
@@ -1589,15 +2625,15 @@
         addMemberBtn.addEventListener('click', async () => {
             const newMemberId = newMemberIdInput.value.trim();
             if (!newMemberId) {
-                showModal("Please enter a User ID.");
+                showModal("Vui lòng nhập ID người dùng.");
                 return;
             }
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to add members.");
+                showModal("Bạn không có quyền thêm thành viên.");
                 return;
             }
             if (!currentProjectId) {
-                showModal("Please select a project to add members to.");
+                showModal("Vui lòng chọn một dự án để thêm thành viên.");
                 return;
             }
 
@@ -1607,18 +2643,18 @@
                 if (projectDoc.exists()) {
                     const projectData = projectDoc.data();
                     if (projectData.members && projectData.members.includes(newMemberId)) {
-                        showModal("This user is already a member of the project.");
+                        showModal("Người dùng này đã là thành viên của dự án.");
                         return;
                     }
                     await updateDoc(projectRef, {
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
-                    showModal(`User ${newMemberId} has been added to the project.`);
+                    showModal(`Người dùng ${newMemberId} đã được thêm vào dự án.`);
                 }
             } catch (error) {
-                console.error("Error adding member:", error);
-                showModal("Failed to add member.");
+                console.error("Lỗi khi thêm thành viên:", error);
+                showModal("Không thể thêm thành viên.");
             }
         });
 
@@ -1631,7 +2667,7 @@
             const projectMembers = (project && project.members) ? project.members : [];
 
             if (projectMembers.length === 0) {
-                currentMembersList.textContent = 'No members in this project yet.';
+                currentMembersList.textContent = 'Chưa có thành viên nào trong dự án này.';
                 return;
             }
             projectMembers.forEach(memberId => {
@@ -1645,13 +2681,13 @@
 
                 if (isCurrentUserAdmin && memberId !== userId) {
                     const removeButton = document.createElement('button');
-                    removeButton.textContent = 'Remove';
+                    removeButton.textContent = 'Xóa';
                     removeButton.className = 'ml-4 bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 transition';
                     removeButton.onclick = () => removeProjectMember(currentProjectId, memberId);
                     memberItem.appendChild(removeButton);
                 } else if (memberId === userId) {
                     const selfTag = document.createElement('span');
-                    selfTag.textContent = '(You)';
+                    selfTag.textContent = '(Bạn)';
                     selfTag.className = 'ml-2 text-gray-400 text-xs italic';
                     memberIdSpan.appendChild(selfTag);
                 }
@@ -1666,11 +2702,11 @@
          */
         async function removeProjectMember(projectId, memberIdToRemove) {
             if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to remove members.");
+                showModal("Bạn không có quyền xóa thành viên.");
                 return;
             }
             if (memberIdToRemove === userId) {
-                showModal("You cannot remove yourself from the project via this interface.");
+                showModal("Bạn không thể tự xóa mình khỏi dự án thông qua giao diện này.");
                 return;
             }
             try {
@@ -1678,44 +2714,41 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
-                showModal(`User ${memberIdToRemove} removed from the project.`);
+                showModal(`Người dùng ${memberIdToRemove} đã bị xóa khỏi dự án.`);
             } catch (error) {
-                    console.error("Error removing member:", error);
-                showModal("Failed to remove member.");
+                console.error("Lỗi khi xóa thành viên:", error);
+                showModal("Không thể xóa thành viên.");
             }
         }
 
-        // Add task form listener
+
         taskForm.addEventListener('submit', handleAddTask);
         
-        // Login button listeners
         adminLoginBtn.addEventListener('click', () => {
             const email = adminEmailInput.value.trim();
             const password = adminPasswordInput.value.trim();
             if (email && password) {
                 handleAdminLogin(email, password);
             } else {
-                showModal("Please enter both email and password for admin login.");
+                showModal("Vui lòng nhập cả email và mật khẩu cho admin.");
             }
         });
 
         guestLoginBtn.addEventListener('click', handleGuestLogin);
         logoutBtn.addEventListener('click', handleLogout);
 
-        // Project select listener
         projectSelect.addEventListener('change', (e) => {
             currentProjectId = e.target.value;
             if (currentProjectId) {
-                setupRealtimeListener(currentProjectId); // Set up task listener for the selected project
-                displayProjectDetails(projectsData[currentProjectId]); // Display project details
+                setupRealtimeListener(currentProjectId);
+                displayProjectDetails(projectsData[currentProjectId]);
             } else {
-                if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
-                renderTasks(); // Clear tasks from UI
-                displayProjectDetails(null); // Clear project details
+                if (unsubscribeFromTasks) unsubscribeFromTasks();
+                renderTasks();
+                displayProjectDetails(null);
             }
         });
 
-        // Initialize the app when the script loads
         initializeFirebase();
     </script>
 </body>
