@@ -102,13 +102,48 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, transform 0.3s ease-in-out;
             z-index: 11000; /* Higher than modals */
+            display: flex; /* Use flexbox for layout */
+            flex-direction: column; /* Stack content vertically */
+            align-items: flex-start; /* Align content to the start */
+            max-width: 300px; /* Limit width */
         }
         .toast-notification.show {
             opacity: 1;
             visibility: visible;
         }
+        /* Collapsed state for the toast */
+        .toast-notification.collapsed {
+            transform: translateX(calc(100% - 40px)); /* Shift left to hide most content */
+            opacity: 0.7;
+            padding-right: 10px; /* Reduce padding when collapsed */
+        }
+        .toast-notification .toast-content {
+            display: block; /* By default, content is visible */
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 100px; /* Max height for content */
+            overflow: hidden; /* Hide overflow when collapsed */
+        }
+        .toast-notification.collapsed .toast-content {
+            max-height: 0; /* Collapse content */
+            opacity: 0;
+            padding: 0;
+        }
+        .toast-notification .toggle-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            align-self: flex-end; /* Align button to the right within the flex container */
+            transition: transform 0.3s ease-in-out;
+        }
+        .toast-notification.collapsed .toggle-button {
+            transform: rotate(180deg); /* Rotate arrow when collapsed */
+        }
+
 
         /* Subtask drag-over effect */
         .subtask-item.drag-over-subtask {
@@ -423,7 +458,12 @@
     
     <!-- Toast Notification for New Comments -->
     <div id="comment-toast" class="toast-notification">
-        New comment on task: <span id="toast-task-name" class="font-semibold"></span>
+        <button class="toggle-button">▲</button>
+        <div class="toast-content">
+            <p>New comment on project: <span id="toast-project-name" class="font-semibold"></span></p>
+            <p>Task: <span id="toast-task-name" class="font-semibold"></span></p>
+            <p><span id="toast-comment-text" class="italic"></span></p>
+        </div>
     </div>
 
 
@@ -562,6 +602,9 @@
         const closeTaskDetailsModalBtn = document.getElementById('close-task-details-modal-btn');
         const commentToast = document.getElementById('comment-toast'); 
         const toastTaskName = document.getElementById('toast-task-name'); 
+        const toastProjectName = document.getElementById('toast-project-name'); // NEW
+        const toastCommentText = document.getElementById('toast-comment-text'); // NEW
+        const toggleToastButton = commentToast.querySelector('.toggle-button'); // NEW
         const commentSectionContainer = document.getElementById('comment-section-container');
         const taskNotesSectionContainer = document.getElementById('task-notes-section-container'); // NEW for task notes section
         const taskNotesList = document.getElementById('task-notes-list'); // NEW for task notes list
@@ -907,20 +950,22 @@
             const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
             const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
 
-            let previousTasksComments = {}; 
-
             unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
                 const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+                // Check for new comments and trigger toast
                 newTasks.forEach(newTask => {
                     const oldTask = tasks.find(t => t.id === newTask.id);
                     const oldCommentCount = oldTask ? (oldTask.comments ? oldTask.comments.length : 0) : 0;
                     const newCommentCount = newTask.comments ? newTask.comments.length : 0;
 
                     if (newCommentCount > oldCommentCount && newTask.id !== currentOpenTaskDetailsId) {
-                        showCommentToast(newTask.text);
+                        const newComment = newTask.comments[newCommentCount - 1]; // Get the latest comment
+                        const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
+                        showCommentToast(projectName, newTask.text, newComment.text);
                     }
                 });
+
                 tasks = newTasks;
                 renderTasks();
                 const project = projectsData[currentProjectId];
@@ -1351,7 +1396,7 @@
             const commentText = newCommentInput.value.trim();
 
             if (!taskId || !currentProjectId || !commentText) {
-                showModal("Please enter a comment.");
+                // No modal for success, just return if input is empty
                 return;
             }
             if (!userId) {
@@ -1370,9 +1415,12 @@
                     comments: arrayUnion(newComment)
                 });
                 newCommentInput.value = '';
+                // Automatically close the task details modal after adding a comment
+                taskDetailsModal.classList.add('hidden');
+                currentOpenTaskDetailsId = null; // Reset tracking of open task
             } catch (error) {
                 console.error("L\u1ED7i khi th\u00EAm b\u00ECnh lu\u1EADn:", error);
-                showModal("Failed to add comment.");
+                showModal("Failed to add comment."); // Keep modal for errors
             }
         });
 
@@ -1383,7 +1431,7 @@
          */
         async function handleDeleteComment(taskId, commentIndex) {
             if (!currentProjectId) {
-                showModal("No project selected.");
+                // No modal for success, just return
                 return;
             }
 
@@ -1399,19 +1447,19 @@
                         if (isCurrentUserAdmin || currentComments[commentIndex].commenterId === userId) {
                             const updatedComments = currentComments.filter((_, i) => i !== commentIndex);
                             await updateDoc(taskRef, { comments: updatedComments });
-                            showModal("Comment deleted successfully!");
+                            // No modal for success, simply update UI implicitly via listener
                         } else {
-                            showModal("You do not have permission to delete this comment.");
+                            showModal("You do not have permission to delete this comment."); // Keep modal for permission errors
                         }
                     } else {
-                        showModal("Error: Comment not found.");
+                        showModal("Error: Comment not found."); // Keep modal for errors
                     }
                 } else {
-                    showModal("Error: Task not found.");
+                    showModal("Error: Task not found."); // Keep modal for errors
                 }
             } catch (error) {
                 console.error("L\u1ED7i khi x\u00F3a b\u00ECnh lu\u1EADn:", error);
-                showModal("Failed to delete comment.");
+                showModal("Failed to delete comment."); // Keep modal for errors
             }
         }
 
@@ -2223,13 +2271,36 @@
         modalCloseBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
         // --- Comment Notification Toast ---
-        function showCommentToast(taskName) {
+        let toastTimeout;
+        /**
+         * Shows a toast notification for a new comment.
+         * @param {string} projectName - The name of the project.
+         * @param {string} taskName - The name of the task.
+         * @param {string} commentText - The text of the new comment.
+         */
+        function showCommentToast(projectName, taskName, commentText) {
+            clearTimeout(toastTimeout); // Clear any existing timeout
+            
+            toastProjectName.textContent = projectName;
             toastTaskName.textContent = taskName;
+            toastCommentText.textContent = `"${commentText}"`;
+
+            commentToast.classList.remove('collapsed'); // Ensure it's expanded
             commentToast.classList.add('show');
-            setTimeout(() => {
-                commentToast.classList.remove('show');
-            }, 5000);
+
+            toastTimeout = setTimeout(() => {
+                commentToast.classList.remove('show'); // Hide visually for animation
+                commentToast.classList.add('collapsed'); // Collapse
+            }, 5000); // Collapse after 5 seconds
         }
+
+        // Toggle button for toast
+        toggleToastButton.addEventListener('click', () => {
+            commentToast.classList.toggle('collapsed');
+            commentToast.classList.add('show'); // Ensure it's visible if toggled from hidden state
+            clearTimeout(toastTimeout); // Prevent auto-collapse if user manually expands
+        });
+
 
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
@@ -2799,7 +2870,7 @@
             if (email && password) {
                 handleAdminLogin(email, password);
             } else {
-                showModal("Please enter both email and password for login."); // Changed message to be generic
+                showModal("Please enter both email and password for login."); 
             }
         });
 
