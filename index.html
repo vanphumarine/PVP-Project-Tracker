@@ -296,55 +296,41 @@
         </div>
     </div>
 
-    <!-- RENAMED: Modal to edit existing task note -->
-    <div id="task-note-edit-modal" class="modal-backdrop hidden">
-        <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Chỉnh sửa Ghi chú Công việc</h3>
-            <textarea id="task-note-textarea-modal" placeholder="Nhập ghi chú cho công việc này..." rows="5" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
-            <input type="hidden" id="editing-task-id-note-modal">
-            <input type="hidden" id="editing-note-index-modal">
-            <div class="flex justify-end gap-2">
-                <button id="save-task-note-modal-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Lưu Ghi chú</button>
-                <button id="cancel-task-note-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Hủy bỏ</button>
-            </div>
-        </div>
-    </div>
-
     <!-- NEW: Modal to edit subtask text and color -->
     <div id="subtask-edit-text-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Subtask</h3>
-            <label for="subtask-edit-text-input" class="block text-sm font-medium text-gray-700 mb-1">Subtask Text</label>
-            <input type="text" id="subtask-edit-text-input" placeholder="Enter subtask text..." class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Chỉnh sửa Subtask</h3>
+            <label for="subtask-edit-text-input" class="block text-sm font-medium text-gray-700 mb-1">Nội dung Subtask</label>
+            <input type="text" id="subtask-edit-text-input" placeholder="Nhập nội dung subtask..." class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4">
             
-            <label class="block text-sm font-medium text-gray-700 mb-2">Highlight Color</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Màu nổi bật</label>
             <div class="flex gap-4 mb-4 justify-center">
                 <label class="flex items-center cursor-pointer">
                     <input type="radio" name="subtask-color" value="default" checked class="form-radio h-4 w-4 text-gray-600">
-                    <span class="ml-2 text-gray-700">Default</span>
+                    <span class="ml-2 text-gray-700">Mặc định</span>
                 </label>
                 <label class="flex items-center cursor-pointer">
                     <input type="radio" name="subtask-color" value="green" class="form-radio h-4 w-4 text-green-500">
-                    <span class="ml-2 text-green-700 font-semibold">Green</span>
+                    <span class="ml-2 text-green-700 font-semibold">Xanh</span>
                 </label>
                 <label class="flex items-center cursor-pointer">
                     <input type="radio" name="subtask-color" value="yellow" class="form-radio h-4 w-4 text-yellow-500">
-                    <span class="ml-2 text-yellow-700 font-semibold">Yellow</span>
+                    <span class="ml-2 text-yellow-700 font-semibold">Vàng</span>
                 </label>
                 <label class="flex items-center cursor-pointer">
                     <input type="radio" name="subtask-color" value="red" class="form-radio h-4 w-4 text-red-500">
-                    <span class="ml-2 text-red-700 font-semibold">Red</span>
+                    <span class="ml-2 text-red-700 font-semibold">Đỏ</span>
                 </label>
             </div>
 
-            <label for="subtask-note-on-edit-modal" class="block text-sm font-medium text-gray-700 mb-1">Subtask Note (Optional)</label>
-            <textarea id="subtask-note-on-edit-modal" placeholder="Enter note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+            <label for="subtask-note-on-edit-modal" class="block text-sm font-medium text-gray-700 mb-1">Ghi chú Subtask (Tùy chọn)</label>
+            <textarea id="subtask-note-on-edit-modal" placeholder="Nhập ghi chú cho subtask này..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
 
             <input type="hidden" id="editing-task-id-subtext">
             <input type="hidden" id="editing-subtask-index-subtext">
             <div class="flex justify-end gap-2">
-                <button id="save-subtask-text-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Changes</button>
-                <button id="cancel-subtask-text-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
+                <button id="save-subtask-text-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Lưu thay đổi</button>
+                <button id="cancel-subtask-text-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Hủy bỏ</button>
             </div>
         </div>
     </div>
@@ -352,19 +338,19 @@
     <!-- Modal to manage project members -->
     <div id="manage-members-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Manage Project Members</h3>
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Quản lý Thành viên Dự án</h3>
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Current Members:</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Thành viên hiện tại:</label>
                 <div id="current-members-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200">
                     <!-- Members will be loaded here -->
                 </div>
             </div>
             <div class="flex gap-2 mb-6">
-                <input type="text" id="new-member-id-input" placeholder="Enter User ID to add" class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-                <button id="add-member-btn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-purple-700 transition-colors duration-300">Add</button>
+                <input type="text" id="new-member-id-input" placeholder="Nhập ID người dùng để thêm" class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                <button id="add-member-btn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-purple-700 transition-colors duration-300">Thêm</button>
             </div>
             <div class="flex justify-end gap-2">
-                <button id="close-members-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
+                <button id="close-members-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Đóng</button>
             </div>
         </div>
     </div>
@@ -372,39 +358,27 @@
     <!-- NEW: Modal to view task details and add comments / edit tasks -->
     <div id="task-details-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Task Details</h3>
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Chi tiết tác vụ</h3>
             
-            <label for="task-details-text-input" class="block text-sm font-medium text-gray-700 mb-1">Task Description:</label>
-            <textarea id="task-details-text-input" placeholder="Task description..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-2"></textarea>
+            <label for="task-details-text-input" class="block text-sm font-medium text-gray-700 mb-1">Mô tả tác vụ:</label>
+            <textarea id="task-details-text-input" placeholder="Mô tả tác vụ..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-2"></textarea>
             
             <div class="flex flex-col sm:flex-row gap-4 mb-4">
                 <div class="flex items-center gap-2">
-                    <label for="task-details-color-input" class="text-gray-700">Color:</label>
+                    <label for="task-details-color-input" class="text-gray-700">Màu sắc:</label>
                     <input type="color" id="task-details-color-input" class="p-1 border border-gray-300 rounded-md w-16 h-10 cursor-pointer">
                 </div>
                 <div class="flex items-center gap-2 flex-grow">
-                    <label for="task-details-deadline-input" class="text-gray-700 whitespace-nowrap">Deadline:</label>
+                    <label for="task-details-deadline-input" class="text-gray-700 whitespace-nowrap">Hạn chót:</label>
                     <input type="date" id="task-details-deadline-input" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
             </div>
 
-            <button id="save-task-details-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300 mb-4">Save Task Changes</button>
-
-            <!-- NEW: Task Notes Section -->
-            <div id="task-notes-section-container" class="mb-4">
-                <h4 class="text-lg font-semibold text-gray-800 mb-2">Task Notes:</h4>
-                <div id="task-notes-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200 mb-2">
-                    <!-- Task Notes will be loaded here -->
-                </div>
-                <div class="flex flex-col gap-2">
-                    <textarea id="new-task-note-input" placeholder="Thêm ghi chú mới..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full"></textarea>
-                    <button id="add-task-note-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Thêm Ghi chú Công việc</button>
-                </div>
-            </div>
+            <button id="save-task-details-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300 mb-4">Lưu thay đổi tác vụ</button>
 
             <!-- Existing Comments Section -->
             <div id="comment-section-container" class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Comments:</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Bình luận:</label>
                 <div id="comments-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200 mb-2">
                     <!-- Comments will be loaded here -->
                 </div>
@@ -514,18 +488,10 @@
         const displayProjectEndDate = document.getElementById('display-project-end-date');
         const displayProjectStatus = document.getElementById('display-project-status');
 
-        // RENAMED for task notes edit
-        const taskNoteEditModal = document.getElementById('task-note-edit-modal'); 
-        const taskNoteTextareaModal = document.getElementById('task-note-textarea-modal');
-        const editingTaskIdNoteModal = document.getElementById('editing-task-id-note-modal');
-        const editingNoteIndexModal = document.getElementById('editing-note-index-modal');
-        const saveTaskNoteModalBtn = document.getElementById('save-task-note-modal-btn');
-        const cancelTaskNoteModalBtn = document.getElementById('cancel-task-note-modal-btn');
-
-        const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); // Repurposed for subtask edit & color
+        const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); 
         const subtaskEditTextInput = document.getElementById('subtask-edit-text-input');
-        const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); // NEW for subtask color
-        const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); // NEW for subtask note on edit modal
+        const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); 
+        const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); 
         const editingTaskIdSubtext = document.getElementById('editing-task-id-subtext');
         const editingSubtaskIndexSubtext = document.getElementById('editing-subtask-index-subtext');
         const saveSubtaskTextBtn = document.getElementById('save-subtask-text-btn');
@@ -550,10 +516,7 @@
         const commentToast = document.getElementById('comment-toast'); 
         const toastTaskName = document.getElementById('toast-task-name'); 
         const commentSectionContainer = document.getElementById('comment-section-container');
-        const taskNotesSectionContainer = document.getElementById('task-notes-section-container'); // NEW for task notes section
-        const taskNotesList = document.getElementById('task-notes-list'); // NEW for task notes list
-        const newTaskNoteInput = document.getElementById('new-task-note-input'); // NEW for task note input
-        const addTaskNoteBtn = document.getElementById('add-task-note-btn'); // NEW for add task note button
+        // taskNotesSectionContainer, taskNotesList, newTaskNoteInput, addTaskNoteBtn are REMOVED for task-level notes
 
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
@@ -567,7 +530,6 @@
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
-        // Adjusted for subtask object and its original index
         let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
 
         // Helper map for subtask colors
@@ -987,14 +949,14 @@
             if (task.deadline) {
                 const deadlineText = document.createElement('p');
                 deadlineText.className = 'text-xs text-gray-600 italic mb-2';
-                deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('en-US')}`;
+                deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('vi-VN')}`;
                 div.appendChild(deadlineText);
             }
 
             if (task.comments && task.comments.length > 0) {
                 const commentsCount = document.createElement('p');
                 commentsCount.className = 'text-xs text-gray-500 italic mt-1';
-                commentsCount.textContent = `💬 ${task.comments.length} comments`;
+                commentsCount.textContent = `💬 ${task.comments.length} bình luận`;
                 div.appendChild(commentsCount);
             }
 
@@ -1014,8 +976,7 @@
                     const subtaskItem = document.createElement('div');
                     subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
                     subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
-                    subtaskItem.setAttribute('data-subtask-index', index); // For subtask drag-drop
-                    // No need to set data-subtask-position here as handleSubtaskDragStart now copies the object
+                    subtaskItem.setAttribute('data-subtask-index', index); // Index in current DOM order for drag-drop
 
                     if (canModifyTask) {
                         subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
@@ -1055,7 +1016,7 @@
                         const editSubtaskTextButton = document.createElement('button');
                         editSubtaskTextButton.textContent = '📝';
                         editSubtaskTextButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
-                        editSubtaskTextButton.title = 'Edit Subtask';
+                        editSubtaskTextButton.title = 'Chỉnh sửa Subtask';
                         editSubtaskTextButton.onclick = (e) => {
                             e.stopPropagation();
                             openSubtaskEditTextModal(task.id, index, subtask.text, subtask.note || '', subtask.color || 'default');
@@ -1075,10 +1036,11 @@
                     }
                     subtasksContainer.appendChild(subtaskItem);
                     
+                    // Display subtask note if it exists
                     if (subtask.note && subtask.note.trim() !== '') {
                         const subtaskNoteDisplay = document.createElement('p');
                         subtaskNoteDisplay.className = 'text-xs text-gray-500 italic ml-6 mb-1 break-words';
-                        subtaskNoteDisplay.textContent = `Note: ${subtask.note}`;
+                        subtaskNoteDisplay.textContent = `Ghi chú: ${subtask.note}`;
                         subtasksContainer.appendChild(subtaskNoteDisplay);
                     }
                 });
@@ -1090,7 +1052,7 @@
 
                 const newSubtaskInput = document.createElement('input');
                 newSubtaskInput.type = 'text';
-                newSubtaskInput.placeholder = 'Add subtask...';
+                newSubtaskInput.placeholder = 'Thêm subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
                 newSubtaskInput.addEventListener('keypress', (e) => {
                     e.stopPropagation(); // Stop propagation here
@@ -1128,51 +1090,37 @@
          */
         function openTaskDetailsModal(task, isEditMode = false) {
             currentOpenTaskDetailsId = task.id;
-            taskIdForComments.value = task.id; // This input also holds task ID for notes section
+            taskIdForComments.value = task.id; 
 
             taskDetailsTextInput.value = task.text || '';
             taskDetailsColorInput.value = task.color || '#818CF8';
             taskDetailsDeadlineInput.value = task.deadline || '';
 
-            const canModifyTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
-            const canComment = !!userId; // Any logged-in user can comment
-            const canAddOrEditNotes = isCurrentUserProjectMember(); // Only project members can add/edit notes
+            const canModifyTaskProperties = isCurrentUserProjectMember(); 
+            const canComment = !!userId; 
 
-            // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
             saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canModifyTaskProperties));
 
             // Commenting section visibility
             commentSectionContainer.classList.toggle('hidden', !canComment);
 
-            // Task Notes section visibility: Only visible if a project member AND in edit mode, OR if a Viewer and not logged in (which should be hidden by canAddOrEditNotes)
-            // Simplified: only show if current user is a project member and in edit mode
-            taskNotesSectionContainer.classList.toggle('hidden', !canAddOrEditNotes || !isEditMode);
-
+            // Task details input fields read-only/disabled status
+            taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
+            taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties;
+            taskDetailsDeadlineInput.disabled = !isEditMode || !canModifyTaskProperties;
 
             // Enable/disable comment input and button based on canComment
             newCommentInput.disabled = !canComment;
             addCommentBtn.disabled = !canComment;
             newCommentInput.placeholder = canComment ? "Thêm bình luận..." : "Đăng nhập để thêm bình luận...";
 
-            // Task note input and button are disabled based on canAddOrEditNotes
-            newTaskNoteInput.disabled = !canAddOrEditNotes;
-            addTaskNoteBtn.disabled = !canAddOrEditNotes;
-            newTaskNoteInput.placeholder = canAddOrEditNotes ? "Thêm ghi chú mới..." : "Chỉ thành viên dự án mới có thể thêm ghi chú...";
-            
-            // Task details input fields read-only/disabled status
-            taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
-            taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties;
-            taskDetailsDeadlineInput.disabled = !isEditMode || !canModifyTaskProperties;
-
-
             renderComments(task.comments || []);
-            renderTaskNotes(task.notes || []); // NEW
+            // No renderTaskNotes here as task-level notes are removed
 
             taskDetailsModal.classList.remove('hidden');
-            // Focus based on user role and mode
-            if (isEditMode && canModifyTaskProperties) { // Admin in edit mode, focus on task text
+            if (isEditMode && canModifyTaskProperties) {
                 taskDetailsTextInput.focus();
-            } else if (canComment) { // Viewer or Admin in view mode, focus on comments
+            } else if (canComment) {
                 newCommentInput.focus();
             }
         }
@@ -1226,7 +1174,7 @@
             
             commentsArray.forEach((comment, index) => {
                 const commentItem = document.createElement('div');
-                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; // Added relative for delete button positioning
+                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; 
                 
                 const commentHeader = document.createElement('div');
                 commentHeader.className = 'flex justify-between items-center mb-1';
@@ -1245,11 +1193,10 @@
                 commentItem.appendChild(commentHeader);
 
                 const commentTextP = document.createElement('p');
-                commentTextP.className = 'text-gray-800 break-words pr-6'; // Added padding for delete button
+                commentTextP.className = 'text-gray-800 break-words pr-6'; 
                 commentTextP.textContent = comment.text;
                 commentItem.appendChild(commentTextP);
 
-                // Add delete button for comments (only if current user is author or admin)
                 if (isCurrentUserAdmin || comment.commenterId === userId) {
                     const deleteCommentButton = document.createElement('button');
                     deleteCommentButton.textContent = '×';
@@ -1319,7 +1266,6 @@
                     const currentComments = taskDoc.data().comments || [];
 
                     if (commentIndex >= 0 && commentIndex < currentComments.length) {
-                        // Check if current user is admin OR the author of the comment
                         if (isCurrentUserAdmin || currentComments[commentIndex].commenterId === userId) {
                             const updatedComments = currentComments.filter((_, i) => i !== commentIndex);
                             await updateDoc(taskRef, { comments: updatedComments });
@@ -1338,213 +1284,7 @@
                 showModal("Không thể xóa bình luận.");
             }
         }
-
-        /**
-         * NEW: Renders the list of task notes in the task details modal.
-         * @param {Array<Object>} notesArray - Array of note objects.
-         */
-        function renderTaskNotes(notesArray) {
-            taskNotesList.innerHTML = '';
-            if (notesArray.length === 0) {
-                taskNotesList.textContent = 'Chưa có ghi chú nào.';
-                taskNotesList.classList.add('text-gray-500', 'italic');
-                return;
-            }
-            taskNotesList.classList.remove('text-gray-500', 'italic');
-            notesArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            
-            notesArray.forEach((note, index) => {
-                const noteItem = document.createElement('div');
-                noteItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-purple-300 relative';
-                
-                const noteHeader = document.createElement('div');
-                noteHeader.className = 'flex justify-between items-center mb-1';
-                
-                const noteInfoSpan = document.createElement('span');
-                noteInfoSpan.className = 'font-semibold text-purple-700';
-                noteInfoSpan.textContent = `Ghi chú ${index + 1}: Bởi ${note.authorId.substring(0, 8)}...`;
-                noteHeader.appendChild(noteInfoSpan);
-
-                const timestampSpan = document.createElement('span');
-                timestampSpan.className = 'text-xs text-gray-500';
-                const date = new Date(note.timestamp);
-                timestampSpan.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-                noteHeader.appendChild(timestampSpan);
-
-                noteItem.appendChild(noteHeader);
-
-                const noteTextP = document.createElement('p');
-                noteTextP.className = 'text-gray-800 break-words pr-6';
-                noteTextP.textContent = note.text;
-                noteItem.appendChild(noteTextP);
-
-                if (isCurrentUserAdmin || note.authorId === userId) {
-                    const noteActionsDiv = document.createElement('div');
-                    noteActionsDiv.className = 'absolute top-1 right-1 flex gap-1';
-
-                    const editNoteButton = document.createElement('button');
-                    editNoteButton.textContent = '✏️';
-                    editNoteButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
-                    editNoteButton.title = 'Chỉnh sửa ghi chú';
-                    editNoteButton.onclick = (e) => {
-                        e.stopPropagation();
-                        openTaskNoteEditModal(taskIdForComments.value, index, note.text);
-                    };
-                    noteActionsDiv.appendChild(editNoteButton);
-
-                    const deleteNoteButton = document.createElement('button');
-                    deleteNoteButton.textContent = '×';
-                    deleteNoteButton.className = 'text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
-                    deleteNoteButton.title = 'Xóa ghi chú';
-                    deleteNoteButton.onclick = (e) => {
-                        e.stopPropagation();
-                        handleDeleteTaskNote(taskIdForComments.value, index);
-                    };
-                    noteActionsDiv.appendChild(deleteNoteButton);
-                    noteItem.appendChild(noteActionsDiv);
-                }
-
-                taskNotesList.appendChild(noteItem);
-            });
-            taskNotesList.scrollTop = taskNotesList.scrollHeight;
-        }
-
-        /**
-         * NEW: Adds a note to the current task.
-         */
-        addTaskNoteBtn.addEventListener('click', async () => {
-            const taskId = taskIdForComments.value;
-            const noteText = newTaskNoteInput.value.trim();
-
-            if (!taskId || !currentProjectId || !noteText) {
-                showModal("Vui lòng nhập ghi chú.");
-                return;
-            }
-            if (!userId) {
-                showModal("Bạn phải đăng nhập để thêm ghi chú.");
-                return;
-            }
-            if (!isCurrentUserProjectMember()) { // Explicit check
-                showModal("Bạn không có quyền thêm ghi chú công việc.");
-                return;
-            }
-
-            try {
-                const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
-                const newTaskNote = {
-                    text: noteText,
-                    authorId: userId,
-                    timestamp: new Date().toISOString()
-                };
-                await updateDoc(taskRef, {
-                    notes: arrayUnion(newTaskNote)
-                });
-                newTaskNoteInput.value = '';
-            } catch (error) {
-                console.error("Lỗi khi thêm ghi chú công việc:", error);
-                showModal("Không thể thêm ghi chú công việc.");
-            }
-        });
-
-        /**
-         * NEW: Deletes a specific note from a task.
-         * @param {string} taskId - The ID of the task containing the note.
-         * @param {number} noteIndex - The index of the note to delete in the notes array.
-         */
-        async function handleDeleteTaskNote(taskId, noteIndex) {
-            if (!currentProjectId) {
-                showModal("Chưa chọn dự án.");
-                return;
-            }
-
-            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
-            
-            try {
-                const taskDoc = await getDoc(taskRef);
-                if (taskDoc.exists()) {
-                    const currentNotes = taskDoc.data().notes || [];
-
-                    if (noteIndex >= 0 && noteIndex < currentNotes.length) {
-                        if (isCurrentUserAdmin || currentNotes[noteIndex].authorId === userId) {
-                            const updatedNotes = currentNotes.filter((_, i) => i !== noteIndex);
-                            await updateDoc(taskRef, { notes: updatedNotes });
-                            showModal("Ghi chú đã được xóa thành công!");
-                        } else {
-                            showModal("Bạn không có quyền xóa ghi chú này.");
-                        }
-                    } else {
-                        showModal("Lỗi: Không tìm thấy ghi chú.");
-                    }
-                } else {
-                    showModal("Lỗi: Không tìm thấy tác vụ.");
-                }
-            } catch (error) {
-                console.error("Lỗi khi xóa ghi chú:", error);
-                showModal("Không thể xóa ghi chú.");
-            }
-        }
-
-        // NEW: Handles opening the modal to edit an existing task note.
-        function openTaskNoteEditModal(taskId, noteIndex, currentNoteText) {
-            if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền chỉnh sửa ghi chú công việc.");
-                return;
-            }
-            editingTaskIdNoteModal.value = taskId;
-            editingNoteIndexModal.value = noteIndex;
-            taskNoteTextareaModal.value = currentNoteText;
-            taskNoteEditModal.classList.remove('hidden');
-            taskNoteTextareaModal.focus();
-        }
-
-        // NEW: Handles saving the edited task note to Firestore.
-        saveTaskNoteModalBtn.addEventListener('click', async () => {
-            const taskId = editingTaskIdNoteModal.value;
-            const noteIndex = parseInt(editingNoteIndexModal.value);
-            const newNoteContent = taskNoteTextareaModal.value.trim();
-
-            if (!taskId || isNaN(noteIndex) || !currentProjectId || !newNoteContent) {
-                showModal("Lỗi: Không tìm thấy thông tin ghi chú công việc hoặc nội dung rỗng.");
-                return;
-            }
-
-            if (!isCurrentUserProjectMember()) {
-                showModal("Bạn không có quyền lưu thay đổi ghi chú công việc.");
-                return;
-            }
-
-            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
-            
-            try {
-                const taskDoc = await getDoc(taskRef);
-                if (taskDoc.exists()) {
-                    const currentNotes = taskDoc.data().notes || [];
-                    if (noteIndex >= 0 && noteIndex < currentNotes.length) {
-                        if (isCurrentUserAdmin || currentNotes[noteIndex].authorId === userId) {
-                            currentNotes[noteIndex].text = newNoteContent;
-                            await updateDoc(taskRef, { notes: currentNotes });
-                            taskNoteEditModal.classList.add('hidden');
-                            showModal("Ghi chú công việc đã được cập nhật thành công!");
-                        } else {
-                            showModal("Bạn không có quyền chỉnh sửa ghi chú công việc này.");
-                        }
-                    } else {
-                        showModal("Lỗi: Chỉ số ghi chú công việc không hợp lệ.");
-                    }
-                } else {
-                    showModal("Lỗi: Không tìm thấy tác vụ.");
-                }
-            } catch (error) {
-                console.error("Lỗi khi lưu ghi chú công việc:", error);
-                showModal("Lỗi khi lưu ghi chú công việc.");
-            }
-        });
-
-        cancelTaskNoteModalBtn.addEventListener('click', () => {
-            taskNoteEditModal.classList.add('hidden');
-        });
-
-
+        
         closeTaskDetailsModalBtn.addEventListener('click', () => {
             taskDetailsModal.classList.add('hidden');
             currentOpenTaskDetailsId = null;
@@ -1578,7 +1318,7 @@
                         deadline: taskDeadline || null,
                         subtasks: [],
                         comments: [],
-                        notes: [] // NEW: Initialize notes array
+                        notes: [] 
                     });
                     taskInput.value = '';
                     taskColorInput.value = '#818CF8';
@@ -1606,7 +1346,8 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    const newSubtaskPosition = Date.now(); // Position for new subtask
+                    // Assign position to new subtask to ensure it's at the end
+                    const newSubtaskPosition = currentSubtasks.length > 0 ? Math.max(...currentSubtasks.map(s => s.position || 0)) + 1000 : 0;
                     const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition }]; 
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
@@ -1622,8 +1363,6 @@
          * @param {number} subtaskIndex - The index of the subtask in the array.
          */
         async function handleToggleSubtask(taskId, subtaskIndex) {
-            // Note: e.stopPropagation() is handled in createTaskElement for the checkbox event listener itself.
-            // This function is only called to update Firestore.
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("Bạn không có quyền thay đổi trạng thái subtask.");
                 return;
@@ -1663,7 +1402,9 @@
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         const updatedSubtasks = currentSubtasks.filter((_, i) => i !== subtaskIndex);
-                        await updateDoc(taskRef, { subtasks: updatedSubtasks });
+                        // Re-assign positions after deletion to keep them ordered
+                        const reindexedSubtasks = updatedSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
+                        await updateDoc(taskRef, { subtasks: reindexedSubtasks });
                     }
                 }
             } catch (error) {
@@ -1673,7 +1414,7 @@
         }
 
         /**
-         * NEW: Handles opening the subtask edit modal (text, note, color).
+         * Handles opening the subtask edit modal (text, note, color).
          * @param {string} taskId - The ID of the parent task.
          * @param {number} subtaskIndex - The index of the subtask.
          * @param {string} currentText - The current subtask text.
@@ -1688,9 +1429,8 @@
             editingTaskIdSubtext.value = taskId;
             editingSubtaskIndexSubtext.value = subtaskIndex;
             subtaskEditTextInput.value = currentText;
-            subtaskNoteOnEditModal.value = currentNote; // Populate note field
+            subtaskNoteOnEditModal.value = currentNote; 
             
-            // Set the correct color radio button
             subtaskColorRadios.forEach(radio => {
                 if (radio.value === currentColor) {
                     radio.checked = true;
@@ -1704,14 +1444,14 @@
         }
 
         /**
-         * NEW: Handles saving the edited subtask (text, note, color) to Firestore.
+         * Handles saving the edited subtask (text, note, color) to Firestore.
          */
         saveSubtaskTextBtn.addEventListener('click', async () => {
             const taskId = editingTaskIdSubtext.value;
             const subtaskIndex = parseInt(editingSubtaskIndexSubtext.value);
             const newSubtaskText = subtaskEditTextInput.value.trim();
-            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); // Get new note
-            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; // Get selected color
+            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
+            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
 
             if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
                 showModal("Lỗi: Không tìm thấy thông tin subtask hoặc nội dung rỗng.");
@@ -1731,8 +1471,8 @@
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
-                        currentSubtasks[subtaskIndex].note = newSubtaskNote; // Save note
-                        currentSubtasks[subtaskIndex].color = newSubtaskColor; // Save color
+                        currentSubtasks[subtaskIndex].note = newSubtaskNote; 
+                        currentSubtasks[subtaskIndex].color = newSubtaskColor; 
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                         subtaskEditTextModal.classList.add('hidden');
                         showModal("Thay đổi subtask đã được lưu thành công!");
@@ -2002,12 +1742,13 @@
             const task = tasks.find(t => t.id === taskId);
             if (task && task.subtasks && task.subtasks[subtaskIndex]) {
                 draggedSubtaskInfo.taskId = taskId;
-                draggedSubtaskInfo.subtaskObject = { ...task.subtasks[subtaskIndex] }; // Deep copy
-                draggedSubtaskInfo.originalIndex = subtaskIndex;
+                // Store a copy of the subtask object itself
+                draggedSubtaskInfo.subtaskObject = { ...task.subtasks[subtaskIndex] }; 
+                draggedSubtaskInfo.originalIndex = subtaskIndex; // Store original index in the *sorted* array
                 subtaskItem.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             } else {
-                e.preventDefault(); // Invalid subtask
+                e.preventDefault(); 
             }
         }
 
@@ -2030,7 +1771,6 @@
             const targetSubtaskItem = e.target.closest('.subtask-item');
             if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
 
-            // Ensure it's the same parent task
             if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
                 targetSubtaskItem.classList.add('drag-over-subtask');
             }
@@ -2065,12 +1805,19 @@
 
             const targetSubtaskItem = e.target.closest('.subtask-item');
             if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-task-id') !== draggedSubtaskInfo.taskId) {
-                showModal("Subtasks only be reordered within their parent task.");
+                showModal("Subtasks chỉ có thể được sắp xếp lại trong tác vụ cha của chúng.");
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
                 return;
             }
 
-            const targetSubtaskIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index'));
+            const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
+            const targetSubtaskDOMIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index')); 
+
+            if (targetTaskId !== draggedSubtaskInfo.taskId) {
+                showModal("Subtasks chỉ có thể được sắp xếp lại trong tác vụ cha của chúng.");
+                targetSubtaskItem.classList.remove('drag-over-subtask');
+                return;
+            }
             
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, draggedSubtaskInfo.taskId);
             try {
@@ -2081,26 +1828,48 @@
                     return;
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
-                
-                // Prevent dropping onto itself
-                if (draggedSubtaskInfo.originalIndex === targetSubtaskIndex) {
+                currentSubtasks.sort((a, b) => (a.position || 0) - (b.position || 0)); // Ensure array is sorted by position
+
+                const originalIndexInSortedArray = currentSubtasks.findIndex(s => 
+                    s.text === draggedSubtaskInfo.subtaskObject.text && 
+                    s.isCompleted === draggedSubtaskInfo.subtaskObject.isCompleted &&
+                    s.note === draggedSubtaskInfo.subtaskObject.note &&
+                    s.color === draggedSubtaskInfo.subtaskObject.color
+                    // Include all relevant properties for robust matching
+                );
+
+                if (originalIndexInSortedArray === -1) {
+                    showModal("Lỗi: Không tìm thấy subtask đang kéo trong danh sách hiện tại.");
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
 
-                // 1. Remove the dragged subtask from its original position
-                const [removedSubtask] = currentSubtasks.splice(draggedSubtaskInfo.originalIndex, 1);
+                const subtaskRect = targetSubtaskItem.getBoundingClientRect();
+                const mouseRelativeY = e.clientY - subtaskRect.top;
+                let dropIndex = targetSubtaskDOMIndex; 
 
-                // 2. Insert the dragged subtask at the new calculated position
-                let newIndex = targetSubtaskIndex;
-                // Adjust index if we removed an item from an earlier position
-                if (draggedSubtaskInfo.originalIndex < targetSubtaskIndex) {
-                    newIndex = targetSubtaskIndex - 1; 
+                // Determine if dropping before or after the target subtask
+                if (mouseRelativeY > subtaskRect.height / 2) {
+                    dropIndex = targetSubtaskDOMIndex + 1; 
                 }
-                currentSubtasks.splice(newIndex, 0, removedSubtask);
 
-                // 3. Re-assign positions based on the new order
-                // This is crucial to keep the client-side sorting in sync with Firestore's (conceptual) order
+                // If dropping onto itself or effectively the same position, do nothing
+                if (originalIndexInSortedArray === dropIndex || 
+                    (originalIndexInSortedArray === dropIndex - 1 && mouseRelativeY > subtaskRect.height / 2)) {
+                    targetSubtaskItem.classList.remove('drag-over-subtask');
+                    return;
+                }
+
+                const [removedSubtask] = currentSubtasks.splice(originalIndexInSortedArray, 1);
+
+                // Adjust dropIndex if we removed an element from an earlier position
+                if (originalIndexInSortedArray < dropIndex) {
+                    dropIndex--;
+                }
+                
+                currentSubtasks.splice(dropIndex, 0, removedSubtask);
+
+                // Re-assign positions based on the new order
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
 
                 await updateDoc(taskRef, { subtasks: currentSubtasks });
@@ -2364,11 +2133,11 @@
                             text: sub.text,
                             isCompleted: false,
                             note: sub.note || '',
-                            color: sub.color || 'default', // NEW: Copy subtask color
-                            position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
+                            color: sub.color || 'default', 
+                            position: sub.position || Date.now() + Math.random() 
                         })),
                         comments: [],
-                        notes: [] // NEW: Copied tasks start with empty notes
+                        notes: [] 
                     };
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
                     showModal("Tác vụ đã được sao chép thành công!");
@@ -2407,11 +2176,11 @@
                                 text: sub.text,
                                 isCompleted: false,
                                 note: sub.note || '',
-                                color: sub.color || 'default', // NEW: Copy subtask color
-                                position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
+                                color: sub.color || 'default', 
+                                position: sub.position || Date.now() + Math.random() 
                             })),
                             comments: [],
-                            notes: [] // NEW: Copied tasks start with empty notes
+                            notes: [] 
                         };
                     });
 
