@@ -150,6 +150,41 @@
             border-bottom: 2px dashed #6366f1; /* Purple dashed border */
             padding-bottom: 0.5rem;
         }
+
+        /* NEW: Styles for comment and note action buttons */
+        .comment-note-actions {
+            display: flex;
+            gap: 4px; /* Space between buttons */
+            position: absolute; /* Position relative to parent */
+            top: 2px; /* Adjust as needed */
+            right: 2px; /* Adjust as needed */
+        }
+        .comment-note-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1;
+            padding: 4px; /* p-1 */
+            border-radius: 0.25rem; /* rounded */
+            transition: background-color 0.1s ease-in-out;
+        }
+        .comment-note-actions button:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* Light hover effect */
+        }
+        .comment-note-actions .delete-button {
+            color: #ef4444; /* red-500 */
+        }
+        .comment-note-actions .delete-button:hover {
+            color: #dc2626; /* red-600 */
+        }
+        .comment-note-actions .edit-button {
+            color: #9ca3af; /* gray-400 */
+        }
+        .comment-note-actions .edit-button:hover {
+            color: #6b7280; /* gray-600 */
+        }
+
     </style>
 </head>
 <body class="antialiased text-gray-800">
@@ -513,7 +548,7 @@
 
         // NEW: Mock nickname map
         const userNicknames = {
-            "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
+           "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
             "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung",
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Mr.Rune",
 	    "OTBxGbC5JZbh1bIRdhuMnq4i1CF3": "Mr.Chinh",
@@ -1347,10 +1382,11 @@
             
             commentsArray.forEach((comment, index) => {
                 const commentItem = document.createElement('div');
+                // Added relative positioning to commentItem for action buttons
                 commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; 
                 
                 const commentHeader = document.createElement('div');
-                commentHeader.className = 'flex justify-between items-center mb-1';
+                commentHeader.className = 'flex justify-between items-center mb-1 pr-12'; // Added pr-12 to make space for buttons
                 
                 const commenterIdSpan = document.createElement('span');
                 commenterIdSpan.className = 'font-semibold text-blue-700';
@@ -1366,22 +1402,27 @@
                 commentItem.appendChild(commentHeader);
 
                 const commentTextP = document.createElement('p');
-                commentTextP.className = 'text-gray-800 break-words pr-6'; 
+                commentTextP.className = 'text-gray-800 break-words pr-6'; // Kept pr-6, maybe remove if too much space
                 commentTextP.textContent = comment.text;
                 commentItem.appendChild(commentTextP);
+
+                // Actions container for comments
+                const commentActionsDiv = document.createElement('div');
+                commentActionsDiv.className = 'comment-note-actions'; // New class for styling
 
                 // Add delete button for comments (only if current user is author or admin)
                 if (isCurrentUserAdmin || comment.commenterId === userId) {
                     const deleteCommentButton = document.createElement('button');
                     deleteCommentButton.textContent = '×';
-                    deleteCommentButton.className = 'absolute top-1 right-1 text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
+                    deleteCommentButton.className = 'delete-button font-bold text-base'; // Smaller font for consistency
                     deleteCommentButton.title = 'Delete comment';
                     deleteCommentButton.onclick = (e) => {
                         e.stopPropagation();
                         handleDeleteComment(taskIdForComments.value, index);
                     };
-                    commentItem.appendChild(deleteCommentButton);
+                    commentActionsDiv.appendChild(deleteCommentButton);
                 }
+                commentItem.appendChild(commentActionsDiv);
 
                 commentsList.appendChild(commentItem);
             });
@@ -1479,10 +1520,11 @@
             
             notesArray.forEach((note, index) => {
                 const noteItem = document.createElement('div');
+                // Added relative positioning to noteItem for action buttons
                 noteItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-purple-300 relative';
                 
                 const noteHeader = document.createElement('div');
-                noteHeader.className = 'flex justify-between items-center mb-1';
+                noteHeader.className = 'flex justify-between items-center mb-1 pr-12'; // Added pr-12 for space
                 
                 const noteInfoSpan = document.createElement('span');
                 noteInfoSpan.className = 'font-semibold text-purple-700';
@@ -1502,13 +1544,14 @@
                 noteTextP.textContent = note.text;
                 noteItem.appendChild(noteTextP);
 
-                if (isCurrentUserAdmin || note.authorId === userId) {
-                    const noteActionsDiv = document.createElement('div');
-                    noteActionsDiv.className = 'absolute top-1 right-1 flex gap-1';
+                // Actions container for notes
+                const noteActionsDiv = document.createElement('div');
+                noteActionsDiv.className = 'comment-note-actions'; // Reusing the same class for consistent styling
 
+                if (isCurrentUserAdmin || note.authorId === userId) {
                     const editNoteButton = document.createElement('button');
                     editNoteButton.textContent = '✏️';
-                    editNoteButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
+                    editNoteButton.className = 'edit-button text-base'; // Smaller font for consistency
                     editNoteButton.title = 'Edit note';
                     editNoteButton.onclick = (e) => {
                         e.stopPropagation();
@@ -1518,7 +1561,7 @@
 
                     const deleteNoteButton = document.createElement('button');
                     deleteNoteButton.textContent = '×';
-                    deleteNoteButton.className = 'text-red-500 hover:text-red-700 text-lg leading-none p-1 rounded-full';
+                    deleteNoteButton.className = 'delete-button font-bold text-base'; // Smaller font for consistency
                     deleteNoteButton.title = 'Delete note';
                     deleteNoteButton.onclick = (e) => {
                         e.stopPropagation();
