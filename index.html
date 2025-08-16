@@ -475,6 +475,7 @@
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Mr.Rune",
 	    "OTBxGbC5JZbh1bIRdhuMnq4i1CF3": "Mr.Chinh",
             "uoQxAubtyqbRhwHcBPzD7h3geKg1": "Mr.Thomas",
+            "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Admin_2", // Added the second admin ID
             // Add more user IDs and their desired nicknames here
         };
 
@@ -651,7 +652,7 @@
                     projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); 
                     adminConfigRef = doc(db, `artifacts/${appId}/public/data/config`, 'admin');
                     
-                    await checkAdminStatus();
+                    await checkAdminStatus(); // Call the updated checkAdminStatus
                     updateUIAfterAuth();
 
                     setupProjectsListener();
@@ -764,35 +765,21 @@
 
         /**
          * Checks the admin status for the current user.
-         * If no admin is configured, the current non-anonymous user will become the admin.
+         * This version hardcodes specific admin User IDs.
          */
         async function checkAdminStatus() {
-            try {
-                const adminDocRef = doc(db, `artifacts/${appId}/public/data/config`, 'admin');
-                const adminDoc = await getDoc(adminDocRef);
+            const predefinedAdminIds = [
+                "37GhB7vKrvdNVQKIfsVEnHaLmHO2",
+                "cTstHQAc8JhHuh6DRXi1A3t0J5r2"
+            ];
 
-                if (adminDoc.exists()) {
-                    const adminId = adminDoc.data().adminId;
-                    isCurrentUserAdmin = (userId === adminId);
-                } else {
-                    if (auth.currentUser && !auth.currentUser.isAnonymous) {
-                        await setDoc(adminDocRef, { adminId: userId });
-                        isCurrentUserAdmin = true;
-                        showModal("You are the first admin! You can now create and manage projects.");
-                    } else {
-                        isCurrentUserAdmin = false;
-                    }
-                }
-            }
-            catch (error) {
-                console.error("Error checking admin status:", error);
-                if (error.code === 'permission-denied') {
-                    showModal("Permission denied when checking admin status. Please verify your Firestore Security Rules.");
-                } else {
-                    showModal(`Error during admin check: ${error.message}. You will have viewer access.`);
-                }
+            if (userId && predefinedAdminIds.includes(userId)) {
+                isCurrentUserAdmin = true;
+            } else {
                 isCurrentUserAdmin = false;
             }
+            // Removed the Firestore admin config check as we are now hardcoding admin IDs.
+            // If you later want to manage admins dynamically, you would reintroduce that logic.
         }
         
         /**
@@ -1849,7 +1836,7 @@
          * @param {number} [newPosition] - Optional: the new position for reordering within the column.
          */
         async function handleUpdateTaskStatus(taskId, newStatus, newPosition = null) {
-            if (!isCurrentUserProjectMember() || !currentProjectId) {
+            if (!isCurrentUserProjectMember()) {
                 showModal("You do not have permission to move tasks.");
                 return;
             }
@@ -1877,7 +1864,7 @@
          * @param {string} taskId - The ID of the task to delete.
          */
         async function handleDeleteTask(taskId) {
-            if (!isCurrentUserProjectMember() || !currentProjectId) {
+            if (!isCurrentUserProjectMember()) {
                 showModal("You do not have permission to delete tasks.");
                 return;
             }
