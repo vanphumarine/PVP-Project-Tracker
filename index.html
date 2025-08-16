@@ -23,7 +23,8 @@
         /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
-            border-left-width: 8px; /* Increased color border width */
+            /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
+            border-width: 1px; /* Add a subtle border on all sides for consistency */
         }
         .task-card.is-admin {
             cursor: grab; /* Indicates draggable for admin */
@@ -191,10 +192,7 @@
                     <input type="text" id="task-input" placeholder="Enter a new task..." class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" required>
                     
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <div class="flex items-center gap-2">
-                            <label for="task-color-input" class="text-gray-700">Color:</label>
-                            <input type="color" id="task-color-input" class="p-1 border border-gray-300 rounded-md w-16 h-10 cursor-pointer">
-                        </div>
+                        <!-- Removed manual color input -->
                         <div class="flex items-center gap-2 flex-grow">
                             <label for="task-deadline-input" class="text-gray-700 whitespace-nowrap">Deadline:</label>
                             <input type="date" id="task-deadline-input" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
@@ -378,10 +376,7 @@
             <textarea id="task-details-text-input" placeholder="Task description..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-2"></textarea>
             
             <div class="flex flex-col sm:flex-row gap-4 mb-4">
-                <div class="flex items-center gap-2">
-                    <label for="task-details-color-input" class="text-gray-700">Color:</label>
-                    <input type="color" id="task-details-color-input" class="p-1 border border-gray-300 rounded-md w-16 h-10 cursor-pointer">
-                </div>
+                <!-- Removed manual color input for task details -->
                 <div class="flex items-center gap-2 flex-grow">
                     <label for="task-details-deadline-input" class="text-gray-700 whitespace-nowrap">Deadline:</label>
                     <input type="date" id="task-details-deadline-input" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
@@ -484,8 +479,8 @@
         const taskFormContainer = document.getElementById('add-task-container');
         const taskForm = document.getElementById('add-task-form');
         const taskInput = document.getElementById('task-input');
-        const taskColorInput = document.getElementById('task-color-input'); // NEW
-        const taskDeadlineInput = document.getElementById('task-deadline-input'); // NEW
+        // const taskColorInput = document.getElementById('task-color-input'); // REMOVED: Manual color input
+        const taskDeadlineInput = document.getElementById('task-deadline-input'); 
         const columns = document.querySelectorAll('.kanban-column');
         const projectSelect = document.getElementById('project-select');
         const createProjectBtn = document.getElementById('create-project-btn');
@@ -539,7 +534,7 @@
 
         const taskDetailsModal = document.getElementById('task-details-modal');
         const taskDetailsTextInput = document.getElementById('task-details-text-input');
-        const taskDetailsColorInput = document.getElementById('task-details-color-input');
+        // const taskDetailsColorInput = document.getElementById('task-details-color-input'); // REMOVED: Manual color input
         const taskDetailsDeadlineInput = document.getElementById('task-details-deadline-input');
         const saveTaskDetailsBtn = document.getElementById('save-task-details-btn');
         const commentsList = document.getElementById('comments-list');
@@ -908,8 +903,36 @@
         function createTaskElement(task) {
             const div = document.createElement('div');
             const canModifyTask = isCurrentUserProjectMember();
-            div.className = `task-card bg-white p-4 rounded-lg shadow-sm ${canModifyTask ? 'is-admin' : ''}`; 
-            div.style.borderLeftColor = task.color || '#818CF8';
+
+            let deadlineClass = '';
+            // Only apply deadline color if the task is not done
+            if (task.deadline && task.status !== 'done') { 
+                const deadlineDate = new Date(task.deadline);
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Reset time for accurate day calculation
+
+                const diffTime = deadlineDate.getTime() - now.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Days remaining
+
+                if (diffDays <= 7) {
+                    // Less than or equal to 1 week
+                    deadlineClass = 'bg-red-100 border-red-400 text-red-800'; 
+                } else if (diffDays <= 14) {
+                    // Less than or equal to 2 weeks
+                    deadlineClass = 'bg-yellow-100 border-yellow-400 text-yellow-800'; 
+                } else if (diffDays <= 30) {
+                    // Less than or equal to 1 month
+                    deadlineClass = 'bg-green-100 border-green-400 text-green-800'; 
+                }
+            }
+            
+            // Default background and border if no deadline class applies or if task is done
+            const defaultBgBorder = 'bg-white border-gray-300 text-gray-800';
+
+            // Apply dynamic classes for background and border based on deadline
+            // If task is 'done', it should revert to default styling regardless of deadline
+            div.className = `task-card p-4 rounded-lg shadow-sm ${canModifyTask ? 'is-admin' : ''} ${deadlineClass || defaultBgBorder}`; 
+
             div.setAttribute('data-id', task.id);
             div.setAttribute('data-position', task.position);
             div.setAttribute('data-status', task.status);
@@ -981,12 +1004,12 @@
 
             const text = document.createElement('p');
             text.textContent = task.text;
-            text.className = 'text-gray-800 font-semibold mb-1 pr-12';
+            text.className = 'font-semibold mb-1 pr-12'; // Removed static text-gray-800, now uses dynamic text color from deadlineClass
             div.appendChild(text);
 
             if (task.deadline) {
                 const deadlineText = document.createElement('p');
-                deadlineText.className = 'text-xs text-gray-600 italic mb-2';
+                deadlineText.className = 'text-xs italic mb-2'; // Removed static text-gray-600, now uses dynamic text color from deadlineClass
                 deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('en-US')}`;
                 div.appendChild(deadlineText);
             }
@@ -1131,7 +1154,7 @@
             taskIdForComments.value = task.id; // This input also holds task ID for notes section
 
             taskDetailsTextInput.value = task.text || '';
-            taskDetailsColorInput.value = task.color || '#818CF8';
+            // taskDetailsColorInput.value = task.color || '#818CF8'; // REMOVED: Manual color input
             taskDetailsDeadlineInput.value = task.deadline || '';
 
             const canModifyTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
@@ -1161,7 +1184,7 @@
             
             // Task details input fields read-only/disabled status
             taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
-            taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties;
+            // taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties; // REMOVED: Manual color input
             taskDetailsDeadlineInput.disabled = !isEditMode || !canModifyTaskProperties;
 
 
@@ -1183,7 +1206,7 @@
         saveTaskDetailsBtn.addEventListener('click', async () => {
             const taskId = taskIdForComments.value;
             const newText = taskDetailsTextInput.value.trim();
-            const newColor = taskDetailsColorInput.value;
+            // const newColor = taskDetailsColorInput.value; // REMOVED: Manual color input
             const newDeadline = taskDetailsDeadlineInput.value;
 
             if (!taskId || !currentProjectId || !newText) {
@@ -1199,7 +1222,7 @@
                 const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
                 await updateDoc(taskRef, {
                     text: newText,
-                    color: newColor,
+                    // color: newColor, // REMOVED: Manual color input
                     deadline: newDeadline || null
                 });
                 taskDetailsModal.classList.add('hidden');
@@ -1563,7 +1586,7 @@
                 return;
             }
             const taskText = taskInput.value.trim();
-            const taskColor = taskColorInput.value;
+            // const taskColor = taskColorInput.value; // REMOVED: Manual color selection
             const taskDeadline = taskDeadlineInput.value;
 
             if (taskText) {
@@ -1574,14 +1597,14 @@
                         status: 'todo',
                         createdAt: new Date().toISOString(),
                         position: newTaskPosition,
-                        color: taskColor || '#818CF8',
+                        // color: taskColor || '#818CF8', // REMOVED: No longer manually set
                         deadline: taskDeadline || null,
                         subtasks: [],
                         comments: [],
                         notes: [] // NEW: Initialize notes array
                     });
                     taskInput.value = '';
-                    taskColorInput.value = '#818CF8';
+                    // taskColorInput.value = '#818CF8'; // REMOVED: No longer manual
                     taskDeadlineInput.value = '';
                 } catch (error) {
                     console.error("Lỗi khi thêm tác vụ: ", error);
@@ -2358,13 +2381,13 @@
                         status: 'todo',
                         createdAt: new Date().toISOString(),
                         position: Date.now(),
-                        color: originalTaskData.color || '#818CF8',
+                        // color: originalTaskData.color || '#818CF8', // REMOVED: No longer manually set
                         deadline: originalTaskData.deadline || null,
                         subtasks: originalTaskData.subtasks.map(sub => ({
                             text: sub.text,
                             isCompleted: false,
                             note: sub.note || '',
-                            color: sub.color || 'default', // NEW: Copy subtask color
+                            color: sub.color || 'default', // Keep subtask color if it's still manually set for subtasks
                             position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
                         })),
                         comments: [],
@@ -2401,7 +2424,7 @@
                             status: 'todo',
                             createdAt: new Date().toISOString(),
                             position: Date.now() + Math.random(),
-                            color: taskData.color || '#818CF8',
+                            // color: taskData.color || '#818CF8', // REMOVED: No longer manually set
                             deadline: taskData.deadline || null,
                             subtasks: taskData.subtasks.map(sub => ({
                                 text: sub.text,
