@@ -11,16 +11,16 @@
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS cơ bản cho font chữ và màu nền */
+        /* CSS c\u01a1 b\u1EA3n cho font ch\u1EEF v\u00E0 m\u00E0u n\u1EC1n */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
         }
-        /* Chiều cao tối thiểu cho cột Kanban để đảm bảo sự nhất quán về mặt hình ảnh */
+        /* Chi\u1EC1u cao t\u1ED1i thi\u1EC3u cho c\u1ED9t Kanban \u0111\u1EC3 \u0111\u1EA3m b\u1EA3o s\u1EF1 nh\u1EA5t qu\u00E1n v\u1EC1 m\u1EB7t h\u00ECnh \u1EA3nh */
         .kanban-column {
             min-height: 400px;
         }
-        /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
+        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED9t cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
             /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
@@ -158,7 +158,7 @@
             
             <!-- Right: Auth Info & Logout Button -->
             <div id="auth-info" class="text-sm text-gray-500 flex flex-row items-center gap-4 flex-wrap justify-center md:justify-end mt-4 md:mt-0">
-                <p>User ID: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
+                <p>User: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
                 <button id="logout-btn" class="bg-red-500 text-white text-sm px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
             </div>
@@ -465,6 +465,14 @@
         // Variable to store the Burndown chart instance
         let burndownChartInstance = null;
 
+        // NEW: Mock nickname map
+        const userNicknames = {
+            "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
+            "another_user_id_1": "Ngoc_Anh",
+            "another_user_id_2": "Minh_Tri",
+            // Add more user IDs and their desired nicknames here
+        };
+
         // DOM element references
         const loginScreen = document.getElementById('login-screen');
         const adminEmailInput = document.getElementById('admin-email');
@@ -572,6 +580,15 @@
             'red': 'text-red-700 bg-red-100 border-red-400',
             'default': 'text-gray-700 bg-gray-100 border-gray-300'
         };
+
+        /**
+         * Lấy biệt danh cho một User ID.
+         * @param {string} id - User ID.
+         * @returns {string} Biệt danh hoặc User ID đã cắt ngắn nếu không tìm thấy biệt danh.
+         */
+        function getNickname(id) {
+            return userNicknames[id] || `${id.substring(0, 8)}...`;
+        }
 
         /**
          * Displays the login screen.
@@ -738,7 +755,7 @@
          */
         function updateUIAfterAuth() {
             userRole = isCurrentUserAdmin ? 'Admin' : 'Viewer';
-            displayUserId.textContent = userId.substring(0,8) + '...';
+            displayUserId.textContent = getNickname(userId); // Use getNickname here
             displayUserRole.textContent = userRole;
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
@@ -1228,7 +1245,7 @@
                 taskDetailsModal.classList.add('hidden');
                 showModal("Task updated successfully!");
             } catch (error) {
-                console.error("Lỗi khi cập nhật chi tiết tác vụ:", error);
+                console.error("L\u1ED7i khi c\u1EADp nh\u1EADt chi ti\u1EBFt t\u00E1c v\u1EE5:", error);
                 showModal("Failed to update task details.");
             }
         });
@@ -1256,7 +1273,7 @@
                 
                 const commenterIdSpan = document.createElement('span');
                 commenterIdSpan.className = 'font-semibold text-blue-700';
-                commenterIdSpan.textContent = comment.commenterId.substring(0, 8) + '...';
+                commenterIdSpan.textContent = getNickname(comment.commenterId); // Use getNickname here
                 commentHeader.appendChild(commenterIdSpan);
 
                 const timestampSpan = document.createElement('span');
@@ -1318,7 +1335,7 @@
                 });
                 newCommentInput.value = '';
             } catch (error) {
-                console.error("Lỗi khi thêm bình luận:", error);
+                console.error("L\u1ED7i khi th\u00EAm b\u00ECnh lu\u1EADn:", error);
                 showModal("Failed to add comment.");
             }
         });
@@ -1357,7 +1374,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Lỗi khi xóa bình luận:", error);
+                console.error("L\u1ED7i khi x\u00F3a b\u00ECnh lu\u1EADn:", error);
                 showModal("Failed to delete comment.");
             }
         }
@@ -1385,7 +1402,7 @@
                 
                 const noteInfoSpan = document.createElement('span');
                 noteInfoSpan.className = 'font-semibold text-purple-700';
-                noteInfoSpan.textContent = `Note ${index + 1}: By ${note.authorId.substring(0, 8)}...`;
+                noteInfoSpan.textContent = `Note ${index + 1}: By ${getNickname(note.authorId)}`; // Use getNickname here
                 noteHeader.appendChild(noteInfoSpan);
 
                 const timestampSpan = document.createElement('span');
@@ -1464,7 +1481,7 @@
                 });
                 newTaskNoteInput.value = '';
             } catch (error) {
-                console.error("Lỗi khi thêm ghi chú công việc:", error);
+                console.error("L\u1ED7i khi th\u00EAm ghi ch\u00FA c\u00F4ng vi\u1EC7c:", error);
                 showModal("Failed to add task note.");
             }
         });
@@ -1502,7 +1519,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Lỗi khi xóa ghi chú:", error);
+                console.error("L\u1ED7i khi x\u00F3a ghi ch\u00FA:", error);
                 showModal("Failed to delete note.");
             }
         }
@@ -1558,7 +1575,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Lỗi khi lưu ghi chú công việc:", error);
+                console.error("L\u1ED7i khi l\u01B0u ghi ch\u00FA c\u00F4ng vi\u1EC7c:", error);
                 showModal("Failed to save task note.");
             }
         });
@@ -1607,7 +1624,7 @@
                     // taskColorInput.value = '#818CF8'; // REMOVED: No longer manual
                     taskDeadlineInput.value = '';
                 } catch (error) {
-                    console.error("Lỗi khi thêm tác vụ: ", error);
+                    console.error("L\u1ED7i khi th\u00EAm t\u00E1c v\u1EE5: ", error);
                     showModal("Failed to add task.");
                 }
             }
@@ -1634,7 +1651,7 @@
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
-                console.error("Lỗi khi thêm subtask:", error);
+                console.error("L\u1ED7i khi th\u00EAm subtask:", error);
                 showModal("Failed to add subtask.");
             }
         }
@@ -1663,7 +1680,7 @@
                     }
                 }
             } catch (error) {
-                console.error("Lỗi khi chuyển đổi subtask:", error);
+                console.error("L\u1ED7i khi chuy\u1EC3n \u0111\u1ED5i subtask:", error);
                 showModal("Failed to toggle subtask status.");
             }
         }
@@ -1690,7 +1707,7 @@
                     }
                 }
             } catch (error) {
-                console.error("Lỗi khi xóa subtask:", error);
+                console.error("L\u1ED7i khi x\u00F3a subtask:", error);
                 showModal("Failed to delete subtask.");
             }
         }
@@ -1766,7 +1783,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Lỗi khi lưu thay đổi subtask:", error);
+                console.error("L\u1ED7i khi l\u01B0u thay \u0111\u1ED5i subtask:", error);
                 showModal("Failed to save subtask changes.");
             }
         });
@@ -1802,7 +1819,7 @@
                 }
                 await updateDoc(taskRef, updateData);
             } catch (error) {
-                console.error("Lỗi khi cập nhật tác vụ: ", error);
+                console.error("L\u1ED7i khi c\u1EADp nh\u1EADt t\u00E1c v\u1EE5: ", error);
                 showModal("Failed to update task status.");
             }
         }
@@ -1820,7 +1837,7 @@
             try {
                 await deleteDoc(taskRef);
             } catch (error) {
-                console.error("Lỗi khi xóa tác vụ: ", error);
+                console.error("L\u1ED7i khi x\u00F3a t\u00E1c v\u1EE5: ", error);
                 showModal("Failed to delete task.");
             }
         }
@@ -1893,7 +1910,7 @@
                                         Date.now();
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
                 } catch (error) {
-                    console.error("Lỗi khi thay đổi trạng thái tác vụ:", error);
+                    console.error("L\u1ED7i khi thay \u0111\u1ED5i tr\u1EA1ng th\u00E1i t\u00E1c v\u1EE5:", error);
                     showModal("Failed to change task status.");
                 }
             }
@@ -2130,7 +2147,7 @@
                 showModal("Subtask reordered successfully!");
 
             } catch (error) {
-                console.error("Lỗi khi sắp xếp lại subtask:", error);
+                console.error("L\u1ED7i khi s\u1EAFp x\u1EBFp l\u1EA1i subtask:", error);
                 showModal("Failed to reorder subtask.");
             } finally {
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
@@ -2295,7 +2312,7 @@
                 showModal("Project deleted successfully!");
                 currentProjectId = null;
             } catch (error) {
-                console.error("Lỗi khi xóa dự án:", error);
+                console.error("L\u1ED7i khi x\u00F3a d\u1EF1 \u00E1n:", error);
                 if (error.code === 'permission-denied') {
                     showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules.");
                 } else {
@@ -2352,7 +2369,7 @@
                     }
                     createProjectModal.classList.add('hidden');
                 } catch (error) {
-                    console.error("Lỗi khi lưu dự án:", error);
+                    console.error("L\u1ED7i khi l\u01B0u d\u1EF1 \u00E1n:", error);
                     showModal("Failed to save project.");
                 }
             } else {
@@ -2399,7 +2416,7 @@
                     showModal("Task not found to copy.");
                 }
             } catch (error) {
-                console.error("Lỗi khi sao chép tác vụ:", error);
+                console.error("L\u1ED7i khi sao ch\u00E9p t\u00E1c v\u1EE5:", error);
                 showModal("Failed to copy task.");
             }
         }
@@ -2442,9 +2459,9 @@
                 const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
                 
                 await Promise.all(addTasksPromises);
-                console.log(`Đã sao chép ${todoTasksToCopy.length} tác vụ 'To Do' từ ${sourceProjectId} sang ${destinationProjectId}`);
+                console.log(`\u0110\u00E3 sao ch\u00E9p ${todoTasksToCopy.length} t\u00E1c v\u1EE5 'To Do' t\u1EEB ${sourceProjectId} sang ${destinationProjectId}`);
             } catch (error) {
-                console.error("Lỗi khi sao chép tác vụ:", error);
+                console.error("L\u1ED7i khi sao ch\u00E9p t\u00E1c v\u1EE5:", error);
                 showModal("Failed to copy 'To Do' tasks.");
             }
         }
@@ -2479,7 +2496,7 @@
                 displayProjectStatus.textContent = project.status || 'Active';
 
                 currentProjectMembers = project.members || [];
-                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.';
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(getNickname).join(', ') : 'No members yet.'; // Use getNickname here
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
@@ -2673,10 +2690,10 @@
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
-                    showModal(`User ${newMemberId} has been added to the project.`);
+                    showModal(`User ${getNickname(newMemberId)} has been added to the project.`); // Use getNickname here
                 }
             } catch (error) {
-                console.error("Lỗi khi thêm thành viên:", error);
+                console.error("L\u1ED7i khi th\u00EAm th\u00E0nh vi\u00EAn:", error);
                 showModal("Failed to add member.");
             }
         });
@@ -2699,7 +2716,7 @@
                 
                 const memberIdSpan = document.createElement('span');
                 memberIdSpan.className = 'font-mono text-gray-700 break-all';
-                memberIdSpan.textContent = memberId;
+                memberIdSpan.textContent = getNickname(memberId); // Use getNickname here
                 memberItem.appendChild(memberIdSpan);
 
                 if (isCurrentUserAdmin && memberId !== userId) {
@@ -2737,9 +2754,9 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
-                showModal(`User ${memberIdToRemove} removed from the project.`);
+                showModal(`User ${getNickname(memberIdToRemove)} removed from the project.`); // Use getNickname here
             } catch (error) {
-                console.error("Lỗi khi xóa thành viên:", error);
+                console.error("L\u1ED7i khi x\u00F3a th\u00E0nh vi\u00EAn:", error);
                 showModal("Failed to remove member.");
             }
         }
