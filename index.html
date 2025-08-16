@@ -7,31 +7,23 @@
     <!-- Tailwind CSS CDN to use utility classes -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter for modern interface -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Basic CSS for font and background color */
+        /* CSS cơ bản cho font chữ và màu nền */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
         }
-        /* Minimum height for Kanban columns to ensure visual consistency */
+        /* Chiều cao tối thiểu cho cột Kanban để đảm bảo sự nhất quán về mặt hình ảnh */
         .kanban-column {
             min-height: 400px;
-            display: flex; /* Using flexbox for column content layout */
-            flex-direction: column; /* Stack items vertically */
         }
-        /* Max height and scroll for task list inside each column */
-        .task-list {
-            max-height: calc(100vh - 350px); /* Set max height to enable scrolling */
-            overflow-y: auto; /* Enable vertical scrolling when content overflows */
-            padding-right: 8px; /* Add some padding to prevent scrollbar sticking to content */
-        }
-
-        /* Task card styling and hover effects for admin */
+        /* Kiểu dáng thẻ tác vụ và hiệu ứng di chuột cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
+            /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
             border-width: 1px; /* Add a subtle border on all sides for consistency */
         }
         .task-card.is-admin {
@@ -162,13 +154,11 @@
                     <option value="">Select a Project</option>
                 </select>
                 <button id="create-project-btn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Create New Project</button>
-                <!-- NEW: Manage Users Button -->
-                <button id="manage-users-btn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-purple-700 transition-colors duration-300 hidden">Manage Users</button>
             </div>
             
             <!-- Right: Auth Info & Logout Button -->
             <div id="auth-info" class="text-sm text-gray-500 flex flex-row items-center gap-4 flex-wrap justify-center md:justify-end mt-4 md:mt-0">
-                <p>User: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-info"></span></p>
+                <p>User ID: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
                 <button id="logout-btn" class="bg-red-500 text-white text-sm px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
             </div>
@@ -431,59 +421,12 @@
         New comment on task: <span id="toast-task-name" class="font-semibold"></span>
     </div>
 
-    <!-- NEW: Modal for User Management -->
-    <div id="manage-users-modal" class="modal-backdrop hidden">
-        <div class="modal-content text-left w-full max-w-2xl">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Manage Users</h3>
-            
-            <!-- Add New User Form -->
-            <div class="mb-6 p-4 border border-gray-200 rounded-md bg-gray-50">
-                <h4 class="text-lg font-semibold mb-3 text-gray-700">Add New User</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="new-user-email-input" class="block text-sm font-medium text-gray-700 mb-1">User Email (Login)</label>
-                        <input type="email" id="new-user-email-input" placeholder="user@example.com" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full">
-                    </div>
-                    <div>
-                        <label for="new-user-password-input" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" id="new-user-password-input" placeholder="At least 6 characters" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full">
-                    </div>
-                    <div>
-                        <label for="new-user-display-name-input" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
-                        <input type="text" id="new-user-display-name-input" placeholder="e.g., John Doe" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full">
-                    </div>
-                    <div>
-                        <label for="new-user-role-select" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                        <select id="new-user-role-select" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full">
-                            <option value="viewer">Viewer</option>
-                            <option value="engineer">Engineer</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                </div>
-                <button id="create-new-user-btn" class="modal-button bg-blue-600 hover:bg-blue-700 w-full mt-4">Create New User</button>
-            </div>
-
-            <!-- Existing Users List -->
-            <div class="mb-6">
-                <h4 class="text-lg font-semibold mb-3 text-gray-700">Existing Users</h4>
-                <div id="existing-users-list" class="bg-gray-100 p-3 rounded-md min-h-[100px] max-h-60 overflow-y-auto border border-gray-200">
-                    <!-- Users will be loaded here -->
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2">
-                <button id="close-manage-users-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
-            </div>
-        </div>
-    </div>
-
 
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
         // IMPORTANT: REPLACE THE FOLLOWING PLACEHOLDER VALUES WITH YOUR ACTUAL FIREBASE PROJECT CONFIGURATION.
@@ -509,18 +452,15 @@
         const appId = firebaseConfig.projectId;
         
         let app, db, auth, userId;
-        let projectsCollectionRef, adminConfigRef, usersCollectionRef; // Added usersCollectionRef
+        let projectsCollectionRef, adminConfigRef;
         let unsubscribeFromTasks; // To unsubscribe from real-time task listener
         let unsubscribeFromProjects; // To unsubscribe from real-time project listener
-        let unsubscribeFromUsers; // NEW: To unsubscribe from real-time user listener
-        let isCurrentUserAdmin = false; // Flag to determine if current user is the SUPER ADMIN of the application
+        let isCurrentUserAdmin = false; // Flag to determine user role (Super Admin of the application)
         let currentProjectId = null; // ID of the currently selected project
         let projectsData = {}; // Stores all fetched project data, by ID
         let currentProjectMembers = []; // Stores the list of members for the current project
-        let userRole = 'Viewer'; // Current user's role (Admin/Engineer/Viewer)
-        let userName = 'Guest'; // Current user's display name
+        let userRole = 'Guest'; // Current user's role (Guest/Admin)
         let currentOpenTaskDetailsId = null; // To track which task detail modal is open
-        let allUsersData = {}; // NEW: Stores all fetched user data, by UID
 
         // Variable to store the Burndown chart instance
         let burndownChartInstance = null;
@@ -534,16 +474,16 @@
         const mainApp = document.getElementById('app');
         const logoutBtn = document.getElementById('logout-btn');
 
-        const displayUserInfo = document.getElementById('display-user-info'); // Renamed from displayUserId
+        const displayUserId = document.getElementById('display-user-id');
         const displayUserRole = document.getElementById('display-user-role');
         const taskFormContainer = document.getElementById('add-task-container');
         const taskForm = document.getElementById('add-task-form');
         const taskInput = document.getElementById('task-input');
+        // const taskColorInput = document.getElementById('task-color-input'); // REMOVED: Manual color input
         const taskDeadlineInput = document.getElementById('task-deadline-input'); 
         const columns = document.querySelectorAll('.kanban-column');
         const projectSelect = document.getElementById('project-select');
         const createProjectBtn = document.getElementById('create-project-btn');
-        const manageUsersBtn = document.getElementById('manage-users-btn'); // NEW: Manage Users button
         const currentProjectDetailsDiv = document.getElementById('current-project-details');
         const burndownChartSection = document.getElementById('burndown-chart-section');
         const editProjectBtn = document.getElementById('edit-project-btn');
@@ -569,6 +509,7 @@
         const displayProjectEndDate = document.getElementById('display-project-end-date');
         const displayProjectStatus = document.getElementById('display-project-status');
 
+        // RENAMED for task notes edit
         const taskNoteEditModal = document.getElementById('task-note-edit-modal'); 
         const taskNoteTextareaModal = document.getElementById('task-note-textarea-modal');
         const editingTaskIdNoteModal = document.getElementById('editing-task-id-note-modal');
@@ -576,10 +517,10 @@
         const saveTaskNoteModalBtn = document.getElementById('save-task-note-modal-btn');
         const cancelTaskNoteModalBtn = document.getElementById('cancel-task-note-modal-btn');
 
-        const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); 
+        const subtaskEditTextModal = document.getElementById('subtask-edit-text-modal'); // Repurposed for subtask edit & color
         const subtaskEditTextInput = document.getElementById('subtask-edit-text-input');
-        const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); 
-        const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); 
+        const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); // NEW for subtask color
+        const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); // NEW for subtask note on edit modal
         const editingTaskIdSubtext = document.getElementById('editing-task-id-subtext');
         const editingSubtaskIndexSubtext = document.getElementById('editing-subtask-index-subtext');
         const saveSubtaskTextBtn = document.getElementById('save-subtask-text-btn');
@@ -593,6 +534,7 @@
 
         const taskDetailsModal = document.getElementById('task-details-modal');
         const taskDetailsTextInput = document.getElementById('task-details-text-input');
+        // const taskDetailsColorInput = document.getElementById('task-details-color-input'); // REMOVED: Manual color input
         const taskDetailsDeadlineInput = document.getElementById('task-details-deadline-input');
         const saveTaskDetailsBtn = document.getElementById('save-task-details-btn');
         const commentsList = document.getElementById('comments-list');
@@ -603,10 +545,11 @@
         const commentToast = document.getElementById('comment-toast'); 
         const toastTaskName = document.getElementById('toast-task-name'); 
         const commentSectionContainer = document.getElementById('comment-section-container');
-        const taskNotesSectionContainer = document.getElementById('task-notes-section-container'); 
-        const taskNotesList = document.getElementById('task-notes-list'); 
-        const newTaskNoteInput = document.getElementById('new-task-note-input'); 
-        const addTaskNoteBtn = document.getElementById('add-task-note-btn'); 
+        const taskNotesSectionContainer = document.getElementById('task-notes-section-container'); // NEW for task notes section
+        const taskNotesList = document.getElementById('task-notes-list'); // NEW for task notes list
+        const newTaskNoteInput = document.getElementById('new-task-note-input'); // NEW for task note input
+        const addTaskNoteBtn = document.getElementById('add-task-note-btn'); // NEW for add task note button
+
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
         const deleteConfirmMessage = document.getElementById('delete-confirm-message');
@@ -614,21 +557,12 @@
         const confirmDeleteNoBtn = document.getElementById('confirm-delete-no-btn');
         let projectIdToDelete = null;
 
-        // NEW: User Management Modal elements
-        const manageUsersModal = document.getElementById('manage-users-modal');
-        const closeManageUsersModalBtn = document.getElementById('close-manage-users-modal-btn');
-        const newUserEmailInput = document.getElementById('new-user-email-input');
-        const newUserPasswordInput = document.getElementById('new-user-password-input');
-        const newUserDisplayNameInput = document.getElementById('new-user-display-name-input');
-        const newUserRoleSelect = document.getElementById('new-user-role-select');
-        const createNewUserBtn = document.getElementById('create-new-user-btn');
-        const existingUsersList = document.getElementById('existing-users-list');
-
         let tasks = [];
         let draggedTaskId = null;
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
+        // Adjusted for subtask object and its original index
         let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
 
         // Helper map for subtask colors
@@ -645,7 +579,7 @@
         function showLoginScreen() {
             loginScreen.classList.remove('hidden');
             mainApp.classList.add('hidden');
-            displayUserInfo.textContent = '';
+            displayUserId.textContent = '';
             displayUserRole.textContent = '';
             logoutBtn.classList.add('hidden');
         }
@@ -683,60 +617,6 @@
         }
 
         /**
-         * Fetches a user's display name from the users collection.
-         * @param {string} uid - The user ID.
-         * @returns {Promise<string>} The user's name or a truncated UID if not found.
-         */
-        async function fetchUserName(uid) {
-            if (!uid) return 'Unknown User';
-            // Try to get from cached allUsersData first
-            if (allUsersData[uid] && allUsersData[uid].name) {
-                return allUsersData[uid].name;
-            }
-            // Fallback to fetching directly if not in cache (e.g., first load or new user)
-            try {
-                const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists() && userDoc.data().name) {
-                    allUsersData[uid] = userDoc.data(); // Cache it
-                    return userDoc.data().name;
-                }
-            } catch (error) {
-                console.warn("Error fetching user name, falling back to UID:", error);
-            }
-            return uid.substring(0, 8) + '...'; // Fallback to truncated UID
-        }
-
-        /**
-         * Ensures a user profile exists in Firestore.
-         * @param {string} uid - The user ID.
-         * @param {string} email - The user's email (if available).
-         * @param {boolean} isAnonymous - True if the user is anonymous.
-         * @returns {Promise<Object>} The user profile data.
-         */
-        async function ensureUserProfile(uid, email, isAnonymous) {
-            const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, uid);
-            try {
-                const userDoc = await getDoc(userDocRef);
-                if (!userDoc.exists()) {
-                    const defaultName = isAnonymous ? 'Guest User' : (email ? email.split('@')[0] : 'New User');
-                    const defaultRole = isAnonymous ? 'viewer' : 'viewer'; // Default for new non-anonymous users
-                    await setDoc(userDocRef, { 
-                        name: defaultName, 
-                        email: email || null,
-                        role: defaultRole,
-                        createdAt: new Date().toISOString()
-                    });
-                    return { name: defaultName, role: defaultRole, email: email };
-                }
-                return userDoc.data();
-            } catch (error) {
-                console.error("Error ensuring user profile:", error);
-                return { name: uid.substring(0, 8) + '...', role: 'viewer', email: email }; // Fallback
-            }
-        }
-
-        /**
          * Sets up the listener for Firebase authentication state changes.
          * Decides whether to display the login screen or the main application.
          */
@@ -746,67 +626,15 @@
                     userId = user.uid;
                     projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); 
                     adminConfigRef = doc(db, `artifacts/${appId}/public/data/config`, 'admin');
-                    usersCollectionRef = collection(db, `artifacts/${appId}/public/data/users`); // Initialize users collection ref
-
-                    // Ensure user profile exists and fetch it
-                    const userProfile = await ensureUserProfile(userId, user.email, user.isAnonymous);
-                    userName = userProfile.name || (user.isAnonymous ? 'Guest User' : (user.email ? user.email.split('@')[0] : userId.substring(0, 8) + '...'));
-                    userRole = userProfile.role || 'viewer';
-
-                    // Check if current user is the super admin (overrides any other role)
-                    const adminDoc = await getDoc(adminConfigRef);
-                    if (adminDoc.exists() && adminDoc.data().adminId === userId) {
-                        isCurrentUserAdmin = true;
-                        userRole = 'admin'; // Super admin role
-                    } else {
-                        isCurrentUserAdmin = false;
-                    }
-
+                    
+                    await checkAdminStatus();
                     updateUIAfterAuth();
+
                     setupProjectsListener();
-                    setupUsersListener(); // NEW: Start listening for all user changes
                     showKanbanBoard();
                 } else {
                     showLoginScreen();
-                    // Clear previous project and user listeners if logging out
-                    if (unsubscribeFromTasks) unsubscribeFromTasks();
-                    if (unsubscribeFromProjects) unsubscribeFromProjects();
-                    if (unsubscribeFromUsers) unsubscribeFromUsers();
-                    projectsData = {};
-                    allUsersData = {};
-                    currentProjectId = null;
-                    tasks = [];
-                    renderTasks();
-                    displayProjectDetails(null);
                 }
-            });
-        }
-
-        /**
-         * NEW: Sets up a real-time listener for all user profiles.
-         * This populates `allUsersData` for quick lookups and manages the 'Manage Users' list.
-         */
-        function setupUsersListener() {
-            if (unsubscribeFromUsers) unsubscribeFromUsers();
-
-            unsubscribeFromUsers = onSnapshot(usersCollectionRef, (snapshot) => {
-                allUsersData = {};
-                snapshot.docs.forEach(userDoc => {
-                    allUsersData[userDoc.id] = { id: userDoc.id, ...userDoc.data() };
-                });
-                // Re-render user list if modal is open
-                if (!manageUsersModal.classList.contains('hidden')) {
-                    populateExistingUsersList();
-                }
-                // Update current user info in case their profile changed (e.g., role changed by admin)
-                if (userId && allUsersData[userId]) {
-                    userName = allUsersData[userId].name;
-                    userRole = allUsersData[userId].role;
-                    updateUIAfterAuth();
-                }
-            }, (error) => {
-                console.error("Error fetching users:", error);
-                showModal("Error fetching user data.");
             });
         }
         
@@ -818,8 +646,6 @@
         async function handleAdminLogin(email, password) {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                // After successful login, ensure a user profile exists
-                await ensureUserProfile(userCredential.user.uid, userCredential.user.email, userCredential.user.isAnonymous);
             } catch (error) {
                 console.error("Admin Login Failed:", error);
                 let errorMessage = "Login failed. Please check your email and password.";
@@ -847,8 +673,6 @@
         async function handleGuestLogin() {
             try {
                 const userCredential = await signInAnonymously(auth);
-                // After successful login, ensure a user profile exists
-                await ensureUserProfile(userCredential.user.uid, userCredential.user.email, userCredential.user.isAnonymous);
             } catch (error) {
                 console.error("Guest Login Failed:", error);
                 let errorMessage = "Failed to log in as guest. Please refresh the page or try again.";
@@ -913,23 +737,18 @@
          * Updates the user interface based on authentication status and user role.
          */
         function updateUIAfterAuth() {
-            displayUserInfo.textContent = userName; // Display user's name
-            displayUserRole.textContent = userRole.toUpperCase(); // Display role in uppercase for clarity
-            displayUserRole.className = `font-bold 
-                ${userRole === 'admin' ? 'text-green-600' : 
-                   userRole === 'engineer' ? 'text-purple-600' : 
-                   'text-blue-600'}`;
+            userRole = isCurrentUserAdmin ? 'Admin' : 'Viewer';
+            displayUserId.textContent = userId.substring(0,8) + '...';
+            displayUserRole.textContent = userRole;
+            displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
 
-            const canModify = (userRole === 'admin' || userRole === 'engineer'); // Admin or Engineer
-            createProjectBtn.disabled = !canModify;
-            editProjectBtn.disabled = !canModify;
-            manageMembersBtn.disabled = !canModify;
-            deleteProjectBtn.disabled = !canModify; // Delete button is enabled, but logic handles restriction for engineer
-            taskFormContainer.classList.toggle('hidden', !canModify);
-
-            // NEW: Manage Users button visibility
-            manageUsersBtn.classList.toggle('hidden', userRole !== 'admin');
+            const canManageProjects = isCurrentUserAdmin;
+            createProjectBtn.disabled = !canManageProjects;
+            editProjectBtn.disabled = !canManageProjects;
+            manageMembersBtn.disabled = !canManageProjects;
+            deleteProjectBtn.disabled = !canManageProjects;
+            taskFormContainer.classList.toggle('hidden', !canManageProjects);
 
             document.querySelector('main').classList.remove('hidden');
             burndownChartSection.classList.remove('hidden');
@@ -937,12 +756,11 @@
 
         /**
          * Checks if the current user is a member of the selected project.
-         * Super Admin or Engineer always have rights to modify tasks in the project.
-         * @returns {boolean} True if the user is a member or super admin/engineer, otherwise false.
+         * Super Admin always has rights.
+         * @returns {boolean} True if the user is a member or super admin, otherwise false.
          */
         function isCurrentUserProjectMember() {
-            // Super Admin or Engineer can always modify project tasks
-            if (userRole === 'admin' || userRole === 'engineer') return true; 
+            if (isCurrentUserAdmin) return true;
             if (!currentProjectId) return false;
             const project = projectsData[currentProjectId];
             if (!project || !project.members) return false;
@@ -1084,7 +902,7 @@
          */
         function createTaskElement(task) {
             const div = document.createElement('div');
-            const canModifyTask = (userRole === 'admin' || userRole === 'engineer'); // Admin or Engineer
+            const canModifyTask = isCurrentUserProjectMember();
 
             let deadlineClass = '';
             // Only apply deadline color if the task is not done
@@ -1150,7 +968,7 @@
             taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
             div.style.position = 'relative';
 
-            if (canModifyTask) { // Only show these for admins/project members (Admin/Engineer roles)
+            if (canModifyTask) { // Only show these for admins/project members
                 const editTaskButton = document.createElement('button');
                 editTaskButton.textContent = '✏️';
                 editTaskButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
@@ -1186,12 +1004,12 @@
 
             const text = document.createElement('p');
             text.textContent = task.text;
-            text.className = 'font-semibold mb-1 pr-12'; 
+            text.className = 'font-semibold mb-1 pr-12'; // Removed static text-gray-800, now uses dynamic text color from deadlineClass
             div.appendChild(text);
 
             if (task.deadline) {
                 const deadlineText = document.createElement('p');
-                deadlineText.className = 'text-xs italic mb-2'; 
+                deadlineText.className = 'text-xs italic mb-2'; // Removed static text-gray-600, now uses dynamic text color from deadlineClass
                 deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('en-US')}`;
                 div.appendChild(deadlineText);
             }
@@ -1217,12 +1035,13 @@
 
                 sortedSubtasks.forEach((subtask, index) => {
                     const subtaskItem = document.createElement('div');
-                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; 
-                    subtaskItem.setAttribute('data-task-id', task.id); 
-                    subtaskItem.setAttribute('data-subtask-index', index); 
+                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
+                    subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
+                    subtaskItem.setAttribute('data-subtask-index', index); // For subtask drag-drop
+                    // No need to set data-subtask-position here as handleSubtaskDragStart now copies the object
 
                     if (canModifyTask) {
-                        subtaskItem.setAttribute('draggable', 'true'); 
+                        subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
                         subtaskItem.addEventListener('dragstart', handleSubtaskDragStart);
                         subtaskItem.addEventListener('dragend', handleSubtaskDragEnd);
                         subtaskItem.addEventListener('dragenter', handleSubtaskDragEnter);
@@ -1240,13 +1059,13 @@
                     subtaskCheckbox.className = 'mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500';
                     subtaskCheckbox.disabled = !canModifyTask;
                     subtaskCheckbox.addEventListener('change', (e) => {
-                        e.stopPropagation(); 
+                        e.stopPropagation(); // Stop propagation to prevent task card click
                         handleToggleSubtask(task.id, index);
                     });
 
                     const subtaskTextSpan = document.createElement('span');
                     subtaskTextSpan.textContent = subtask.text;
-                    subtaskTextSpan.className = subtask.isCompleted ? 'line-through text-gray-500' : ''; 
+                    subtaskTextSpan.className = subtask.isCompleted ? 'line-through text-gray-500' : ''; // Apply strikethrough
 
                     subtaskContent.appendChild(subtaskCheckbox);
                     subtaskContent.appendChild(subtaskTextSpan);
@@ -1297,14 +1116,14 @@
                 newSubtaskInput.placeholder = 'Add subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
                 newSubtaskInput.addEventListener('keypress', (e) => {
-                    e.stopPropagation(); 
+                    e.stopPropagation(); // Stop propagation here
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         handleAddSubtask(task.id, newSubtaskInput.value);
                     }
                 });
                 newSubtaskInput.addEventListener('click', (e) => {
-                    e.stopPropagation(); 
+                    e.stopPropagation(); // Stop propagation here
                 });
 
                 const addSubtaskButton = document.createElement('button');
@@ -1335,11 +1154,12 @@
             taskIdForComments.value = task.id; // This input also holds task ID for notes section
 
             taskDetailsTextInput.value = task.text || '';
+            // taskDetailsColorInput.value = task.color || '#818CF8'; // REMOVED: Manual color input
             taskDetailsDeadlineInput.value = task.deadline || '';
 
-            const canModifyTaskProperties = (userRole === 'admin' || userRole === 'engineer'); 
-            const canComment = !!userId; 
-            const canAddOrEditNotes = (userRole === 'admin' || userRole === 'engineer'); 
+            const canModifyTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
+            const canComment = !!userId; // Any logged-in user can comment
+            const canAddOrEditNotes = isCurrentUserProjectMember(); // Only project members can add/edit notes
 
             // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
             saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canModifyTaskProperties));
@@ -1347,7 +1167,8 @@
             // Commenting section visibility
             commentSectionContainer.classList.toggle('hidden', !canComment);
 
-            // Task Notes section visibility: Only visible if a project member AND in edit mode
+            // Task Notes section visibility: Only visible if a project member AND in edit mode, OR if a Viewer and not logged in (which should be hidden by canAddOrEditNotes)
+            // Simplified: only show if current user is a project member and in edit mode
             taskNotesSectionContainer.classList.toggle('hidden', !canAddOrEditNotes || !isEditMode);
 
 
@@ -1363,17 +1184,18 @@
             
             // Task details input fields read-only/disabled status
             taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
+            // taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties; // REMOVED: Manual color input
             taskDetailsDeadlineInput.disabled = !isEditMode || !canModifyTaskProperties;
 
 
             renderComments(task.comments || []);
-            renderTaskNotes(task.notes || []); 
+            renderTaskNotes(task.notes || []); // NEW
 
             taskDetailsModal.classList.remove('hidden');
             // Focus based on user role and mode
-            if (isEditMode && canModifyTaskProperties) { 
+            if (isEditMode && canModifyTaskProperties) { // Admin in edit mode, focus on task text
                 taskDetailsTextInput.focus();
-            } else if (canComment) { 
+            } else if (canComment) { // Viewer or Admin in view mode, focus on comments
                 newCommentInput.focus();
             }
         }
@@ -1384,6 +1206,7 @@
         saveTaskDetailsBtn.addEventListener('click', async () => {
             const taskId = taskIdForComments.value;
             const newText = taskDetailsTextInput.value.trim();
+            // const newColor = taskDetailsColorInput.value; // REMOVED: Manual color input
             const newDeadline = taskDetailsDeadlineInput.value;
 
             if (!taskId || !currentProjectId || !newText) {
@@ -1399,12 +1222,13 @@
                 const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
                 await updateDoc(taskRef, {
                     text: newText,
+                    // color: newColor, // REMOVED: Manual color input
                     deadline: newDeadline || null
                 });
                 taskDetailsModal.classList.add('hidden');
                 showModal("Task updated successfully!");
             } catch (error) {
-                console.error("Error updating task details:", error);
+                console.error("Lỗi khi cập nhật chi tiết tác vụ:", error);
                 showModal("Failed to update task details.");
             }
         });
@@ -1413,7 +1237,7 @@
          * Renders the list of comments in the task details modal.
          * @param {Array<Object>} commentsArray - Array of comment objects.
          */
-        async function renderComments(commentsArray) { // Made async to fetch user names
+        function renderComments(commentsArray) {
             commentsList.innerHTML = '';
             if (commentsArray.length === 0) {
                 commentsList.textContent = 'No comments yet.';
@@ -1423,17 +1247,17 @@
             commentsList.classList.remove('text-gray-500', 'italic');
             commentsArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            for (const comment of commentsArray) { // Use for...of for async operations
+            commentsArray.forEach((comment, index) => {
                 const commentItem = document.createElement('div');
-                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; 
+                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; // Added relative for delete button positioning
                 
                 const commentHeader = document.createElement('div');
                 commentHeader.className = 'flex justify-between items-center mb-1';
                 
-                const commenterNameSpan = document.createElement('span'); // Changed from commenterIdSpan
-                commenterNameSpan.className = 'font-semibold text-blue-700';
-                commenterNameSpan.textContent = await fetchUserName(comment.commenterId); // Fetch and display name
-                commentHeader.appendChild(commenterNameSpan);
+                const commenterIdSpan = document.createElement('span');
+                commenterIdSpan.className = 'font-semibold text-blue-700';
+                commenterIdSpan.textContent = comment.commenterId.substring(0, 8) + '...';
+                commentHeader.appendChild(commenterIdSpan);
 
                 const timestampSpan = document.createElement('span');
                 timestampSpan.className = 'text-xs text-gray-500';
@@ -1444,7 +1268,7 @@
                 commentItem.appendChild(commentHeader);
 
                 const commentTextP = document.createElement('p');
-                commentTextP.className = 'text-gray-800 break-words pr-6'; 
+                commentTextP.className = 'text-gray-800 break-words pr-6'; // Added padding for delete button
                 commentTextP.textContent = comment.text;
                 commentItem.appendChild(commentTextP);
 
@@ -1456,13 +1280,13 @@
                     deleteCommentButton.title = 'Delete comment';
                     deleteCommentButton.onclick = (e) => {
                         e.stopPropagation();
-                        handleDeleteComment(taskIdForComments.value, commentsArray.indexOf(comment)); // Use actual index
+                        handleDeleteComment(taskIdForComments.value, index);
                     };
                     commentItem.appendChild(deleteCommentButton);
                 }
 
                 commentsList.appendChild(commentItem);
-            }
+            });
             commentsList.scrollTop = commentsList.scrollHeight;
         }
 
@@ -1494,7 +1318,7 @@
                 });
                 newCommentInput.value = '';
             } catch (error) {
-                console.error("Error adding comment:", error);
+                console.error("Lỗi khi thêm bình luận:", error);
                 showModal("Failed to add comment.");
             }
         });
@@ -1533,7 +1357,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Error deleting comment:", error);
+                console.error("Lỗi khi xóa bình luận:", error);
                 showModal("Failed to delete comment.");
             }
         }
@@ -1542,7 +1366,7 @@
          * NEW: Renders the list of task notes in the task details modal.
          * @param {Array<Object>} notesArray - Array of note objects.
          */
-        async function renderTaskNotes(notesArray) { // Made async to fetch user names
+        function renderTaskNotes(notesArray) {
             taskNotesList.innerHTML = '';
             if (notesArray.length === 0) {
                 taskNotesList.textContent = 'No notes yet.';
@@ -1552,7 +1376,7 @@
             taskNotesList.classList.remove('text-gray-500', 'italic');
             notesArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            for (const note of notesArray) { // Use for...of for async operations
+            notesArray.forEach((note, index) => {
                 const noteItem = document.createElement('div');
                 noteItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-purple-300 relative';
                 
@@ -1561,7 +1385,7 @@
                 
                 const noteInfoSpan = document.createElement('span');
                 noteInfoSpan.className = 'font-semibold text-purple-700';
-                noteInfoSpan.textContent = `Note: By ${await fetchUserName(note.authorId)}`; // Fetch and display name
+                noteInfoSpan.textContent = `Note ${index + 1}: By ${note.authorId.substring(0, 8)}...`;
                 noteHeader.appendChild(noteInfoSpan);
 
                 const timestampSpan = document.createElement('span');
@@ -1587,7 +1411,7 @@
                     editNoteButton.title = 'Edit note';
                     editNoteButton.onclick = (e) => {
                         e.stopPropagation();
-                        openTaskNoteEditModal(taskIdForComments.value, notesArray.indexOf(note), note.text); // Use actual index
+                        openTaskNoteEditModal(taskIdForComments.value, index, note.text);
                     };
                     noteActionsDiv.appendChild(editNoteButton);
 
@@ -1597,14 +1421,14 @@
                     deleteNoteButton.title = 'Delete note';
                     deleteNoteButton.onclick = (e) => {
                         e.stopPropagation();
-                        handleDeleteTaskNote(taskIdForComments.value, notesArray.indexOf(note)); // Use actual index
+                        handleDeleteTaskNote(taskIdForComments.value, index);
                     };
                     noteActionsDiv.appendChild(deleteNoteButton);
                     noteItem.appendChild(noteActionsDiv);
                 }
 
                 taskNotesList.appendChild(noteItem);
-            }
+            });
             taskNotesList.scrollTop = taskNotesList.scrollHeight;
         }
 
@@ -1623,7 +1447,7 @@
                 showModal("You must be logged in to add a note.");
                 return;
             }
-            if (!isCurrentUserProjectMember()) { 
+            if (!isCurrentUserProjectMember()) { // Explicit check
                 showModal("You do not have permission to add task notes.");
                 return;
             }
@@ -1640,7 +1464,7 @@
                 });
                 newTaskNoteInput.value = '';
             } catch (error) {
-                console.error("Error adding task note:", error);
+                console.error("Lỗi khi thêm ghi chú công việc:", error);
                 showModal("Failed to add task note.");
             }
         });
@@ -1678,7 +1502,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Error deleting note:", error);
+                console.error("Lỗi khi xóa ghi chú:", error);
                 showModal("Failed to delete note.");
             }
         }
@@ -1734,7 +1558,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Error saving task note:", error);
+                console.error("Lỗi khi lưu ghi chú công việc:", error);
                 showModal("Failed to save task note.");
             }
         });
@@ -1762,6 +1586,7 @@
                 return;
             }
             const taskText = taskInput.value.trim();
+            // const taskColor = taskColorInput.value; // REMOVED: Manual color selection
             const taskDeadline = taskDeadlineInput.value;
 
             if (taskText) {
@@ -1772,15 +1597,17 @@
                         status: 'todo',
                         createdAt: new Date().toISOString(),
                         position: newTaskPosition,
+                        // color: taskColor || '#818CF8', // REMOVED: No longer manually set
                         deadline: taskDeadline || null,
                         subtasks: [],
                         comments: [],
-                        notes: [] 
+                        notes: [] // NEW: Initialize notes array
                     });
                     taskInput.value = '';
+                    // taskColorInput.value = '#818CF8'; // REMOVED: No longer manual
                     taskDeadlineInput.value = '';
                 } catch (error) {
-                    console.error("Error adding task: ", error);
+                    console.error("Lỗi khi thêm tác vụ: ", error);
                     showModal("Failed to add task.");
                 }
             }
@@ -1802,12 +1629,12 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    const newSubtaskPosition = Date.now(); 
+                    const newSubtaskPosition = Date.now(); // Position for new subtask
                     const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition }]; 
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
-                console.error("Error adding subtask:", error);
+                console.error("Lỗi khi thêm subtask:", error);
                 showModal("Failed to add subtask.");
             }
         }
@@ -1818,6 +1645,8 @@
          * @param {number} subtaskIndex - The index of the subtask in the array.
          */
         async function handleToggleSubtask(taskId, subtaskIndex) {
+            // Note: e.stopPropagation() is handled in createTaskElement for the checkbox event listener itself.
+            // This function is only called to update Firestore.
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to change subtask status.");
                 return;
@@ -1834,7 +1663,7 @@
                     }
                 }
             } catch (error) {
-                console.error("Error toggling subtask:", error);
+                console.error("Lỗi khi chuyển đổi subtask:", error);
                 showModal("Failed to toggle subtask status.");
             }
         }
@@ -1861,7 +1690,7 @@
                     }
                 }
             } catch (error) {
-                console.error("Error deleting subtask:", error);
+                console.error("Lỗi khi xóa subtask:", error);
                 showModal("Failed to delete subtask.");
             }
         }
@@ -1882,7 +1711,7 @@
             editingTaskIdSubtext.value = taskId;
             editingSubtaskIndexSubtext.value = subtaskIndex;
             subtaskEditTextInput.value = currentText;
-            subtaskNoteOnEditModal.value = currentNote; 
+            subtaskNoteOnEditModal.value = currentNote; // Populate note field
             
             // Set the correct color radio button
             subtaskColorRadios.forEach(radio => {
@@ -1904,8 +1733,8 @@
             const taskId = editingTaskIdSubtext.value;
             const subtaskIndex = parseInt(editingSubtaskIndexSubtext.value);
             const newSubtaskText = subtaskEditTextInput.value.trim();
-            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
-            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
+            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); // Get new note
+            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; // Get selected color
 
             if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
                 showModal("Error: Subtask information not found or content is empty.");
@@ -1925,8 +1754,8 @@
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
-                        currentSubtasks[subtaskIndex].note = newSubtaskNote; 
-                        currentSubtasks[subtaskIndex].color = newSubtaskColor; 
+                        currentSubtasks[subtaskIndex].note = newSubtaskNote; // Save note
+                        currentSubtasks[subtaskIndex].color = newSubtaskColor; // Save color
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                         subtaskEditTextModal.classList.add('hidden');
                         showModal("Subtask changes saved successfully!");
@@ -1937,7 +1766,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("Error saving subtask changes:", error);
+                console.error("Lỗi khi lưu thay đổi subtask:", error);
                 showModal("Failed to save subtask changes.");
             }
         });
@@ -1946,10 +1775,6 @@
             subtaskEditTextModal.classList.add('hidden');
         });
 
-        closeTaskDetailsModalBtn.addEventListener('click', () => {
-            taskDetailsModal.classList.add('hidden');
-            currentOpenTaskDetailsId = null;
-        });
 
         /**
          * Updates the status of a task in Firestore.
@@ -1959,7 +1784,7 @@
          * @param {number} [newPosition] - Optional: the new position for reordering within the column.
          */
         async function handleUpdateTaskStatus(taskId, newStatus, newPosition = null) {
-            if (!isCurrentUserProjectMember()) {
+            if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to move tasks.");
                 return;
             }
@@ -1977,7 +1802,7 @@
                 }
                 await updateDoc(taskRef, updateData);
             } catch (error) {
-                console.error("Error updating task: ", error);
+                console.error("Lỗi khi cập nhật tác vụ: ", error);
                 showModal("Failed to update task status.");
             }
         }
@@ -1987,7 +1812,7 @@
          * @param {string} taskId - The ID of the task to delete.
          */
         async function handleDeleteTask(taskId) {
-            if (!isCurrentUserProjectMember()) {
+            if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to delete tasks.");
                 return;
             }
@@ -1995,7 +1820,7 @@
             try {
                 await deleteDoc(taskRef);
             } catch (error) {
-                console.error("Error deleting task: ", error);
+                console.error("Lỗi khi xóa tác vụ: ", error);
                 showModal("Failed to delete task.");
             }
         }
@@ -2068,7 +1893,7 @@
                                         Date.now();
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
                 } catch (error) {
-                    console.error("Error changing task status:", error);
+                    console.error("Lỗi khi thay đổi trạng thái tác vụ:", error);
                     showModal("Failed to change task status.");
                 }
             }
@@ -2305,7 +2130,7 @@
                 showModal("Subtask reordered successfully!");
 
             } catch (error) {
-                console.error("Error reordering subtask:", error);
+                console.error("Lỗi khi sắp xếp lại subtask:", error);
                 showModal("Failed to reorder subtask.");
             } finally {
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
@@ -2360,8 +2185,7 @@
 
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
-            // Both Admin and Engineer can create projects
-            if (userRole !== 'admin' && userRole !== 'engineer') {
+            if (!isCurrentUserAdmin) {
                 showModal("You do not have permission to create new projects.");
                 return;
             }
@@ -2380,8 +2204,7 @@
         });
 
         editProjectBtn.addEventListener('click', () => {
-            // Both Admin and Engineer can edit projects
-            if (userRole !== 'admin' && userRole !== 'engineer') {
+            if (!isCurrentUserAdmin) {
                 showModal("You do not have permission to edit projects.");
                 return;
             }
@@ -2409,28 +2232,19 @@
         });
 
         deleteProjectBtn.addEventListener('click', async () => {
+            if (!isCurrentUserAdmin) {
+                showModal("You do not have permission to delete projects.");
+                return;
+            }
             if (!currentProjectId) {
                 showModal("Please select a project to delete.");
                 return;
             }
             const project = projectsData[currentProjectId];
-            if (!project) {
-                showModal("Error: Project data not found for deletion.");
-                return;
-            }
-
-            if (userRole === 'admin') {
-                // Super Admin can delete any project
+            if (project) {
                 promptDeleteConfirmation(currentProjectId, project.name);
-            } else if (userRole === 'engineer') {
-                // Engineer cannot delete completed projects
-                if (project.status === 'Completed') {
-                    showModal("Engineers cannot delete projects that are in 'Completed' status.");
-                } else {
-                    promptDeleteConfirmation(currentProjectId, project.name);
-                }
             } else {
-                showModal("You do not have permission to delete projects.");
+                showModal("Error: Project data not found for deletion.");
             }
         });
 
@@ -2481,7 +2295,7 @@
                 showModal("Project deleted successfully!");
                 currentProjectId = null;
             } catch (error) {
-                console.error("Error deleting project:", error);
+                console.error("Lỗi khi xóa dự án:", error);
                 if (error.code === 'permission-denied') {
                     showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules.");
                 } else {
@@ -2499,8 +2313,7 @@
             const projectIdToModify = editingProjectIdInput.value;
             const sourceProjectIdToCopy = copyTasksFromProjectSelect.value;
 
-            // Both Admin and Engineer can save projects
-            if (userRole !== 'admin' && userRole !== 'engineer') {
+            if (!isCurrentUserAdmin) {
                 showModal("You do not have permission to save projects.");
                 return;
             }
@@ -2526,7 +2339,7 @@
                     } else {
                         projectData.createdBy = userId;
                         projectData.createdAt = new Date().toISOString();
-                        projectData.members = [userId]; // Creator is automatically a member
+                        projectData.members = [userId];
                         const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/projects`), projectData);
                         const newProjectId = docRef.id;
                         currentProjectId = newProjectId;
@@ -2539,7 +2352,7 @@
                     }
                     createProjectModal.classList.add('hidden');
                 } catch (error) {
-                    console.error("Error saving project:", error);
+                    console.error("Lỗi khi lưu dự án:", error);
                     showModal("Failed to save project.");
                 }
             } else {
@@ -2568,16 +2381,17 @@
                         status: 'todo',
                         createdAt: new Date().toISOString(),
                         position: Date.now(),
+                        // color: originalTaskData.color || '#818CF8', // REMOVED: No longer manually set
                         deadline: originalTaskData.deadline || null,
                         subtasks: originalTaskData.subtasks.map(sub => ({
                             text: sub.text,
                             isCompleted: false,
                             note: sub.note || '',
-                            color: sub.color || 'default', 
-                            position: sub.position || Date.now() + Math.random() 
+                            color: sub.color || 'default', // Keep subtask color if it's still manually set for subtasks
+                            position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
                         })),
                         comments: [],
-                        notes: [] 
+                        notes: [] // NEW: Copied tasks start with empty notes
                     };
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
                     showModal("Task copied successfully!");
@@ -2585,7 +2399,7 @@
                     showModal("Task not found to copy.");
                 }
             } catch (error) {
-                console.error("Error copying task:", error);
+                console.error("Lỗi khi sao chép tác vụ:", error);
                 showModal("Failed to copy task.");
             }
         }
@@ -2610,16 +2424,17 @@
                             status: 'todo',
                             createdAt: new Date().toISOString(),
                             position: Date.now() + Math.random(),
+                            // color: taskData.color || '#818CF8', // REMOVED: No longer manually set
                             deadline: taskData.deadline || null,
                             subtasks: taskData.subtasks.map(sub => ({
                                 text: sub.text,
                                 isCompleted: false,
                                 note: sub.note || '',
-                                color: sub.color || 'default', 
-                                position: sub.position || Date.now() + Math.random() 
+                                color: sub.color || 'default', // NEW: Copy subtask color
+                                position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
                             })),
                             comments: [],
-                            notes: [] 
+                            notes: [] // NEW: Copied tasks start with empty notes
                         };
                     });
 
@@ -2627,9 +2442,9 @@
                 const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
                 
                 await Promise.all(addTasksPromises);
-                console.log(`Copied ${todoTasksToCopy.length} 'To Do' tasks from ${sourceProjectId} to ${destinationProjectId}`);
+                console.log(`Đã sao chép ${todoTasksToCopy.length} tác vụ 'To Do' từ ${sourceProjectId} sang ${destinationProjectId}`);
             } catch (error) {
-                console.error("Error copying tasks:", error);
+                console.error("Lỗi khi sao chép tác vụ:", error);
                 showModal("Failed to copy 'To Do' tasks.");
             }
         }
@@ -2655,7 +2470,7 @@
          * Displays details of the currently selected project.
          * @param {Object} project - The project object to display. If null, details will be hidden.
          */
-        async function displayProjectDetails(project) {
+        function displayProjectDetails(project) {
             if (project) {
                 displayProjectName.textContent = project.name;
                 displayProjectDescription.textContent = project.description || 'No description.';
@@ -2664,25 +2479,16 @@
                 displayProjectStatus.textContent = project.status || 'Active';
 
                 currentProjectMembers = project.members || [];
-                // Fetch and display names of members
-                const memberNamesPromises = currentProjectMembers.map(async (memberId) => {
-                    const userProfile = allUsersData[memberId];
-                    return userProfile ? userProfile.name : memberId.substring(0,8) + '...'; // Use cached name
-                });
-                const memberNames = await Promise.all(memberNamesPromises);
-                const membersDisplay = memberNames.length > 0 ? memberNames.join(', ') : 'No members yet.';
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(id => id.substring(0,8) + '...').join(', ') : 'No members yet.';
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
                 burndownChartSection.classList.remove('hidden');
 
-                // Determine who can modify project details (Admin or Engineer)
-                const canModifyProject = (userRole === 'admin' || userRole === 'engineer');
+                const canModifyProject = isCurrentUserAdmin;
                 editProjectBtn.classList.toggle('hidden', !canModifyProject);
                 manageMembersBtn.classList.toggle('hidden', !canModifyProject);
-                
-                // Delete button visibility is based on role, with additional logic for Engineer on click
-                deleteProjectBtn.classList.toggle('hidden', !(userRole === 'admin' || userRole === 'engineer')); 
+                deleteProjectBtn.classList.toggle('hidden', !canModifyProject);
 
             } else {
                 currentProjectDetailsDiv.classList.add('hidden');
@@ -2822,8 +2628,7 @@
 
         // --- Project Member Management Logic ---
         manageMembersBtn.addEventListener('click', () => {
-            // Both Admin and Engineer can manage members
-            if (userRole !== 'admin' && userRole !== 'engineer') {
+            if (!isCurrentUserAdmin) {
                 showModal("You do not have permission to manage members.");
                 return;
             }
@@ -2846,9 +2651,8 @@
                 showModal("Please enter a User ID.");
                 return;
             }
-            // Only Admin (Super Admin) can add new members to a project
-            if (userRole !== 'admin') {
-                showModal("Only Admin can add members to projects.");
+            if (!isCurrentUserAdmin) {
+                showModal("You do not have permission to add members.");
                 return;
             }
             if (!currentProjectId) {
@@ -2865,22 +2669,14 @@
                         showModal("This user is already a member of the project.");
                         return;
                     }
-                    // Check if the user ID actually exists in the users collection
-                    // This relies on allUsersData being populated by the user listener
-                    const targetUser = allUsersData[newMemberId];
-                    if (!targetUser) {
-                        showModal(`User with ID "${newMemberId}" does not exist in the system. They must log in at least once or be created by Admin in "Manage Users".`);
-                        return;
-                    }
-
                     await updateDoc(projectRef, {
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
-                    showModal(`User ${targetUser.name || newMemberId} has been added to the project.`);
+                    showModal(`User ${newMemberId} has been added to the project.`);
                 }
             } catch (error) {
-                console.error("Error adding member:", error);
+                console.error("Lỗi khi thêm thành viên:", error);
                 showModal("Failed to add member.");
             }
         });
@@ -2888,7 +2684,7 @@
         /**
          * Displays the list of members in the manage members modal.
          */
-        async function displayMembersInModal() { // Made async
+        function displayMembersInModal() {
             currentMembersList.innerHTML = '';
             const project = projectsData[currentProjectId];
             const projectMembers = (project && project.members) ? project.members : [];
@@ -2897,18 +2693,16 @@
                 currentMembersList.textContent = 'No members in this project yet.';
                 return;
             }
-            for (const memberId of projectMembers) { // Use for...of for async
+            projectMembers.forEach(memberId => {
                 const memberItem = document.createElement('div');
                 memberItem.className = 'flex items-center justify-between p-2 bg-white rounded-md shadow-sm mb-2';
                 
-                const memberInfoSpan = document.createElement('span');
-                memberInfoSpan.className = 'font-mono text-gray-700 break-all';
-                // Prefer cached name, otherwise fetch, otherwise fallback to truncated ID
-                memberInfoSpan.textContent = allUsersData[memberId] ? allUsersData[memberId].name : await fetchUserName(memberId); 
-                memberItem.appendChild(memberInfoSpan);
+                const memberIdSpan = document.createElement('span');
+                memberIdSpan.className = 'font-mono text-gray-700 break-all';
+                memberIdSpan.textContent = memberId;
+                memberItem.appendChild(memberIdSpan);
 
-                // Only Super Admin can remove members
-                if (userRole === 'admin' && memberId !== userId) {
+                if (isCurrentUserAdmin && memberId !== userId) {
                     const removeButton = document.createElement('button');
                     removeButton.textContent = 'Remove';
                     removeButton.className = 'ml-4 bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 transition';
@@ -2916,12 +2710,12 @@
                     memberItem.appendChild(removeButton);
                 } else if (memberId === userId) {
                     const selfTag = document.createElement('span');
-                    selfTag.textContent = ' (You)';
+                    selfTag.textContent = '(You)';
                     selfTag.className = 'ml-2 text-gray-400 text-xs italic';
-                    memberInfoSpan.appendChild(selfTag);
+                    memberIdSpan.appendChild(selfTag);
                 }
                 currentMembersList.appendChild(memberItem);
-            }
+            });
         }
 
         /**
@@ -2930,8 +2724,7 @@
          * @param {string} memberIdToRemove - The ID of the member to remove.
          */
         async function removeProjectMember(projectId, memberIdToRemove) {
-            // Only Admin (Super Admin) can remove members
-            if (userRole !== 'admin') {
+            if (!isCurrentUserAdmin) {
                 showModal("You do not have permission to remove members.");
                 return;
             }
@@ -2944,175 +2737,10 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
-                showModal(`User ${allUsersData[memberIdToRemove] ? allUsersData[memberIdToRemove].name : memberIdToRemove} removed from the project.`);
+                showModal(`User ${memberIdToRemove} removed from the project.`);
             } catch (error) {
-                console.error("Error removing member:", error);
+                console.error("Lỗi khi xóa thành viên:", error);
                 showModal("Failed to remove member.");
-            }
-        }
-
-        // --- NEW: User Management Modal Logic ---
-        manageUsersBtn.addEventListener('click', () => {
-            if (userRole !== 'admin') {
-                showModal("You do not have permission to manage users.");
-                return;
-            }
-            populateExistingUsersList(); // Refresh the list when opening
-            manageUsersModal.classList.remove('hidden');
-        });
-
-        closeManageUsersModalBtn.addEventListener('click', () => {
-            manageUsersModal.classList.add('hidden');
-            // Clear new user form
-            newUserEmailInput.value = '';
-            newUserPasswordInput.value = '';
-            newUserDisplayNameInput.value = '';
-            newUserRoleSelect.value = 'viewer';
-        });
-
-        /**
-         * Populates the list of existing users in the manage users modal.
-         */
-        function populateExistingUsersList() {
-            existingUsersList.innerHTML = '';
-            const users = Object.values(allUsersData).sort((a, b) => a.name.localeCompare(b.name));
-
-            if (users.length === 0) {
-                existingUsersList.textContent = 'No users registered yet.';
-                existingUsersList.classList.add('text-gray-500', 'italic');
-                return;
-            }
-            existingUsersList.classList.remove('text-gray-500', 'italic');
-
-            users.forEach(user => {
-                const userItem = document.createElement('div');
-                userItem.className = 'flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 bg-white rounded-md shadow-sm mb-2 border-l-4 border-blue-200';
-                
-                const userInfoDiv = document.createElement('div');
-                userInfoDiv.className = 'flex-grow mb-1 sm:mb-0';
-
-                const userNameP = document.createElement('p');
-                userNameP.className = 'font-semibold text-gray-800';
-                userNameP.textContent = user.name;
-                userInfoDiv.appendChild(userNameP);
-
-                const userEmailP = document.createElement('p');
-                userEmailP.className = 'text-sm text-gray-600';
-                userEmailP.textContent = user.email || '(No Email)';
-                userInfoDiv.appendChild(userEmailP);
-
-                const userRoleP = document.createElement('p');
-                userRoleP.className = 'text-xs font-medium text-gray-500';
-                userRoleP.textContent = `Role: ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`;
-                userInfoDiv.appendChild(userRoleP);
-
-                userItem.appendChild(userInfoDiv);
-
-                // Role edit dropdown for admins
-                if (userRole === 'admin' && user.id !== userId) { // Admin cannot change their own role here
-                    const roleSelect = document.createElement('select');
-                    roleSelect.className = 'p-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 transition mt-2 sm:mt-0 sm:ml-4';
-                    ['viewer', 'engineer', 'admin'].forEach(role => {
-                        const option = document.createElement('option');
-                        option.value = role;
-                        option.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-                        roleSelect.appendChild(option);
-                    });
-                    roleSelect.value = user.role;
-                    roleSelect.addEventListener('change', (e) => handleEditUserRole(user.id, e.target.value, user.name));
-                    userItem.appendChild(roleSelect);
-                } else if (user.id === userId) {
-                    const selfTag = document.createElement('span');
-                    selfTag.textContent = '(You)';
-                    selfTag.className = 'ml-2 text-gray-400 text-xs italic whitespace-nowrap';
-                    userNameP.appendChild(selfTag);
-                }
-
-                existingUsersList.appendChild(userItem);
-            });
-        }
-
-        /**
-         * Handles creating a new user (Firebase Auth + Firestore Profile).
-         */
-        createNewUserBtn.addEventListener('click', async () => {
-            const email = newUserEmailInput.value.trim();
-            const password = newUserPasswordInput.value.trim();
-            const displayName = newUserDisplayNameInput.value.trim();
-            const role = newUserRoleSelect.value;
-
-            if (!email || !password || !displayName) {
-                showModal("Please fill in all fields (Email, Password, Display Name).");
-                return;
-            }
-            if (password.length < 6) {
-                showModal("Password must be at least 6 characters long.");
-                return;
-            }
-
-            try {
-                // 1. Create user in Firebase Authentication
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const newUserId = userCredential.user.uid;
-
-                // 2. Create user profile in Firestore
-                const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, newUserId);
-                await setDoc(userDocRef, {
-                    name: displayName,
-                    email: email,
-                    role: role,
-                    createdAt: new Date().toISOString()
-                });
-
-                showModal(`User "${displayName}" (Role: ${role.toUpperCase()}) created successfully!`);
-                // Clear form
-                newUserEmailInput.value = '';
-                newUserPasswordInput.value = '';
-                newUserDisplayNameInput.value = '';
-                newUserRoleSelect.value = 'viewer';
-                // The onSnapshot listener for users will automatically refresh the list.
-            } catch (error) {
-                console.error("Error creating new user:", error);
-                let errorMessage = "Failed to create user.";
-                if (error.code === 'auth/email-already-in-use') {
-                    errorMessage = "This email is already in use by another account.";
-                } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = "Invalid email format.";
-                } else if (error.code === 'auth/weak-password') {
-                    errorMessage = "Password is too weak. Please choose a stronger password.";
-                } else if (error.code === 'permission-denied') {
-                    errorMessage = "Permission denied. Only Super Admin can create new user profiles. Please check your Firebase Security Rules.";
-                }
-                showModal(errorMessage);
-            }
-        });
-
-        /**
-         * Handles editing the role of an existing user.
-         * @param {string} targetUid - The UID of the user whose role is being edited.
-         * @param {string} newRole - The new role to assign.
-         * @param {string} userNameDisplay - The display name of the user for the modal message.
-         */
-        async function handleEditUserRole(targetUid, newRole, userNameDisplay) {
-            if (userRole !== 'admin') {
-                showModal("You do not have permission to edit user roles.");
-                return;
-            }
-            if (targetUid === userId) {
-                showModal("You cannot change your own role through this interface.");
-                return;
-            }
-            try {
-                const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, targetUid);
-                await updateDoc(userDocRef, { role: newRole });
-                showModal(`Role for user "${userNameDisplay}" updated to ${newRole.toUpperCase()}.`);
-            } catch (error) {
-                console.error("Error updating user role:", error);
-                let errorMessage = "Failed to update user role.";
-                if (error.code === 'permission-denied') {
-                    errorMessage = "Permission denied. Only Super Admin can change user roles. Please check your Firebase Security Rules.";
-                }
-                showModal(errorMessage);
             }
         }
 
@@ -3131,6 +2759,18 @@
 
         guestLoginBtn.addEventListener('click', handleGuestLogin);
         logoutBtn.addEventListener('click', handleLogout);
+
+        projectSelect.addEventListener('change', (e) => {
+            currentProjectId = e.target.value;
+            if (currentProjectId) {
+                setupRealtimeListener(currentProjectId);
+                displayProjectDetails(projectsData[currentProjectId]);
+            } else {
+                if (unsubscribeFromTasks) unsubscribeFromTasks();
+                renderTasks();
+                displayProjectDetails(null);
+            }
+        });
 
         initializeFirebase();
     </script>
