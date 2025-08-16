@@ -529,9 +529,9 @@
         let draggedTaskOriginalPosition = null;
 
         // Stores information about the subtask being dragged.
+        // `subtaskIndex` stores its index in the array at the start of the drag.
         // `subtaskObject` holds a deep copy of the subtask for consistent reference.
-        // `originalIndex` holds its index in the array at the start of the drag.
-        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
+        let draggedSubtaskInfo = { taskId: null, subtaskIndex: null, subtaskObject: null }; 
 
         // Helper map for subtask colors
         const subtaskColorMap = {
@@ -977,8 +977,10 @@
                     const subtaskItem = document.createElement('div');
                     subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
                     subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
-                    // Use subtask.id for stable identification
-                    subtaskItem.setAttribute('data-subtask-id', subtask.id); 
+                    // Use index for stable identification
+                    subtaskItem.setAttribute('data-subtask-index', index); 
+                    // Store the subtask's unique ID for consistency during operations
+                    subtaskItem.setAttribute('data-subtask-id', subtask.id);
 
                     if (canModifyTask) {
                         subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
@@ -1382,7 +1384,7 @@
             try {
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
-                    const currentSubtasks = taskDoc.data().subtasks || [];
+                    let currentSubtasks = taskDoc.data().subtasks || [];
                     const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId); // Find by ID
                     if (subtaskIndex > -1) {
                         currentSubtasks[subtaskIndex].isCompleted = !currentSubtasks[subtaskIndex].isCompleted;
@@ -1410,7 +1412,7 @@
             try {
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
-                    const currentSubtasks = taskDoc.data().subtasks || [];
+                    let currentSubtasks = taskDoc.data().subtasks || [];
                     const updatedSubtasks = currentSubtasks.filter(sub => sub.id !== subtaskId); // Filter by ID
                     // Re-assign positions after deletion to keep them ordered
                     const reindexedSubtasks = updatedSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
@@ -1436,7 +1438,7 @@
                 return;
             }
             editingTaskIdSubtext.value = taskId;
-            subtaskEditIdInput.value = subtaskId;
+            subtaskEditIdInput.value = subtaskId; 
             subtaskEditTextInput.value = currentText;
             subtaskNoteOnEditModal.value = currentNote; 
             
@@ -1457,7 +1459,7 @@
          */
         saveSubtaskTextBtn.addEventListener('click', async () => {
             const taskId = editingTaskIdSubtext.value;
-            const subtaskId = subtaskEditIdInput.value;
+            const subtaskId = subtaskEditIdInput.value; 
             const newSubtaskText = subtaskEditTextInput.value.trim();
             const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
             const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
@@ -1477,8 +1479,8 @@
             try {
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
-                    const currentSubtasks = taskDoc.data().subtasks || [];
-                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId);
+                    let currentSubtasks = taskDoc.data().subtasks || [];
+                    const subtaskIndex = currentSubtasks.findIndex(sub => sub.id === subtaskId); 
                     if (subtaskIndex > -1) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
                         currentSubtasks[subtaskIndex].note = newSubtaskNote; 
@@ -1734,7 +1736,7 @@
             column.addEventListener('drop', handleDropColumn);
         });
 
-        // --- NEW: Subtask Drag and Drop Logic ---
+        // --- Subtask Drag and Drop Logic (Reverted to 1.txt approach) ---
 
         /**
          * Handles the start of a drag operation for a subtask.
@@ -1747,32 +1749,19 @@
             }
             const subtaskItem = e.target.closest('.subtask-item');
             const taskId = subtaskItem.getAttribute('data-task-id');
-            const subtaskId = subtaskItem.getAttribute('data-subtask-id');
+            const subtaskIndex = parseInt(subtaskItem.getAttribute('data-subtask-index'));
 
             const task = tasks.find(t => t.id === taskId);
-            if (!task) {
-                console.error("Error: Parent task not found for subtask drag.", { taskId });
-                showModal("Error: Parent task not found for subtask drag.");
-                e.preventDefault();
-                return;
-            }
-            
-            // Find the subtask object and its current index in the *current* task's subtasks array
-            const subtaskIndex = task.subtasks.findIndex(sub => sub.id === subtaskId);
-            const subtaskToDrag = task.subtasks[subtaskIndex];
-            
-            // Validate subtask object and its essential properties
-            if (subtaskToDrag && typeof subtaskToDrag === 'object' && subtaskToDrag !== null && subtaskToDrag.text !== undefined && subtaskToDrag.id !== undefined && subtaskIndex !== -1) {
+            if (task && task.subtasks && task.subtasks[subtaskIndex]) {
                 draggedSubtaskInfo.taskId = taskId;
-                // Create a deep copy of the subtask object to avoid reference issues
-                draggedSubtaskInfo.subtaskObject = JSON.parse(JSON.stringify(subtaskToDrag)); 
-                draggedSubtaskInfo.originalIndex = subtaskIndex; // Store the original index for later calculation
+                // Deep copy the subtask object
+                draggedSubtaskInfo.subtaskObject = JSON.parse(JSON.stringify(task.subtasks[subtaskIndex]));
+                draggedSubtaskInfo.subtaskIndex = subtaskIndex; // Store the original index
                 subtaskItem.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             } else {
-                console.error("Error: Subtask is not a valid object or is missing essential properties (id or text), or index is invalid.", { taskId, subtaskId, subtaskToDrag, subtaskIndex });
-                showModal("Error: Cannot drag this subtask. It might be invalid or missing content."); 
-                e.preventDefault(); 
+                e.preventDefault(); // Invalid subtask
+                showModal("Error: Cannot drag this subtask. It might be invalid or missing content.");
             }
         }
 
@@ -1784,7 +1773,7 @@
             e.target.classList.remove('dragging');
             document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
             // Reset dragged subtask info
-            draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null };
+            draggedSubtaskInfo = { taskId: null, subtaskIndex: null, subtaskObject: null };
         }
 
         /**
@@ -1794,12 +1783,10 @@
         function handleSubtaskDragEnter(e) {
             e.preventDefault();
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-id') === draggedSubtaskInfo.subtaskObject?.id) return;
+            // Check if it's the same subtask being dragged or if the parent tasks differ
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.subtaskIndex) || targetSubtaskItem.getAttribute('data-task-id') !== draggedSubtaskInfo.taskId) return;
 
-            // Only highlight if the target is within the same parent task as the dragged subtask
-            if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
-                targetSubtaskItem.classList.add('drag-over-subtask');
-            }
+            targetSubtaskItem.classList.add('drag-over-subtask');
         }
 
         /**
@@ -1808,7 +1795,8 @@
          */
         function handleSubtaskDragLeave(e) {
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            // Remove highlight from any subtask that is no longer being dragged over
+            // Check if it's the same subtask being dragged
+            if (targetSubtaskItem && targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.subtaskIndex)) return;
             targetSubtaskItem?.classList.remove('drag-over-subtask');
         }
 
@@ -1823,12 +1811,13 @@
 
         /**
          * Handles drop event on a subtask (for reordering within a task).
+         * This logic attempts to mimic the behavior from the user's provided 1.txt file.
          * @param {Event} e - The drop event.
          */
         async function handleSubtaskDrop(e) {
             e.preventDefault();
             // Basic validation for the dragged subtask information
-            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || !draggedSubtaskInfo.subtaskObject || !currentProjectId) {
+            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskObject === null || draggedSubtaskInfo.subtaskIndex === null || !currentProjectId) {
                 showModal("Error: Missing dragged subtask data or insufficient permissions.");
                 e.target.closest('.subtask-item')?.classList.remove('drag-over-subtask');
                 return;
@@ -1842,8 +1831,8 @@
             }
 
             const targetTaskId = targetSubtaskItem.getAttribute('data-task-id');
-            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id'); 
-
+            const targetSubtaskIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index'));
+            
             // Ensure dropping within the same parent task
             if (targetTaskId !== draggedSubtaskInfo.taskId) {
                 showModal("Subtasks can only be reordered within their parent task.");
@@ -1852,7 +1841,7 @@
             }
             
             // If dropping onto itself, do nothing
-            if (targetSubtaskId === draggedSubtaskInfo.subtaskObject.id) {
+            if (draggedSubtaskInfo.subtaskIndex === targetSubtaskIndex) {
                 targetSubtaskItem.classList.remove('drag-over-subtask');
                 return;
             }
@@ -1868,57 +1857,47 @@
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
                 
-                // IMPORTANT: Always sort subtasks by position from Firestore data before manipulating
-                // This ensures `findIndex` operates on a consistently ordered array.
+                // Sort the subtasks from Firestore by position to ensure consistent indexing
+                // This is crucial because `onSnapshot` might return documents in any order if not explicitly sorted,
+                // and we rely on array indices here.
                 currentSubtasks.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-                // Find the *actual* current index of the dragged and target subtasks in the *current fetched* subtasks array
-                const draggedSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskObject.id);
-                const targetSubtaskIndexInFetchedArray = currentSubtasks.findIndex(sub => sub.id === targetSubtaskId);
-
-                // Robust check: Ensure both subtasks exist in the fetched array
-                if (draggedSubtaskIndexInFetchedArray === -1) {
-                    showModal("Error: Dragged subtask no longer exists in the project. It might have been deleted by another user.");
+                // Find the *current* index of the dragged subtask based on its ID
+                // This is more robust than relying solely on `draggedSubtaskInfo.subtaskIndex` if the array changed since dragstart
+                const actualDraggedSubtaskCurrentIndex = currentSubtasks.findIndex(sub => sub.id === draggedSubtaskInfo.subtaskObject.id);
+                if (actualDraggedSubtaskCurrentIndex === -1) {
+                    showModal("Error: Dragged subtask no longer found. It may have been modified or deleted by another user.");
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
-                if (targetSubtaskIndexInFetchedArray === -1) {
-                    showModal("Error: Target subtask not found in the project. It might have been deleted by another user.");
-                    targetSubtaskItem.classList.remove('drag-over-subtask');
-                    return;
-                }
-                
-                // 1. Remove the dragged subtask from its current position in the fetched array
-                const [removedSubtask] = currentSubtasks.splice(draggedSubtaskIndexInFetchedArray, 1);
 
-                // 2. Calculate the new index where the removed subtask should be inserted
-                // This `newInsertionIndex` refers to the index in the `currentSubtasks` array *after* the removal.
-                let newInsertionIndex = targetSubtaskIndexInFetchedArray;
+                // 1. Remove the dragged subtask from its current (actual) position
+                const [removedSubtask] = currentSubtasks.splice(actualDraggedSubtaskCurrentIndex, 1);
 
-                // Adjust `newInsertionIndex` if the dragged element was originally before the target element
+                // 2. Determine the new insertion index based on the target subtask's current index and mouse position
+                let newInsertionIndex = targetSubtaskIndex; 
+
+                // Adjust insertionIndex if the dragged element was originally before the target element
                 // because removing an element from an earlier index shifts subsequent elements to the left by one.
-                if (draggedSubtaskIndexInFetchedArray < targetSubtaskIndexInFetchedArray) {
+                if (actualDraggedSubtaskCurrentIndex < targetSubtaskIndex) {
                     newInsertionIndex--;
                 }
 
-                // Determine precise insertion point based on mouse position relative to target element
+                // Consider mouse position for precise insertion (before or after the target)
                 const subtaskRect = targetSubtaskItem.getBoundingClientRect();
                 const mouseRelativeY = e.clientY - subtaskRect.top;
-
                 if (mouseRelativeY > subtaskRect.height / 2) {
-                    // If dropping on the bottom half, insert *after* the target element
-                    newInsertionIndex++;
+                    newInsertionIndex++; // Insert after target
                 }
 
-                // Ensure `newInsertionIndex` is within valid bounds (0 to currentSubtasks.length)
+                // Ensure newInsertionIndex is within valid bounds
                 newInsertionIndex = Math.max(0, Math.min(newInsertionIndex, currentSubtasks.length));
 
-                // 3. Insert the dragged subtask at the calculated position
+                // 3. Insert the removed subtask at the calculated new position
                 currentSubtasks.splice(newInsertionIndex, 0, removedSubtask);
 
-                // 4. Re-assign positions based on the new order
-                // Using a larger step (e.g., 1000) for positions leaves gaps,
-                // which helps prevent floating point errors and makes future insertions smoother.
+                // 4. Re-assign positions based on the new array order
+                // This is crucial to ensure Firestore correctly reflects the visual order.
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
 
                 // 5. Update Firestore with the new ordered subtasks array
