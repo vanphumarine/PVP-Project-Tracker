@@ -126,16 +126,19 @@
             <p class="text-gray-600 mb-6">Choose how you want to access the application.</p>
             
             <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Admin Login</h3>
-                <input type="email" id="admin-email" placeholder="Admin Email" class="w-full p-3 mb-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <input type="password" id="admin-password" placeholder="Admin Password" class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <button id="admin-login-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Login as Admin</button>
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Login</h3>
+                <input type="email" id="admin-email" placeholder="Email" class="w-full p-3 mb-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="password" id="admin-password" placeholder="Password" class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button id="admin-login-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Login</button>
             </div>
 
+            <!-- Removed Viewer Access section -->
+            <!--
             <div class="border-t border-gray-200 pt-6">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Viewer Access</h3>
                 <button id="guest-login-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-green-700 transition-colors duration-300">Continue as Guest</button>
             </div>
+            -->
         </div>
     </div>
 
@@ -484,7 +487,7 @@
         const adminEmailInput = document.getElementById('admin-email');
         const adminPasswordInput = document.getElementById('admin-password');
         const adminLoginBtn = document.getElementById('admin-login-btn');
-        const guestLoginBtn = document.getElementById('guest-login-btn');
+        const guestLoginBtn = document.getElementById('guest-login-btn'); // This element will be removed but kept in JS for clarity
         const mainApp = document.getElementById('app');
         const logoutBtn = document.getElementById('logout-btn');
         const changePasswordBtn = document.getElementById('change-password-btn'); // NEW: Change Password Button
@@ -606,7 +609,7 @@
             displayUserId.textContent = '';
             displayUserRole.textContent = '';
             logoutBtn.classList.add('hidden');
-            changePasswordBtn.classList.add('hidden'); // NEW: Hide change password button
+            changePasswordBtn.classList.add('hidden'); 
         }
 
         /**
@@ -632,7 +635,7 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('debug'); // Enable debug logging for Firebase
+                setLogLevel('debug'); 
                 setupAuthListener();
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
@@ -652,7 +655,7 @@
                     projectsCollectionRef = collection(db, `artifacts/${appId}/public/data/projects`); 
                     adminConfigRef = doc(db, `artifacts/${appId}/public/data/config`, 'admin');
                     
-                    await checkAdminStatus(); // Call the updated checkAdminStatus
+                    await checkAdminStatus(); 
                     updateUIAfterAuth();
 
                     setupProjectsListener();
@@ -672,7 +675,7 @@
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
-                console.error("Admin Login Failed:", error);
+                console.error("Login Failed:", error); // Changed message to be generic
                 let errorMessage = "Login failed. Please check your email and password.";
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     errorMessage = "Invalid email or password.";
@@ -694,9 +697,14 @@
 
         /**
          * Handles anonymous guest login.
+         * This function is now effectively removed as the "Continue as Guest" button is gone.
+         * However, keeping the function definition in case it's called elsewhere or for future use.
          */
         async function handleGuestLogin() {
             try {
+                // Since the guest login button is removed, this function might not be called.
+                // If you intend to disable guest login, you might want to remove this function entirely
+                // or ensure it's not reachable. For now, it remains.
                 const userCredential = await signInAnonymously(auth);
             } catch (error) {
                 console.error("Guest Login Failed:", error);
@@ -726,7 +734,7 @@
         }
 
         /**
-         * NEW: Handles sending a password reset email to the current user.
+         * Handles sending a password reset email to the current user.
          */
         async function handleChangePassword() {
             const user = auth.currentUser;
@@ -778,8 +786,6 @@
             } else {
                 isCurrentUserAdmin = false;
             }
-            // Removed the Firestore admin config check as we are now hardcoding admin IDs.
-            // If you later want to manage admins dynamically, you would reintroduce that logic.
         }
         
         /**
@@ -787,11 +793,10 @@
          */
         function updateUIAfterAuth() {
             userRole = isCurrentUserAdmin ? 'Admin' : 'Viewer';
-            displayUserId.textContent = getNickname(userId); // Use getNickname here
+            displayUserId.textContent = getNickname(userId); 
             displayUserRole.textContent = userRole;
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
-            // NEW: Show change password button if logged in and not anonymous
             changePasswordBtn.classList.toggle('hidden', auth.currentUser.isAnonymous);
 
 
@@ -861,21 +866,21 @@
                 } else if (currentProjectId && !snapshot.docs.some(doc => doc.id === currentProjectId)) {
                     currentProjectId = firstProjectId;
                     projectSelect.value = firstProjectId || "";
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
-                    renderTasks(); // Clear tasks from UI
+                    if (unsubscribeFromTasks) unsubscribeFromTasks(); 
+                    renderTasks(); 
                     if (firstProjectId) {
                          setupRealtimeListener(firstProjectId);
                          displayProjectDetails(projectsData[firstProjectId]);
                     } else {
-                        displayProjectDetails(null); // Clear project details
+                        displayProjectDetails(null); 
                     }
                 } else if (currentProjectId) {
                      projectSelect.value = currentProjectId;
                      displayProjectDetails(projectsData[currentProjectId]);
                 } else {
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe task listener if no project selected
-                    renderTasks(); // Clear tasks from UI
-                    displayProjectDetails(null); // Clear project details
+                    if (unsubscribeFromTasks) unsubscribeFromTasks(); 
+                    renderTasks(); 
+                    displayProjectDetails(null); 
                 }
 
                 const mainContent = document.querySelector('main');
@@ -902,7 +907,7 @@
             const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
             const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
 
-            let previousTasksComments = {}; // For new comment toast
+            let previousTasksComments = {}; 
 
             unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
                 const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -961,10 +966,10 @@
             if (task.deadline && task.status !== 'done') { 
                 const deadlineDate = new Date(task.deadline);
                 const now = new Date();
-                now.setHours(0, 0, 0, 0); // Reset time for accurate day calculation
+                now.setHours(0, 0, 0, 0); 
 
                 const diffTime = deadlineDate.getTime() - now.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Days remaining
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
                 if (diffDays <= 7) {
                     // Less than or equal to 1 week
@@ -1008,10 +1013,10 @@
                 // Subtask checkbox click should not open the modal.
                 // Added check for input field here
                 if (e.target.closest('button') || e.target.closest('input[type="checkbox"]') || e.target.closest('input[type="text"]')) {
-                    e.stopPropagation(); // Prevent card click event if a button, checkbox or text input was clicked
+                    e.stopPropagation(); 
                     return;
                 }
-                openTaskDetailsModal(task, false); // Always open in view mode by default for general clicks
+                openTaskDetailsModal(task, false); 
             });
 
 
@@ -1020,14 +1025,14 @@
             taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
             div.style.position = 'relative';
 
-            if (canModifyTask) { // Only show these for admins/project members
+            if (canModifyTask) { 
                 const editTaskButton = document.createElement('button');
                 editTaskButton.textContent = '✏️';
                 editTaskButton.className = 'text-gray-500 hover:text-gray-700 p-1 rounded';
                 editTaskButton.title = 'Edit Task';
                 editTaskButton.onclick = (e) => {
-                    e.stopPropagation(); // Prevent card click event
-                    openTaskDetailsModal(task, true); // Open in edit mode
+                    e.stopPropagation(); 
+                    openTaskDetailsModal(task, true); 
                 };
                 taskActionsDiv.appendChild(editTaskButton);
 
@@ -1056,12 +1061,12 @@
 
             const text = document.createElement('p');
             text.textContent = task.text;
-            text.className = 'font-semibold mb-1 pr-12'; // Removed static text-gray-800, now uses dynamic text color from deadlineClass
+            text.className = 'font-semibold mb-1 pr-12'; 
             div.appendChild(text);
 
             if (task.deadline) {
                 const deadlineText = document.createElement('p');
-                deadlineText.className = 'text-xs italic mb-2'; // Removed static text-gray-600, now uses dynamic text color from deadlineClass
+                deadlineText.className = 'text-xs italic mb-2'; 
                 deadlineText.textContent = `Deadline: ${new Date(task.deadline).toLocaleDateString('en-US')}`;
                 div.appendChild(deadlineText);
             }
@@ -1087,13 +1092,13 @@
 
                 sortedSubtasks.forEach((subtask, index) => {
                     const subtaskItem = document.createElement('div');
-                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; // Apply color class
-                    subtaskItem.setAttribute('data-task-id', task.id); // For subtask drag-drop
-                    subtaskItem.setAttribute('data-subtask-index', index); // For subtask drag-drop
+                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; 
+                    subtaskItem.setAttribute('data-task-id', task.id); 
+                    subtaskItem.setAttribute('data-subtask-index', index); 
                     // No need to set data-subtask-position here as handleSubtaskDragStart now copies the object
 
                     if (canModifyTask) {
-                        subtaskItem.setAttribute('draggable', 'true'); // Make subtask draggable
+                        subtaskItem.setAttribute('draggable', 'true'); 
                         subtaskItem.addEventListener('dragstart', handleSubtaskDragStart);
                         subtaskItem.addEventListener('dragend', handleSubtaskDragEnd);
                         subtaskItem.addEventListener('dragenter', handleSubtaskDragEnter);
@@ -1111,13 +1116,13 @@
                     subtaskCheckbox.className = 'mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500';
                     subtaskCheckbox.disabled = !canModifyTask;
                     subtaskCheckbox.addEventListener('change', (e) => {
-                        e.stopPropagation(); // Stop propagation to prevent task card click
+                        e.stopPropagation(); 
                         handleToggleSubtask(task.id, index);
                     });
 
                     const subtaskTextSpan = document.createElement('span');
                     subtaskTextSpan.textContent = subtask.text;
-                    subtaskTextSpan.className = subtask.isCompleted ? 'line-through text-gray-500' : ''; // Apply strikethrough
+                    subtaskTextSpan.className = subtask.isCompleted ? 'line-through text-gray-500' : ''; 
 
                     subtaskContent.appendChild(subtaskCheckbox);
                     subtaskContent.appendChild(subtaskTextSpan);
@@ -1168,14 +1173,14 @@
                 newSubtaskInput.placeholder = 'Add subtask...';
                 newSubtaskInput.className = 'flex-grow p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500';
                 newSubtaskInput.addEventListener('keypress', (e) => {
-                    e.stopPropagation(); // Stop propagation here
+                    e.stopPropagation(); 
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         handleAddSubtask(task.id, newSubtaskInput.value);
                     }
                 });
                 newSubtaskInput.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Stop propagation here
+                    e.stopPropagation(); 
                 });
 
                 const addSubtaskButton = document.createElement('button');
@@ -1203,15 +1208,14 @@
          */
         function openTaskDetailsModal(task, isEditMode = false) {
             currentOpenTaskDetailsId = task.id;
-            taskIdForComments.value = task.id; // This input also holds task ID for notes section
+            taskIdForComments.value = task.id; 
 
             taskDetailsTextInput.value = task.text || '';
-            // taskDetailsColorInput.value = task.color || '#818CF8'; // REMOVED: Manual color input
             taskDetailsDeadlineInput.value = task.deadline || '';
 
-            const canModifyTaskProperties = isCurrentUserProjectMember(); // Only project members can edit task properties
-            const canComment = !!userId; // Any logged-in user can comment
-            const canAddOrEditNotes = isCurrentUserProjectMember(); // Only project members can add/edit notes
+            const canModifyTaskProperties = isCurrentUserProjectMember(); 
+            const canComment = !!userId; 
+            const canAddOrEditNotes = isCurrentUserProjectMember(); 
 
             // Save Task Changes button is only visible if current user is admin/project member AND opened in edit mode
             saveTaskDetailsBtn.classList.toggle('hidden', !(isEditMode && canModifyTaskProperties));
@@ -1236,18 +1240,17 @@
             
             // Task details input fields read-only/disabled status
             taskDetailsTextInput.readOnly = !isEditMode || !canModifyTaskProperties;
-            // taskDetailsColorInput.disabled = !isEditMode || !canModifyTaskProperties; // REMOVED: Manual color input
             taskDetailsDeadlineInput.disabled = !isEditMode || !canModifyTaskProperties;
 
 
             renderComments(task.comments || []);
-            renderTaskNotes(task.notes || []); // NEW
+            renderTaskNotes(task.notes || []); 
 
             taskDetailsModal.classList.remove('hidden');
             // Focus based on user role and mode
-            if (isEditMode && canModifyTaskProperties) { // Admin in edit mode, focus on task text
+            if (isEditMode && canModifyTaskProperties) { 
                 taskDetailsTextInput.focus();
-            } else if (canComment) { // Viewer or Admin in view mode, focus on comments
+            } else if (canComment) { 
                 newCommentInput.focus();
             }
         }
@@ -1258,7 +1261,6 @@
         saveTaskDetailsBtn.addEventListener('click', async () => {
             const taskId = taskIdForComments.value;
             const newText = taskDetailsTextInput.value.trim();
-            // const newColor = taskDetailsColorInput.value; // REMOVED: Manual color input
             const newDeadline = taskDetailsDeadlineInput.value;
 
             if (!taskId || !currentProjectId || !newText) {
@@ -1274,7 +1276,6 @@
                 const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
                 await updateDoc(taskRef, {
                     text: newText,
-                    // color: newColor, // REMOVED: Manual color input
                     deadline: newDeadline || null
                 });
                 taskDetailsModal.classList.add('hidden');
@@ -1301,14 +1302,14 @@
             
             commentsArray.forEach((comment, index) => {
                 const commentItem = document.createElement('div');
-                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; // Added relative for delete button positioning
+                commentItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2 border-blue-300 relative'; 
                 
                 const commentHeader = document.createElement('div');
                 commentHeader.className = 'flex justify-between items-center mb-1';
                 
                 const commenterIdSpan = document.createElement('span');
                 commenterIdSpan.className = 'font-semibold text-blue-700';
-                commenterIdSpan.textContent = getNickname(comment.commenterId); // Use getNickname here
+                commenterIdSpan.textContent = getNickname(comment.commenterId); 
                 commentHeader.appendChild(commenterIdSpan);
 
                 const timestampSpan = document.createElement('span');
@@ -1320,7 +1321,7 @@
                 commentItem.appendChild(commentHeader);
 
                 const commentTextP = document.createElement('p');
-                commentTextP.className = 'text-gray-800 break-words pr-6'; // Added padding for delete button
+                commentTextP.className = 'text-gray-800 break-words pr-6'; 
                 commentTextP.textContent = comment.text;
                 commentItem.appendChild(commentTextP);
 
@@ -1437,7 +1438,7 @@
                 
                 const noteInfoSpan = document.createElement('span');
                 noteInfoSpan.className = 'font-semibold text-purple-700';
-                noteInfoSpan.textContent = `Note ${index + 1}: By ${getNickname(note.authorId)}`; // Use getNickname here
+                noteInfoSpan.textContent = `Note ${index + 1}: By ${getNickname(note.authorId)}`; 
                 noteHeader.appendChild(noteInfoSpan);
 
                 const timestampSpan = document.createElement('span');
@@ -1499,7 +1500,7 @@
                 showModal("You must be logged in to add a note.");
                 return;
             }
-            if (!isCurrentUserProjectMember()) { // Explicit check
+            if (!isCurrentUserProjectMember()) { 
                 showModal("You do not have permission to add task notes.");
                 return;
             }
@@ -1638,7 +1639,6 @@
                 return;
             }
             const taskText = taskInput.value.trim();
-            // const taskColor = taskColorInput.value; // REMOVED: Manual color selection
             const taskDeadline = taskDeadlineInput.value;
 
             if (taskText) {
@@ -1649,14 +1649,12 @@
                         status: 'todo',
                         createdAt: new Date().toISOString(),
                         position: newTaskPosition,
-                        // color: taskColor || '#818CF8', // REMOVED: No longer manually set
                         deadline: taskDeadline || null,
                         subtasks: [],
                         comments: [],
-                        notes: [] // NEW: Initialize notes array
+                        notes: [] 
                     });
                     taskInput.value = '';
-                    // taskColorInput.value = '#818CF8'; // REMOVED: No longer manual
                     taskDeadlineInput.value = '';
                 } catch (error) {
                     console.error("L\u1ED7i khi th\u00EAm t\u00E1c v\u1EE5: ", error);
@@ -1681,7 +1679,7 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    const newSubtaskPosition = Date.now(); // Position for new subtask
+                    const newSubtaskPosition = Date.now(); 
                     const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition }]; 
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
@@ -1697,8 +1695,6 @@
          * @param {number} subtaskIndex - The index of the subtask in the array.
          */
         async function handleToggleSubtask(taskId, subtaskIndex) {
-            // Note: e.stopPropagation() is handled in createTaskElement for the checkbox event listener itself.
-            // This function is only called to update Firestore.
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to change subtask status.");
                 return;
@@ -1763,7 +1759,7 @@
             editingTaskIdSubtext.value = taskId;
             editingSubtaskIndexSubtext.value = subtaskIndex;
             subtaskEditTextInput.value = currentText;
-            subtaskNoteOnEditModal.value = currentNote; // Populate note field
+            subtaskNoteOnEditModal.value = currentNote; 
             
             // Set the correct color radio button
             subtaskColorRadios.forEach(radio => {
@@ -1785,8 +1781,8 @@
             const taskId = editingTaskIdSubtext.value;
             const subtaskIndex = parseInt(editingSubtaskIndexSubtext.value);
             const newSubtaskText = subtaskEditTextInput.value.trim();
-            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); // Get new note
-            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; // Get selected color
+            const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
+            const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
 
             if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
                 showModal("Error: Subtask information not found or content is empty.");
@@ -1806,8 +1802,8 @@
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
-                        currentSubtasks[subtaskIndex].note = newSubtaskNote; // Save note
-                        currentSubtasks[subtaskIndex].color = newSubtaskColor; // Save color
+                        currentSubtasks[subtaskIndex].note = newSubtaskNote; 
+                        currentSubtasks[subtaskIndex].color = newSubtaskColor; 
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                         subtaskEditTextModal.classList.add('hidden');
                         showModal("Subtask changes saved successfully!");
@@ -1854,7 +1850,7 @@
                 }
                 await updateDoc(taskRef, updateData);
             } catch (error) {
-                console.error("L\u1ED7i khi c\u1EADp nh\u1EADt t\u00E1c v\u1EE5: ", error);
+                    console.error("L\u1ED7i khi c\u1EADp nh\u1EADt t\u00E1c v\u1EE5: ", error);
                 showModal("Failed to update task status.");
             }
         }
@@ -2077,12 +2073,12 @@
             const task = tasks.find(t => t.id === taskId);
             if (task && task.subtasks && task.subtasks[subtaskIndex]) {
                 draggedSubtaskInfo.taskId = taskId;
-                draggedSubtaskInfo.subtaskObject = { ...task.subtasks[subtaskIndex] }; // Deep copy
+                draggedSubtaskInfo.subtaskObject = { ...task.subtasks[subtaskIndex] }; 
                 draggedSubtaskInfo.originalIndex = subtaskIndex;
                 subtaskItem.classList.add('dragging');
                 e.dataTransfer.effectAllowed = 'move';
             } else {
-                e.preventDefault(); // Invalid subtask
+                e.preventDefault(); 
             }
         }
 
@@ -2433,17 +2429,16 @@
                         status: 'todo',
                         createdAt: new Date().toISOString(),
                         position: Date.now(),
-                        // color: originalTaskData.color || '#818CF8', // REMOVED: No longer manually set
                         deadline: originalTaskData.deadline || null,
                         subtasks: originalTaskData.subtasks.map(sub => ({
                             text: sub.text,
                             isCompleted: false,
                             note: sub.note || '',
-                            color: sub.color || 'default', // Keep subtask color if it's still manually set for subtasks
-                            position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
+                            color: sub.color || 'default', 
+                            position: sub.position || Date.now() + Math.random() 
                         })),
                         comments: [],
-                        notes: [] // NEW: Copied tasks start with empty notes
+                        notes: [] 
                     };
                     await addDoc(collection(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`), copiedTaskData);
                     showModal("Task copied successfully!");
@@ -2476,17 +2471,16 @@
                             status: 'todo',
                             createdAt: new Date().toISOString(),
                             position: Date.now() + Math.random(),
-                            // color: taskData.color || '#818CF8', // REMOVED: No longer manually set
                             deadline: taskData.deadline || null,
                             subtasks: taskData.subtasks.map(sub => ({
                                 text: sub.text,
                                 isCompleted: false,
                                 note: sub.note || '',
-                                color: sub.color || 'default', // NEW: Copy subtask color
-                                position: sub.position || Date.now() + Math.random() // NEW: Copy subtask position or create new
+                                color: sub.color || 'default', 
+                                position: sub.position || Date.now() + Math.random() 
                             })),
                             comments: [],
-                            notes: [] // NEW: Copied tasks start with empty notes
+                            notes: [] 
                         };
                     });
 
@@ -2531,7 +2525,7 @@
                 displayProjectStatus.textContent = project.status || 'Active';
 
                 currentProjectMembers = project.members || [];
-                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(getNickname).join(', ') : 'No members yet.'; // Use getNickname here
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(getNickname).join(', ') : 'No members yet.'; 
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
@@ -2725,7 +2719,7 @@
                         members: arrayUnion(newMemberId)
                     });
                     newMemberIdInput.value = '';
-                    showModal(`User ${getNickname(newMemberId)} has been added to the project.`); // Use getNickname here
+                    showModal(`User ${getNickname(newMemberId)} has been added to the project.`); 
                 }
             } catch (error) {
                 console.error("L\u1ED7i khi th\u00EAm th\u00E0nh vi\u00EAn:", error);
@@ -2751,7 +2745,7 @@
                 
                 const memberIdSpan = document.createElement('span');
                 memberIdSpan.className = 'font-mono text-gray-700 break-all';
-                memberIdSpan.textContent = getNickname(memberId); // Use getNickname here
+                memberIdSpan.textContent = getNickname(memberId); 
                 memberItem.appendChild(memberIdSpan);
 
                 if (isCurrentUserAdmin && memberId !== userId) {
@@ -2789,7 +2783,7 @@
                 await updateDoc(projectRef, {
                     members: arrayRemove(memberIdToRemove)
                 });
-                showModal(`User ${getNickname(memberIdToRemove)} removed from the project.`); // Use getNickname here
+                showModal(`User ${getNickname(memberIdToRemove)} removed from the project.`); 
             } catch (error) {
                 console.error("L\u1ED7i khi x\u00F3a th\u00E0nh vi\u00EAn:", error);
                 showModal("Failed to remove member.");
@@ -2805,13 +2799,15 @@
             if (email && password) {
                 handleAdminLogin(email, password);
             } else {
-                showModal("Please enter both email and password for admin login.");
+                showModal("Please enter both email and password for login."); // Changed message to be generic
             }
         });
 
-        guestLoginBtn.addEventListener('click', handleGuestLogin);
+        // Removed the event listener for guest login button as the button itself is removed
+        // guestLoginBtn.addEventListener('click', handleGuestLogin); 
+
         logoutBtn.addEventListener('click', handleLogout);
-        changePasswordBtn.addEventListener('click', handleChangePassword); // NEW: Add event listener for change password button
+        changePasswordBtn.addEventListener('click', handleChangePassword); 
 
         projectSelect.addEventListener('change', (e) => {
             currentProjectId = e.target.value;
