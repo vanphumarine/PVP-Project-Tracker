@@ -593,6 +593,17 @@
         </div>
     </div>
 
+    <!-- Reaction Notification Toast -->
+    <div id="reaction-toast" class="toast-notification">
+        <button class="toggle-button">▲</button>
+        <div class="toast-content">
+            <p>New reaction on project: <span id="reaction-toast-project-name" class="font-semibold"></span></p>
+            <p>Task: <span id="reaction-toast-task-name" class="font-semibold"></span></p>
+            <p>Subtask: <span id="reaction-toast-subtask-text" class="italic"></span></p>
+            <p><span id="reaction-toast-reactor-nickname" class="font-bold"></span> reacted with <span id="reaction-toast-type" class="font-semibold"></span>!</p>
+        </div>
+    </div>
+
 
     <script type="module">
         // Import Firebase modules
@@ -744,6 +755,15 @@
         // NEW: Added for task status in toast
         const toastTaskStatus = document.getElementById('toast-task-status');
 
+        // Reaction Toast DOM elements
+        const reactionToast = document.getElementById('reaction-toast');
+        const reactionToastProjectName = document.getElementById('reaction-toast-project-name');
+        const reactionToastTaskName = document.getElementById('reaction-toast-task-name');
+        const reactionToastSubtaskText = document.getElementById('reaction-toast-subtask-text');
+        const reactionToastReactorNickname = document.getElementById('reaction-toast-reactor-nickname');
+        const reactionToastType = document.getElementById('reaction-toast-type');
+        const toggleReactionToastButton = reactionToast.querySelector('.toggle-button');
+
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
         const deleteConfirmMessage = document.getElementById('delete-confirm-message');
@@ -766,6 +786,19 @@
             'red': 'text-red-700 bg-red-100 border-red-400',
             'default': 'text-gray-700 bg-gray-100 border-gray-300'
         };
+
+        // Reaction definitions
+        const reactionEmojis = {
+            'like': '👍',
+            'handling': '🤝',
+            'note': '📌'
+        };
+        const reactionNames = {
+            'like': 'Thích',
+            'handling': 'Tôi sẽ xử lí',
+            'note': 'Lưu ý về tab này'
+        };
+
 
         /**
          * Lấy biệt danh cho một User ID.
@@ -991,7 +1024,7 @@
          */
         function updateUIAfterAuth() {
             userRole = isCurrentUserAdmin ? 'Admin' : 'Viewer';
-            displayUserId.textContent = getNickname(userId); 
+            displayUserId.textContent = userId; // Display full userId
             displayUserRole.textContent = userRole;
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
@@ -1134,6 +1167,45 @@
                         const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
                         // Pass task status to the toast
                         showCommentToast(projectName, newTask.text, newTask.status, newComment.text); 
+                    }
+
+                    // Check for new reactions on subtasks
+                    if (oldTask && newTask.subtasks) {
+                        newTask.subtasks.forEach((newSubtask, subtaskIndex) => {
+                            const oldSubtask = oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null;
+
+                            if (newSubtask.reactions && oldSubtask && oldSubtask.reactions) {
+                                // Find any reaction that exists in newSubtask.reactions but not in oldSubtask.reactions
+                                const newReaction = newSubtask.reactions.find(nr => 
+                                    !oldSubtask.reactions.some(or => or.type === nr.type && or.reactorId === nr.reactorId)
+                                );
+                                if (newReaction && newReaction.reactorId !== userId) { // Only notify if not self-reaction
+                                    const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
+                                    showReactionToast(
+                                        projectName,
+                                        newTask.text,
+                                        newSubtask.text,
+                                        getNickname(newReaction.reactorId),
+                                        newReaction.type
+                                    );
+                                }
+                            } else if (newSubtask.reactions && (!oldSubtask || !oldSubtask.reactions || oldSubtask.reactions.length === 0)) {
+                                // Subtask previously had no reactions, now it has one (first reaction)
+                                if (newSubtask.reactions.length > 0) {
+                                    const firstReaction = newSubtask.reactions[0];
+                                    if (firstReaction.reactorId !== userId) {
+                                        const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
+                                        showReactionToast(
+                                            projectName,
+                                            newTask.text,
+                                            newSubtask.text,
+                                            getNickname(firstReaction.reactorId),
+                                            firstReaction.type
+                                        );
+                                    }
+                                }
+                            }
+                        });
                     }
                 });
 
@@ -1383,6 +1455,45 @@
                         subtaskNoteDisplay.textContent = `Note: ${subtask.note}`;
                         subtasksContainer.appendChild(subtaskNoteDisplay);
                     }
+
+                    // NEW: Subtask Reactions
+                    const subtaskReactionsDiv = document.createElement('div');
+                    subtaskReactionsDiv.className = 'flex items-center gap-2 mt-1 text-gray-500 pl-6'; // Added padding-left for alignment
+
+                    const reactionTypes = [
+                        { type: 'like', emoji: '👍', name: 'Like' },
+                        { type: 'handling', emoji: '🤝', name: 'Tôi sẽ xử lí' },
+                        { type: 'note', emoji: '📌', name: 'Lưu ý về tab này' }
+                    ];
+
+                    reactionTypes.forEach(reactionDef => {
+                        const reactionsForType = (subtask.reactions || []).filter(
+                            r => r.type === reactionDef.type
+                        );
+                        const reactionCount = reactionsForType.length;
+                        const hasReacted = reactionsForType.some(
+                            r => r.reactorId === userId
+                        );
+
+                        const reactionButton = document.createElement('button');
+                        reactionButton.className = `flex items-center text-sm px-2 py-1 rounded-full border ${hasReacted ? 'bg-blue-200 border-blue-400 text-blue-800' : 'bg-gray-100 border-gray-300 text-gray-600'} hover:bg-blue-100 hover:border-blue-300 transition-colors duration-200`;
+                        reactionButton.title = reactionDef.name;
+
+                        reactionButton.innerHTML = `<span>${reactionDef.emoji}</span> <span class="ml-1 font-semibold">${reactionCount > 0 ? reactionCount : ''}</span>`;
+
+                        if (canModifyTask) { // Only allow reaction if user is a member
+                            reactionButton.onclick = async (e) => {
+                                e.stopPropagation(); // Prevent opening task details modal
+                                await toggleSubtaskReaction(task.id, index, reactionDef.type);
+                            };
+                        } else {
+                            reactionButton.disabled = true;
+                            reactionButton.classList.add('cursor-not-allowed', 'opacity-70');
+                        }
+
+                        subtaskReactionsDiv.appendChild(reactionButton);
+                    });
+                    subtasksContainer.appendChild(subtaskReactionsDiv); // Append reactions below subtasks
                 });
             }
 
@@ -1917,7 +2028,7 @@
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     const newSubtaskPosition = Date.now(); 
-                    const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition }]; 
+                    const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition, reactions: [] }]; // Initialize reactions array
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
@@ -2059,6 +2170,65 @@
         cancelSubtaskTextBtn.addEventListener('click', () => {
             subtaskEditTextModal.classList.add('hidden');
         });
+
+        /**
+         * NEW: Toggles a reaction on a specific subtask.
+         * If the user has already reacted with this type, it removes their reaction.
+         * Otherwise, it adds their reaction.
+         * @param {string} taskId - The ID of the parent task.
+         * @param {number} subtaskIndex - The index of the subtask in the array.
+         * @param {string} reactionType - The type of reaction ('like', 'handling', 'note').
+         */
+        async function toggleSubtaskReaction(taskId, subtaskIndex, reactionType) {
+            if (!userId || !currentProjectId) {
+                showModal("You must be logged in to react.");
+                return;
+            }
+            if (!isCurrentUserProjectMember()) { // Only project members can add reactions
+                showModal("You do not have permission to react to subtasks.");
+                return;
+            }
+
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, taskId);
+            try {
+                const taskDoc = await getDoc(taskRef);
+                if (taskDoc.exists()) {
+                    const taskData = taskDoc.data();
+                    const currentSubtasks = [...(taskData.subtasks || [])];
+
+                    if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
+                        const subtask = { ...currentSubtasks[subtaskIndex] }; 
+                        let currentReactions = [...(subtask.reactions || [])]; 
+
+                        const existingReactionIndex = currentReactions.findIndex(
+                            r => r.type === reactionType && r.reactorId === userId
+                        );
+
+                        if (existingReactionIndex > -1) {
+                            // User already reacted with this type, remove it
+                            currentReactions.splice(existingReactionIndex, 1);
+                            // showModal(`Removed ${reactionType} reaction.`); // Removed for smoother UX
+                        } else {
+                            // User has not reacted with this type, add it
+                            currentReactions.push({
+                                type: reactionType,
+                                reactorId: userId,
+                                timestamp: new Date().toISOString()
+                            });
+                            // showModal(`Added ${reactionType} reaction!`); // Removed for smoother UX
+                        }
+                        
+                        subtask.reactions = currentReactions;
+                        currentSubtasks[subtaskIndex] = subtask; 
+
+                        await updateDoc(taskRef, { subtasks: currentSubtasks });
+                    }
+                }
+            } catch (error) {
+                console.error(`Error toggling ${reactionType} reaction:`, error);
+                showModal(`Failed to toggle ${reactionType} reaction.`);
+            }
+        }
 
 
         /**
@@ -2502,6 +2672,48 @@
             clearTimeout(toastTimeout); // Prevent auto-collapse if user manually toggles
         });
 
+        /**
+         * NEW: Shows a toast notification for a new reaction.
+         * @param {string} projectName - The name of the project.
+         * @param {string} taskText - The text of the task.
+         * @param {string} subtaskText - The text of the subtask.
+         * @param {string} reactorNickname - The nickname of the user who reacted.
+         * @param {string} reactionType - The type of reaction ('like', 'handling', 'note').
+         */
+        function showReactionToast(projectName, taskText, subtaskText, reactorNickname, reactionType) {
+            if (reactorNickname === getNickname(userId)) { // Don't show toast for self-reactions
+                return;
+            }
+
+            clearTimeout(reactionToastTimeout);
+            
+            reactionToastProjectName.textContent = projectName;
+            reactionToastTaskName.textContent = taskText;
+            reactionToastSubtaskText.textContent = subtaskText;
+            reactionToastReactorNickname.textContent = reactorNickname;
+            reactionToastType.textContent = `${reactionEmojis[reactionType]} ${reactionNames[reactionType]}`;
+
+            reactionToast.classList.add('show');
+            reactionToast.classList.remove('collapsed');
+
+            reactionToastTimeout = setTimeout(() => {
+                reactionToast.classList.add('collapsed');
+            }, 5000); 
+        }
+
+        reactionToast.addEventListener('click', (e) => {
+            if (e.target !== toggleReactionToastButton) {
+                reactionToast.classList.toggle('collapsed');
+                clearTimeout(reactionToastTimeout);
+            }
+        });
+
+        toggleReactionToastButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            reactionToast.classList.toggle('collapsed');
+            clearTimeout(reactionToastTimeout);
+        });
+
 
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
@@ -2707,7 +2919,8 @@
                             isCompleted: false,
                             note: sub.note || '',
                             color: sub.color || 'default', 
-                            position: sub.position || Date.now() + Math.random() 
+                            position: sub.position || Date.now() + Math.random(),
+                            reactions: [] // Ensure copied subtasks start with no reactions
                         })),
                         comments: [],
                         notes: [] 
@@ -2749,7 +2962,8 @@
                                 isCompleted: false,
                                 note: sub.note || '',
                                 color: sub.color || 'default', 
-                                position: sub.position || Date.now() + Math.random() 
+                                position: sub.position || Date.now() + Math.random(),
+                                reactions: [] // Ensure copied subtasks start with no reactions
                             })),
                             comments: [],
                             notes: [] 
