@@ -212,6 +212,45 @@
             color: #6b7280; /* gray-600 */
         }
 
+        /* Custom styles for the countdown timer inspired by the image */
+        .countdown-card {
+            width: 128px; /* w-32 */
+            height: 128px; /* h-32 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            border: 1px solid #e5e7eb; /* border border-gray-200 */
+            overflow: hidden;
+            position: relative;
+            font-family: 'Inter', sans-serif; /* Ensure Inter font */
+        }
+
+        .countdown-card .header-text {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            background-image: linear-gradient(to right, #3b82f6, #60a5fa); /* blue-600 to blue-400 */
+            color: white;
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600; /* font-semibold */
+            text-transform: uppercase;
+            padding: 0.375rem 0; /* py-1.5 */
+            text-align: center;
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+        }
+
+        .countdown-card .days-value {
+            font-size: 3rem; /* text-5xl */
+            font-weight: 300; /* font-light */
+            color: #374151; /* gray-800 */
+            margin-top: 1rem; /* mt-4 */
+        }
+
     </style>
 </head>
 <body class="antialiased text-gray-800">
@@ -269,37 +308,44 @@
         <!-- Project Details and Add Task Form - Now stacked vertically (flex-col) and centered with max-width -->
         <div class="flex flex-col gap-4 mb-4 max-w-full mx-auto">
             <!-- Current Project Details Display -->
-            <div id="current-project-details" class="w-full bg-blue-100 p-4 rounded-lg shadow-md hidden text-left border-l-4 border-blue-500">
-                <h2 class="text-2xl font-bold text-blue-800 mb-2" id="display-project-name"></h2>
-                <p class="text-gray-700 mb-3" id="display-project-description"></p>
-                
-                <!-- Updated layout for project details -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
-                    <div class="flex items-center gap-1">
-                        <strong class="text-blue-700">Start Date:</strong>
-                        <span id="display-project-start-date"></span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <strong class="text-blue-700">End Date:</strong>
-                        <span id="display-project-end-date"></span>
-                    </div>
-                    <div class="flex items-center gap-1 col-span-1 sm:col-span-2 lg:col-span-1">
-                        <strong class="text-blue-700">Status:</strong>
-                        <span id="display-project-status" class="font-semibold"></span>
-                    </div>
-                    <div class="flex items-center gap-1 col-span-full">
-                        <strong class="text-blue-700">Members:</strong>
-                        <span id="display-project-members" class="font-semibold"></span>
+            <div id="current-project-details" class="w-full bg-blue-100 p-4 rounded-lg shadow-md hidden text-left border-l-4 border-blue-500 flex flex-wrap items-start justify-between">
+                <div class="flex-grow">
+                    <h2 class="text-2xl font-bold text-blue-800 mb-2" id="display-project-name"></h2>
+                    <p class="text-gray-700 mb-3" id="display-project-description"></p>
+                    
+                    <!-- Updated layout for project details -->
+                    <div class="flex flex-col gap-1 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <strong class="text-blue-700">Start Date:</strong>
+                            <span id="display-project-start-date"></span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <strong class="text-blue-700">End Date:</strong>
+                            <span id="display-project-end-date"></span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <strong class="text-blue-700">Status:</strong>
+                            <span id="display-project-status" class="font-semibold"></span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <strong class="text-blue-700">Members:</strong>
+                            <span id="display-project-members" class="font-semibold"></span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Countdown Timer -->
-                <div id="countdown-timer" class="mt-4 p-2 bg-yellow-200 text-yellow-800 rounded-md font-bold text-center text-lg hidden">
-                    <!-- Countdown will be displayed here -->
+                <div id="countdown-timer" class="mt-4 sm:mt-0 ml-0 sm:ml-4 hidden">
+                    <div class="countdown-card">
+                        <div class="header-text">
+                            Days Until Seatrial
+                        </div>
+                        <div id="countdown-days-value" class="days-value">0</div>
+                    </div>
                 </div>
 
                 <!-- Action buttons for project, displayed based on permissions -->
-                <div class="text-right mt-3 flex justify-end gap-2">
+                <div class="w-full text-right mt-3 flex justify-end gap-2">
                     <button id="edit-project-btn" class="bg-blue-500 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-600 transition-colors duration-300">Edit Project</button>
                     <button id="manage-members-btn" class="bg-purple-500 text-white font-semibold py-2 px-3 rounded-md hover:bg-purple-600 transition-colors duration-300">Manage Members</button>
                     <button id="delete-project-btn" class="bg-red-500 text-white font-semibold py-2 px-3 rounded-md hover:bg-red-600 transition-colors duration-300">Delete Project</button>
@@ -595,7 +641,7 @@
 
         // NEW: Mock nickname map
         const userNicknames = {
-           "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
+            "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
             "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung",
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Ytterdal_Rune",
 	    "OTBxGbC5JZbh1bIRdhuMnq4i1CF3": "Tran_Chinh",
@@ -631,6 +677,8 @@
         const deleteProjectBtn = document.getElementById('delete-project-btn');
         const displayProjectMembers = document.getElementById('display-project-members');
         const countdownTimer = document.getElementById('countdown-timer'); // NEW: Countdown Timer element
+        const countdownDaysValue = document.getElementById('countdown-days-value'); // NEW: Countdown days value
+
         
         const createProjectModal = document.getElementById('create-project-modal');
         const projectModalTitle = document.getElementById('project-modal-title');
@@ -2931,12 +2979,12 @@
                 const timeLeft = endDate.getTime() - now.getTime(); // Milliseconds difference
 
                 if (timeLeft <= 0) {
-                    countdownTimer.textContent = "Ngày đếm ngược tới Seatrial: Đã kết thúc!";
+                    countdownDaysValue.textContent = "0";
                     countdownTimer.classList.remove('hidden');
                     clearInterval(countdownInterval);
                 } else {
                     const days = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-                    countdownTimer.textContent = `Ngày đếm ngược tới Seatrial: ${days} ngày`;
+                    countdownDaysValue.textContent = days;
                     countdownTimer.classList.remove('hidden');
                 }
             }
