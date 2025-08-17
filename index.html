@@ -11,7 +11,7 @@
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS c\u01a1 b\u1EA3n cho font ch\u1EEF v\u00E0 m\u00E0u n\u1EC1n */
+        /* CSS c\u01a1 b\u1EA3n cho font ch\u1EEF v\u00E0 m\u00Eàu n\u1EC1n */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
@@ -763,10 +763,24 @@
                     
                     await checkAdminStatus(); 
                     updateUIAfterAuth();
-
                     setupProjectsListener();
                     showKanbanBoard();
                 } else {
+                    // User logged out. Unsubscribe from all active listeners.
+                    if (unsubscribeFromProjects) {
+                        unsubscribeFromProjects();
+                        unsubscribeFromProjects = null; // Reset to null after unsubscribing
+                    }
+                    if (unsubscribeFromTasks) {
+                        unsubscribeFromTasks();
+                        unsubscribeFromTasks = null; // Reset to null after unsubscribing
+                    }
+                    currentProjectId = null; // Clear the currently selected project
+                    projectsData = {}; // Clear cached project data
+                    renderTasks(); // Clear displayed tasks
+                    displayProjectDetails(null); // Clear project details display
+                    burndownChartSection.classList.add('hidden'); // Hide chart
+                    
                     showLoginScreen();
                 }
             });
@@ -937,14 +951,16 @@
          * This listener also populates the "Copy tasks from" dropdown in the project creation modal.
          */
         function setupProjectsListener() {
+            // Unsubscribe from previous listener if it exists
             if (unsubscribeFromProjects) unsubscribeFromProjects();
 
             const projectsQuery = query(collection(db, `artifacts/${appId}/public/data/projects`), orderBy('createdAt', 'desc'));
 
+            // Set up new listener
             unsubscribeFromProjects = onSnapshot(projectsQuery, (snapshot) => {
                 projectSelect.innerHTML = '<option value="">Select a Project</option>';
                 copyTasksFromProjectSelect.innerHTML = '<option value="">Do Not Copy Tasks</option>';
-                projectsData = {};
+                projectsData = {}; // Clear existing project data
                 let firstProjectId = null;
                 
                 snapshot.docs.forEach(projectDoc => {
@@ -966,31 +982,36 @@
                     }
                 });
 
+                // Logic to select a project or handle no projects
                 if (!currentProjectId && firstProjectId) {
                     projectSelect.value = firstProjectId;
                     currentProjectId = firstProjectId;
                     setupRealtimeListener(currentProjectId);
                     displayProjectDetails(projectsData[currentProjectId]);
                 } else if (currentProjectId && !snapshot.docs.some(doc => doc.id === currentProjectId)) {
-                    currentProjectId = firstProjectId;
+                    // If the currently selected project was deleted or is no longer available
+                    currentProjectId = firstProjectId; // Try to select the first available project
                     projectSelect.value = firstProjectId || "";
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); 
-                    renderTasks(); 
+                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe from old tasks listener
+                    renderTasks(); // Clear tasks
                     if (firstProjectId) {
                          setupRealtimeListener(firstProjectId);
                          displayProjectDetails(projectsData[firstProjectId]);
                     } else {
-                        displayProjectDetails(null); 
+                        displayProjectDetails(null); // No projects left, hide details
                     }
                 } else if (currentProjectId) {
+                     // If current project is still valid, ensure it's selected and details are displayed
                      projectSelect.value = currentProjectId;
                      displayProjectDetails(projectsData[currentProjectId]);
                 } else {
-                    if (unsubscribeFromTasks) unsubscribeFromTasks(); 
-                    renderTasks(); 
-                    displayProjectDetails(null); 
+                    // No projects at all or no project selected initially
+                    if (unsubscribeFromTasks) unsubscribeFromTasks(); // Unsubscribe from tasks listener
+                    renderTasks(); // Clear tasks
+                    displayProjectDetails(null); // Hide project details
                 }
 
+                // Show/hide main content based on whether there are projects
                 const mainContent = document.querySelector('main');
                 if (snapshot.empty) {
                     mainContent.classList.add('hidden');
@@ -999,8 +1020,12 @@
                     mainContent.classList.remove('hidden');
                 }
             }, (error) => {
+                // This error handler should ideally only catch genuine errors while logged in.
+                // Log the error but don't show a modal on simple logout (handled by explicit unsubscribe).
                 console.error("Error fetching projects:", error);
-                showModal("Error fetching projects.");
+                // The modal is explicitly removed here to prevent it from showing on logout.
+                // If you want to show a modal for *other* fetching errors (when logged in),
+                // you would add a more specific condition here.
             });
         }
 
@@ -1010,11 +1035,13 @@
          * @param {string} projectId - The ID of the project to fetch tasks for.
          */
         function setupRealtimeListener(projectId) {
+            // Unsubscribe from previous listener if it exists
             if (unsubscribeFromTasks) unsubscribeFromTasks();
             
             const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
             const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
 
+            // Set up new listener
             unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
                 const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -1044,7 +1071,7 @@
                 }
             }, (error) => {
                 console.error("Error fetching tasks for project:", error);
-                showModal("Error listening for real-time task updates.");
+                // Do not show modal here on general errors, as it might be due to logout
             });
         }
 
