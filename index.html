@@ -392,6 +392,7 @@
                 <p>User: <span class="font-bold text-gray-800" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
                 <!-- NEW: Change Password Button -->
+                <button id="recent-events-btn" class="bg-indigo-500 text-white text-sm px-3 py-1 rounded-md hover:bg-indigo-600 transition-colors duration-300">Recent Events</button>
                 <button id="change-password-btn" class="bg-blue-500 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-600 transition-colors duration-300">Change Password</button>
                 <button id="logout-btn" class="bg-red-500 text-white text-sm px-3 py-1 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
             </div>
@@ -696,6 +697,19 @@
         </div>
     </div>
 
+    <!-- NEW: Modal for Recent Events List -->
+    <div id="recent-events-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left w-full max-w-lg">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Recent Events (Last 10)</h3>
+            <div id="recent-events-list" class="bg-gray-100 p-3 rounded-md min-h-[150px] max-h-[400px] overflow-y-auto border border-gray-200 mb-4">
+                <!-- Recent events will be loaded here -->
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="close-recent-events-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
         // Import Firebase modules
@@ -762,6 +776,8 @@
         const mainApp = document.getElementById('app');
         const logoutBtn = document.getElementById('logout-btn');
         const changePasswordBtn = document.getElementById('change-password-btn'); // NEW: Change Password Button
+        const recentEventsBtn = document.getElementById('recent-events-btn'); // NEW: Recent Events Button
+
 
         const displayUserId = document.getElementById('display-user-id');
         const displayUserRole = document.getElementById('display-user-role');
@@ -856,6 +872,11 @@
         const reactionToastType = document.getElementById('reaction-toast-type');
         const toggleReactionToastButton = reactionToast.querySelector('.toggle-button');
 
+        // NEW: Recent Events Modal DOM elements
+        const recentEventsModal = document.getElementById('recent-events-modal');
+        const recentEventsList = document.getElementById('recent-events-list');
+        const closeRecentEventsModalBtn = document.getElementById('close-recent-events-modal-btn');
+
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
         const deleteConfirmMessage = document.getElementById('delete-confirm-message');
@@ -891,6 +912,10 @@
             'note': 'Note'
         };
 
+        // NEW: Array to store recent events (comments and reactions)
+        let recentEvents = [];
+        const MAX_RECENT_EVENTS = 10;
+
 
         /**
          * Get nickname for a User ID.
@@ -911,6 +936,7 @@
             displayUserRole.textContent = '';
             logoutBtn.classList.add('hidden');
             changePasswordBtn.classList.add('hidden'); 
+            recentEventsBtn.classList.add('hidden'); // NEW: Hide recent events button
         }
 
         /**
@@ -981,9 +1007,13 @@
                     if (countdownInterval) {
                         clearInterval(countdownInterval);
                         countdownInterval = null;
-                        countdownTimer.classList.add('hidden');
                     }
                     
+                    // NEW: Clear recent events on logout
+                    recentEvents = [];
+                    recentEventsList.innerHTML = '';
+                    recentEventsModal.classList.add('hidden');
+
                     showLoginScreen();
                 }
             });
@@ -1121,7 +1151,7 @@
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
             changePasswordBtn.classList.toggle('hidden', auth.currentUser.isAnonymous);
-
+            recentEventsBtn.classList.remove('hidden'); // NEW: Show recent events button
 
             const canManageProjects = isCurrentUserAdmin;
             createProjectBtn.disabled = !canManageProjects;
@@ -1268,6 +1298,17 @@
                         const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
                         // Pass task status to the toast
                         showCommentToast(projectName, newTask.text, newTask.status, newComment.text); 
+                        addEventToRecentEvents({
+                            type: 'comment',
+                            timestamp: newComment.timestamp,
+                            projectId: currentProjectId,
+                            projectName: projectName,
+                            taskId: newTask.id,
+                            taskText: newTask.text,
+                            taskStatus: newTask.status,
+                            commenterId: newComment.commenterId,
+                            commentText: newComment.text
+                        });
                     }
 
                     // Check for new reactions on subtasks
@@ -1289,6 +1330,17 @@
                                         getNickname(newReaction.reactorId),
                                         newReaction.type
                                     );
+                                    addEventToRecentEvents({
+                                        type: 'reaction',
+                                        timestamp: newReaction.timestamp,
+                                        projectId: currentProjectId,
+                                        projectName: projectName,
+                                        taskId: newTask.id,
+                                        taskText: newTask.text,
+                                        subtaskText: newSubtask.text,
+                                        reactorId: newReaction.reactorId,
+                                        reactionType: newReaction.type
+                                    });
                                 }
                             } else if (newSubtask.reactions && (!oldSubtask || !oldSubtask.reactions || oldSubtask.reactions.length === 0)) {
                                 // Subtask previously had no reactions, now it has one (first reaction)
@@ -1303,6 +1355,17 @@
                                             getNickname(firstReaction.reactorId),
                                             firstReaction.type
                                         );
+                                        addEventToRecentEvents({
+                                            type: 'reaction',
+                                            timestamp: firstReaction.timestamp,
+                                            projectId: currentProjectId,
+                                            projectName: projectName,
+                                            taskId: newTask.id,
+                                            taskText: newTask.text,
+                                            subtaskText: newSubtask.text,
+                                            reactorId: firstReaction.reactorId,
+                                            reactionType: firstReaction.type
+                                        });
                                     }
                                 }
                             }
@@ -2783,6 +2846,7 @@
             clearTimeout(toastTimeout); // Prevent auto-collapse if user manually toggles
         });
 
+        let reactionToastTimeout; // Declare this outside to be accessible by event listeners
         /**
          * NEW: Shows a toast notification for a new reaction.
          * @param {string} projectName - The name of the project.
@@ -2796,7 +2860,6 @@
                 return;
             }
 
-            let reactionToastTimeout; // This was missing the declaration (let)
             clearTimeout(reactionToastTimeout);
             
             reactionToastProjectName.textContent = projectName;
@@ -2816,7 +2879,6 @@
         reactionToast.addEventListener('click', (e) => {
             if (e.target !== toggleReactionToastButton) {
                 reactionToast.classList.toggle('collapsed');
-                let reactionToastTimeout; // Also missing declaration here
                 clearTimeout(reactionToastTimeout);
             }
         });
@@ -2824,10 +2886,79 @@
         toggleReactionToastButton.addEventListener('click', (e) => {
             e.stopPropagation();
             reactionToast.classList.toggle('collapsed');
-            let reactionToastTimeout; // Also missing declaration here
             clearTimeout(reactionToastTimeout);
         });
 
+        // --- NEW: Recent Events Logic ---
+
+        /**
+         * Adds a new event (comment or reaction) to the recentEvents array.
+         * Maintains the array size up to MAX_RECENT_EVENTS and keeps it sorted by timestamp.
+         * @param {Object} event - The event object to add.
+         */
+        function addEventToRecentEvents(event) {
+            recentEvents.push(event);
+            // Sort by timestamp in descending order (newest first)
+            recentEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            // Keep only the latest MAX_RECENT_EVENTS
+            if (recentEvents.length > MAX_RECENT_EVENTS) {
+                recentEvents = recentEvents.slice(0, MAX_RECENT_EVENTS);
+            }
+        }
+
+        /**
+         * Opens the Recent Events modal and renders the events.
+         */
+        function openRecentEventsModal() {
+            renderRecentEvents();
+            recentEventsModal.classList.remove('hidden');
+        }
+
+        /**
+         * Renders the recent events list in the modal.
+         */
+        function renderRecentEvents() {
+            recentEventsList.innerHTML = '';
+            if (recentEvents.length === 0) {
+                recentEventsList.textContent = 'No recent events.';
+                recentEventsList.classList.add('text-gray-500', 'italic', 'text-center', 'py-4');
+                return;
+            }
+            recentEventsList.classList.remove('text-gray-500', 'italic', 'text-center', 'py-4');
+
+            recentEvents.forEach(event => {
+                const eventItem = document.createElement('div');
+                eventItem.className = 'p-2 bg-white rounded-md shadow-sm mb-2 text-sm border-l-2';
+                
+                const timestamp = new Date(event.timestamp).toLocaleString('en-US', {
+                    hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric'
+                });
+                const eventHeader = document.createElement('p');
+                eventHeader.className = 'text-xs text-gray-500 mb-1';
+                eventHeader.textContent = `${timestamp} - Project: ${event.projectName}`;
+                eventItem.appendChild(eventHeader);
+
+                const eventContent = document.createElement('p');
+                eventContent.className = 'text-gray-800 break-words font-semibold';
+
+                if (event.type === 'comment') {
+                    eventItem.classList.add('border-blue-300');
+                    eventContent.innerHTML = `💬 <span class="text-blue-700">${getNickname(event.commenterId)}</span> commented on task "<span class="italic">${event.taskText}</span>" (Status: <span class="capitalize">${event.taskStatus}</span>): "${event.commentText}"`;
+                } else if (event.type === 'reaction') {
+                    eventItem.classList.add('border-purple-300');
+                    eventContent.innerHTML = `${reactionEmojis[event.reactionType]} <span class="text-purple-700">${getNickname(event.reactorId)}</span> reacted to subtask "<span class="italic">${event.subtaskText}</span>" in task "<span class="italic">${event.taskText}</span>" with <span class="font-bold">${reactionNames[event.reactionType]}</span>.`;
+                }
+                eventItem.appendChild(eventContent);
+                recentEventsList.appendChild(eventItem);
+            });
+            recentEventsList.scrollTop = recentEventsList.scrollHeight; // Scroll to bottom to show newest
+        }
+
+        // Event listeners for Recent Events modal
+        recentEventsBtn.addEventListener('click', openRecentEventsModal);
+        closeRecentEventsModalBtn.addEventListener('click', () => {
+            recentEventsModal.classList.add('hidden');
+        });
 
         // --- Project Management Logic ---
         createProjectBtn.addEventListener('click', () => {
