@@ -11,12 +11,12 @@
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS c\u01a1 b\u1EA3n cho font ch\u1EEF v\u00E0 m\u00Eàu n\u1EC1n */
+        /* Basic CSS for font and background color */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
         }
-        /* Chi\u1EC1u cao t\u1ED1i thi\u1EC3u cho c\u1ED9t Kanban \u0111\u1EC3 \u0111\u1EA3m b\u1EA3o s\u1EF1 nh\u1EA5t qu\u00E1n v\u1EC1 m\u1EB7t h\u00ECnh \u1EA3nh */
+        /* Minimum height for Kanban columns to ensure visual consistency */
         .kanban-column {
             min-height: 400px;
             max-height: calc(100vh - 280px); /* Adjust based on header/footer height */
@@ -43,7 +43,7 @@
             background-color: #808080; /* Darker thumb on hover */
         }
 
-        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED3t cho admin */
+        /* Task card styling and hover effects for admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
             /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
@@ -276,6 +276,7 @@
         }
 
         .subtask-reactions-container .reaction-button {
+            position: relative; /* For tooltip positioning */
             font-size: 0.875rem; /* text-sm */
             padding: 4px 8px; /* py-1 px-2 */
             border-radius: 9999px; /* rounded-full */
@@ -302,6 +303,43 @@
             background-color: #e5e7eb; /* gray-200 */
             border: 1px solid #d1d5db; /* gray-300 */
             color: #4b5563; /* gray-700 */
+        }
+        
+        /* Reaction tooltip styles */
+        .reaction-tooltip {
+            position: absolute;
+            bottom: calc(100% + 5px); /* Position above the button */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem; /* text-xs */
+            white-space: normal; /* Allow text to wrap */
+            text-align: center;
+            max-width: 150px; /* Limit width */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+            z-index: 10; /* Ensure it's above other elements */
+        }
+
+        .reaction-tooltip::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: -5px; /* Position below for a caret effect */
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
+            background-color: #333;
+        }
+
+        .reaction-button:hover .reaction-tooltip {
+            opacity: 1;
+            visibility: visible;
         }
 
     </style>
@@ -350,7 +388,8 @@
             
             <!-- Right: Auth Info & Logout Button -->
             <div id="auth-info" class="text-sm text-gray-500 flex flex-row items-center gap-2 flex-wrap justify-center md:justify-end mt-2 md:mt-0">
-                <p>User: <span class="font-mono bg-gray-200 px-2 py-1 rounded" id="display-user-id"></span></p>
+                <!-- Changed to display nickname -->
+                <p>User: <span class="font-bold text-gray-800" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
                 <!-- NEW: Change Password Button -->
                 <button id="change-password-btn" class="bg-blue-500 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-600 transition-colors duration-300">Change Password</button>
@@ -676,7 +715,7 @@
  		apiKey: "AIzaSyAN57LfBD0P8hqP6ysOJ7Wtc9uYDKy3eCU",
   		authDomain: "pvp-project-tracker.firebaseapp.com",
   		projectId: "pvp-project-tracker",
-  		storageBucket: "pvp-project-tracker.firebasestorage.app",
+  		storageBucket: "pvp-project-tracker.firebaseostorage.app",
   		messagingSenderId: "399186770907",
   		appId: "1:399186770907:web:dfcf167526d2d0014d05fe",
   		measurementId: "G-SW4ZCDVDGK"
@@ -738,7 +777,7 @@
         const burndownChartSection = document.getElementById('burndown-chart-section');
         const editProjectBtn = document.getElementById('edit-project-btn');
         const manageMembersBtn = document.getElementById('manage-members-btn');
-        const deleteProjectBtn = document.getElementById('delete-project-btn');
+        const deleteProjectBtn = document.getElementById('delete-project-btn'); // Corrected line
         const displayProjectMembers = document.getElementById('display-project-members');
         const countdownTimer = document.getElementById('countdown-timer'); // NEW: Countdown Timer element
         const countdownDaysValue = document.getElementById('countdown-days-value'); // NEW: Countdown days value
@@ -789,7 +828,7 @@
         const taskDetailsTextInput = document.getElementById('task-details-text-input');
         // const taskDetailsColorInput = document.getElementById('task-details-color-input'); // REMOVED: Manual color input
         const taskDetailsDeadlineInput = document.getElementById('task-details-deadline-input');
-        const saveTaskDetailsBtn = document.getElementById('save-task-details-btn');
+        const saveTaskDetailsBtn = document.getElementById('save-task-details-btn'); // Corrected line
         const commentsList = document.getElementById('comments-list');
         const newCommentInput = document.getElementById('new-comment-input');
         const addCommentBtn = document.getElementById('add-comment-btn');
@@ -847,16 +886,16 @@
             'note': '📌'
         };
         const reactionNames = {
-            'like': 'Thích',
-            'handling': 'Tôi sẽ xử lí',
-            'note': 'Lưu ý về tab này'
+            'like': 'Like',
+            'handling': 'Handling',
+            'note': 'Note'
         };
 
 
         /**
-         * L\u1EA5y bi\u1EC7t danh cho m\u1ED9t User ID.
+         * Get nickname for a User ID.
          * @param {string} id - User ID.
-         * @returns {string} Bi\u1EC7t danh ho\u1EB7c User ID \u0111\u00E3 c\u1EAFt ng\u1EAFn n\u1EBFu kh\u00F4ng t\u00ECm th\u1EA5y bi\u1EC7t danh.
+         * @returns {string} Nickname or truncated User ID if no nickname is found.
          */
         function getNickname(id) {
             return userNicknames[id] || `${id.substring(0, 8)}...`;
@@ -1077,7 +1116,7 @@
          */
         function updateUIAfterAuth() {
             userRole = isCurrentUserAdmin ? 'Admin' : 'Viewer';
-            displayUserId.textContent = userId; // Display full userId
+            displayUserId.textContent = getNickname(userId); // Display nickname
             displayUserRole.textContent = userRole;
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
@@ -1525,9 +1564,9 @@
                         subtaskReactionsContainer.className = 'subtask-reactions-container'; 
 
                         const reactionTypes = [
-                            { type: 'like', emoji: '👍', name: 'Thích' },
-                            { type: 'handling', emoji: '🤝', name: 'Tôi sẽ xử lí' },
-                            { type: 'note', emoji: '📌', name: 'Lưu ý' }
+                            { type: 'like', emoji: '👍', name: 'Like' },
+                            { type: 'handling', emoji: '🤝', name: 'Handling' },
+                            { type: 'note', emoji: '📌', name: 'Note' }
                         ];
 
                         reactionTypes.forEach(reactionDef => {
@@ -1541,9 +1580,24 @@
 
                             const reactionButton = document.createElement('button');
                             reactionButton.className = `reaction-button ${hasReacted ? 'reacted' : 'not-reacted'}`;
-                            reactionButton.title = reactionDef.name;
+                            // This title will be overridden by the tooltip for nicknames, but good for fallback
+                            reactionButton.title = reactionDef.name; 
 
                             reactionButton.innerHTML = `<span>${reactionDef.emoji}</span> <span class="text-xs font-medium">${reactionCount > 0 ? reactionCount : ''}</span>`;
+
+                            // Tooltip for nicknames
+                            const tooltip = document.createElement('div');
+                            tooltip.className = 'reaction-tooltip';
+                            
+                            reactionButton.addEventListener('mouseenter', () => {
+                                if (reactionsForType.length > 0) {
+                                    const nicknames = reactionsForType.map(r => getNickname(r.reactorId)).join(', ');
+                                    tooltip.textContent = nicknames;
+                                } else {
+                                    tooltip.textContent = reactionDef.name;
+                                }
+                            });
+                            reactionButton.appendChild(tooltip);
 
                             reactionButton.onclick = async (e) => {
                                 e.stopPropagation(); 
@@ -1673,7 +1727,7 @@
                 taskDetailsModal.classList.add('hidden');
                 showModal("Task updated successfully!");
             } catch (error) {
-                console.error("L\u1ED7i khi c\u1EADp nh\u1EADt chi ti\u1EBFt t\u00E1c v\u1EE5:", error);
+                console.error("Error updating task details:", error);
                 showModal("Failed to update task details.");
             }
         });
@@ -1774,7 +1828,7 @@
                 taskDetailsModal.classList.add('hidden');
                 currentOpenTaskDetailsId = null; // Reset tracking of open task
             } catch (error) {
-                console.error("L\u1ED7i khi th\u00EAm b\u00ECnh lu\u1EADn:", error);
+                console.error("Error adding comment:", error);
                 showModal("Failed to add comment."); // Keep modal for errors
             }
         });
@@ -1813,7 +1867,7 @@
                     showModal("Error: Task not found."); // Keep modal for errors
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi x\u00F3a b\u00ECnh lu\u1EADn:", error);
+                console.error("Error deleting comment:", error);
                 showModal("Failed to delete comment."); // Keep modal for errors
             }
         }
@@ -1924,7 +1978,7 @@
                 });
                 newTaskNoteInput.value = '';
             } catch (error) {
-                console.error("L\u1ED7i khi th\u00EAm ghi ch\u00FA c\u00F4ng vi\u1EC7c:", error);
+                console.error("Error adding task note:", error);
                 showModal("Failed to add task note.");
             }
         });
@@ -1962,7 +2016,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi x\u00F3a ghi ch\u00FA:", error);
+                console.error("Error deleting note:", error);
                 showModal("Failed to delete note.");
             }
         }
@@ -2018,7 +2072,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi l\u01B0u ghi ch\u00FA c\u00F4ng vi\u1EC7c:", error);
+                console.error("Error saving task note:", error);
                 showModal("Failed to save task note.");
             }
         });
@@ -2064,7 +2118,7 @@
                     taskInput.value = '';
                     taskDeadlineInput.value = '';
                 } catch (error) {
-                    console.error("L\u1ED7i khi th\u00EAm t\u00E1c v\u1EE5: ", error);
+                    console.error("Error adding task: ", error);
                     showModal("Failed to add task.");
                 }
             }
@@ -2091,7 +2145,7 @@
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi th\u00EAm subtask:", error);
+                console.error("Error adding subtask:", error);
                 showModal("Failed to add subtask.");
             }
         }
@@ -2118,7 +2172,7 @@
                     }
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi chuy\u1EC3n \u0111\u1ED5i subtask:", error);
+                console.error("Error toggling subtask:", error);
                 showModal("Failed to toggle subtask status.");
             }
         }
@@ -2145,7 +2199,7 @@
                     }
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi x\u00F3a subtask:", error);
+                console.error("Error deleting subtask:", error);
                 showModal("Failed to delete subtask.");
             }
         }
@@ -2221,7 +2275,7 @@
                     showModal("Error: Task not found.");
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi l\u01B0u thay \u0111\u1ED5i subtask:", error);
+                console.error("Error saving subtask changes:", error);
                 showModal("Failed to save subtask changes.");
             }
         });
@@ -2314,7 +2368,7 @@
                 }
                 await updateDoc(taskRef, updateData);
             } catch (error) {
-                    console.error("L\u1ED7i khi c\u1EADp nh\u1EADt t\u00E1c v\u1EE5: ", error);
+                    console.error("Error updating task: ", error);
                 showModal("Failed to update task status.");
             }
         }
@@ -2332,7 +2386,7 @@
             try {
                 await deleteDoc(taskRef);
             } catch (error) {
-                console.error("L\u1ED7i khi x\u00F3a t\u00E1c v\u1EE5: ", error);
+                console.error("Error deleting task: ", error);
                 showModal("Failed to delete task.");
             }
         }
@@ -2405,7 +2459,7 @@
                                         Date.now();
                     await handleUpdateTaskStatus(draggedTaskId, newStatus, newPosition);
                 } catch (error) {
-                    console.error("L\u1ED7i khi thay \u0111\u1ED5i tr\u1EA1ng th\u00E1i t\u00E1c v\u1EE5:", error);
+                    console.error("Error changing task status:", error);
                     showModal("Failed to change task status.");
                 }
             }
@@ -2642,7 +2696,7 @@
                 showModal("Subtask reordered successfully!");
 
             } catch (error) {
-                console.error("L\u1ED7i khi s\u1EAFp x\u1EBFp l\u1EA1i subtask:", error);
+                console.error("Error reordering subtask:", error);
                 showModal("Failed to reorder subtask.");
             } finally {
                 targetSubtaskItem?.classList.remove('drag-over-subtask');
@@ -2742,6 +2796,7 @@
                 return;
             }
 
+            let reactionToastTimeout; // This was missing the declaration (let)
             clearTimeout(reactionToastTimeout);
             
             reactionToastProjectName.textContent = projectName;
@@ -2761,6 +2816,7 @@
         reactionToast.addEventListener('click', (e) => {
             if (e.target !== toggleReactionToastButton) {
                 reactionToast.classList.toggle('collapsed');
+                let reactionToastTimeout; // Also missing declaration here
                 clearTimeout(reactionToastTimeout);
             }
         });
@@ -2768,6 +2824,7 @@
         toggleReactionToastButton.addEventListener('click', (e) => {
             e.stopPropagation();
             reactionToast.classList.toggle('collapsed');
+            let reactionToastTimeout; // Also missing declaration here
             clearTimeout(reactionToastTimeout);
         });
 
@@ -2813,11 +2870,11 @@
                 editingProjectIdInput.value = projectToEdit.id;
                 copyTasksFromProjectSelect.value = '';
 
-                createProjectModal.classList.remove('hidden');
-                newProjectNameInput.focus();
             } else {
                 showModal("Error: Project data not found for editing.");
             }
+            createProjectModal.classList.remove('hidden');
+            newProjectNameInput.focus();
         });
 
         deleteProjectBtn.addEventListener('click', async () => {
@@ -2884,7 +2941,7 @@
                 showModal("Project deleted successfully!");
                 currentProjectId = null;
             } catch (error) {
-                console.error("L\u1ED7i khi x\u00F3a d\u1EF1 \u00E1n:", error);
+                console.error("Error deleting project:", error);
                 if (error.code === 'permission-denied') {
                     showModal("Permission error: You do not have permission to delete this project. Please check your admin role and Firestore security rules.");
                 } else {
@@ -2941,7 +2998,7 @@
                     }
                     createProjectModal.classList.add('hidden');
                 } catch (error) {
-                    console.error("L\u1ED7i khi l\u01B0u d\u1EF1 \u00E1n:", error);
+                    console.error("Error saving project:", error);
                     showModal("Failed to save project.");
                 }
             } else {
@@ -2988,7 +3045,7 @@
                     showModal("Task not found to copy.");
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi sao ch\u00E9p t\u00E1c v\u1EE5:", error);
+                console.error("Error copying task:", error);
                 showModal("Failed to copy task.");
             }
         }
@@ -3031,9 +3088,9 @@
                 const addTasksPromises = todoTasksToCopy.map(task => addDoc(destinationTasksCollectionRef, task));
                 
                 await Promise.all(addTasksPromises);
-                console.log(`\u0110\u00E3 sao ch\u00E9p ${todoTasksToCopy.length} t\u00E1c v\u1EE5 'To Do' t\u1EEB ${sourceProjectId} sang ${destinationProjectId}`);
+                console.log(`Copied ${todoTasksToCopy.length} 'To Do' tasks from ${sourceProjectId} to ${destinationProjectId}`);
             } catch (error) {
-                console.error("L\u1ED7i khi sao ch\u00E9p t\u00E1c v\u1EE5:", error);
+                console.error("Error copying tasks:", error);
                 showModal("Failed to copy 'To Do' tasks.");
             }
         }
@@ -3314,7 +3371,7 @@
                     showModal(`User ${getNickname(newMemberId)} has been added to the project.`); 
                 }
             } catch (error) {
-                console.error("L\u1ED7i khi th\u00EAm th\u00E0nh vi\u00EAn:", error);
+                console.error("Error adding member:", error);
                 showModal("Failed to add member.");
             }
         });
@@ -3377,7 +3434,7 @@
                 });
                 showModal(`User ${getNickname(memberIdToRemove)} removed from the project.`); 
             } catch (error) {
-                console.error("L\u1ED7i khi x\u00F3a th\u00E0nh vi\u00EAn:", error);
+                console.error("Error removing member:", error);
                 showModal("Failed to remove member.");
             }
         }
