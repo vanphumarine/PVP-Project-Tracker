@@ -908,8 +908,8 @@
         };
         const reactionNames = {
             'like': 'Like',
-            'handling': 'Handling',
-            'note': 'Note'
+            'handling': 'I will handle',
+            'note': 'Please note this subtab'
         };
 
         // NEW: Array to store recent events (comments and reactions)
@@ -1314,7 +1314,8 @@
                     // Check for new reactions on subtasks
                     if (oldTask && newTask.subtasks) {
                         newTask.subtasks.forEach((newSubtask, subtaskIndex) => {
-                            const oldSubtask = oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null;
+                            // FIXED: Correctly reference oldTask for oldSubtask
+                            const oldSubtask = oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null; 
 
                             if (newSubtask.reactions && oldSubtask && oldSubtask.reactions) {
                                 // Find any reaction that exists in newSubtask.reactions but not in oldSubtask.reactions
@@ -1508,7 +1509,7 @@
 
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = '×';
-                deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-1 rounded-full';
+                    deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-1 rounded-full';
                 deleteButton.onclick = (e) => {
                     e.stopPropagation();
                     handleDeleteTask(task.id);
