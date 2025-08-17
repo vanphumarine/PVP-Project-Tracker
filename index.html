@@ -908,8 +908,8 @@
         };
         const reactionNames = {
             'like': 'Like',
-            'handling': 'handling',
-            'note': 'note'
+            'handling': 'Handling',
+            'note': 'Note'
         };
 
         // NEW: Array to store recent events (comments and reactions)
@@ -1312,64 +1312,40 @@
                     }
 
                     // Check for new reactions on subtasks
-                    if (oldTask && newTask.subtasks) {
+                    if (newTask.subtasks) { // No need to check oldTask for this loop, we just need to compare new with old if old exists
                         newTask.subtasks.forEach((newSubtask, subtaskIndex) => {
-                            // FIXED: Correctly reference oldTask for oldSubtask
-                            const oldSubtask = oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null; 
+                            const oldSubtask = oldTask && oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null;
 
-                            if (newSubtask.reactions && oldSubtask && oldSubtask.reactions) {
-                                // Find any reaction that exists in newSubtask.reactions but not in oldSubtask.reactions
-                                const newReaction = newSubtask.reactions.find(nr => 
-                                    !oldSubtask.reactions.some(or => or.type === nr.type && or.reactorId === nr.reactorId)
-                                );
-                                if (newReaction && newReaction.reactorId !== userId) { // Only notify if not self-reaction
-                                    const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
-                                    showReactionToast(
-                                        projectName,
-                                        newTask.text,
-                                        newSubtask.text,
-                                        getNickname(newReaction.reactorId),
-                                        newReaction.type
-                                    );
-                                    addEventToRecentEvents({
-                                        type: 'reaction',
-                                        timestamp: newReaction.timestamp,
-                                        projectId: currentProjectId,
-                                        projectName: projectName,
-                                        taskId: newTask.id,
-                                        taskText: newTask.text,
-                                        subtaskText: newSubtask.text,
-                                        reactorId: newReaction.reactorId,
-                                        reactionType: newReaction.type
-                                    });
-                                }
-                            } else if (newSubtask.reactions && (!oldSubtask || !oldSubtask.reactions || oldSubtask.reactions.length === 0)) {
-                                // Subtask previously had no reactions, now it has one (first reaction)
-                                if (newSubtask.reactions.length > 0) {
-                                    const firstReaction = newSubtask.reactions[0];
-                                    if (firstReaction.reactorId !== userId) {
+                            const oldReactions = new Set((oldSubtask?.reactions || []).map(r => `${r.type}-${r.reactorId}`));
+                            const currentReactions = newSubtask.reactions || [];
+
+                            currentReactions.forEach(reaction => {
+                                // Check if this specific reaction (type + reactorId) was NOT present in the old state
+                                if (!oldReactions.has(`${reaction.type}-${reaction.reactorId}`)) {
+                                    // It's a new reaction
+                                    if (reaction.reactorId !== userId) { // Only notify if not self-reaction
                                         const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
                                         showReactionToast(
                                             projectName,
                                             newTask.text,
                                             newSubtask.text,
-                                            getNickname(firstReaction.reactorId),
-                                            firstReaction.type
+                                            getNickname(reaction.reactorId),
+                                            reaction.type
                                         );
                                         addEventToRecentEvents({
                                             type: 'reaction',
-                                            timestamp: firstReaction.timestamp,
+                                            timestamp: reaction.timestamp,
                                             projectId: currentProjectId,
                                             projectName: projectName,
                                             taskId: newTask.id,
                                             taskText: newTask.text,
                                             subtaskText: newSubtask.text,
-                                            reactorId: firstReaction.reactorId,
-                                            reactionType: firstReaction.type
+                                            reactorId: reaction.reactorId,
+                                            reactionType: reaction.type
                                         });
                                     }
                                 }
-                            }
+                            });
                         });
                     }
                 });
