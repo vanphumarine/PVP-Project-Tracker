@@ -11,7 +11,7 @@
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS c\u01a1 b\u1EA3n cho font ch\u1EEF v\u00E0 m\u00Eàu n\u1EC1n */
+        /* CSS c\u01a1 b\u1EA3n cho font ch\u1EEF v\u00E0 m\u00E0u n\u1EC1n */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Light gray background */
@@ -19,8 +19,31 @@
         /* Chi\u1EC1u cao t\u1ED1i thi\u1EC3u cho c\u1ED9t Kanban \u0111\u1EC3 \u0111\u1EA3m b\u1EA3o s\u1EF1 nh\u1EA5t qu\u00E1n v\u1EC1 m\u1EB7t h\u00ECnh \u1EA3nh */
         .kanban-column {
             min-height: 400px;
+            max-height: calc(100vh - 280px); /* Adjust based on header/footer height */
+            overflow-y: auto; /* Enable independent vertical scrolling */
+            padding-right: 1rem; /* Add padding for scrollbar visibility */
         }
-        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED7t cho admin */
+        /* Styling for the scrollbar */
+        .kanban-column::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+        }
+
+        .kanban-column::-webkit-scrollbar-track {
+            background: #e0e0e0; /* Track color */
+            border-radius: 4px;
+        }
+
+        .kanban-column::-webkit-scrollbar-thumb {
+            background-color: #a0a0a0; /* Thumb color */
+            border-radius: 4px;
+            border: 2px solid #e0e0e0; /* Padding around thumb */
+        }
+
+        .kanban-column::-webkit-scrollbar-thumb:hover {
+            background-color: #808080; /* Darker thumb on hover */
+        }
+
+        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED9t cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
             /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
@@ -223,7 +246,7 @@
         </header>
 
         <!-- Top Controls: Project Selection/Creation & Auth Info -->
-        <div class="flex flex-col md:flex-row items-center justify-between gap-2 mb-4 max-w-full mx-auto"> <!-- Changed max-w-7xl to max-w-full -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-2 mb-4 max-w-full mx-auto">
             <!-- Left: Project Selection and Label -->
             <div class="flex items-center gap-2 flex-wrap justify-center md:justify-start">
                 <label for="project-select" class="text-lg font-medium text-gray-700 whitespace-nowrap">Select Project:</label>
@@ -244,7 +267,7 @@
         </div>
 
         <!-- Project Details and Add Task Form - Now stacked vertically (flex-col) and centered with max-width -->
-        <div class="flex flex-col gap-4 mb-4 max-w-full mx-auto"> <!-- Changed max-w-4xl to max-w-full -->
+        <div class="flex flex-col gap-4 mb-4 max-w-full mx-auto">
             <!-- Current Project Details Display -->
             <div id="current-project-details" class="w-full bg-blue-100 p-4 rounded-lg shadow-md hidden text-left border-l-4 border-blue-500">
                 <h2 class="text-2xl font-bold text-blue-800 mb-2" id="display-project-name"></h2>
