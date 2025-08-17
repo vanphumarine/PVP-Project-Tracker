@@ -43,7 +43,7 @@
             background-color: #808080; /* Darker thumb on hover */
         }
 
-        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED9t cho admin */
+        /* Ki\u1EC3u d\u00E1ng th\u1EBB t\u00E1c v\u1EE5 v\u00E0 hi\u1EC7u \u1EE9ng di chu\u1ED3t cho admin */
         .task-card {
             transition: all 0.2s ease-in-out; /* Smooth transition on drag/hover */
             /* border-left-width: 8px; /* Adjusted dynamically, so remove static */
@@ -249,6 +249,59 @@
             font-weight: 300; /* font-light */
             color: #374151; /* gray-800 */
             margin-top: 1rem; /* mt-4 */
+        }
+
+        /* NEW: Styles for subtask reaction buttons on hover */
+        .subtask-reactions-container {
+            position: absolute; /* Positioned relative to .subtask-item */
+            bottom: 2px; /* Adjust as needed */
+            right: 2px; /* Adjust as needed */
+            display: flex; /* Always flex for layout */
+            align-items: center;
+            gap: 4px;
+            background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent background */
+            padding: 4px 8px; /* Padding around buttons */
+            border-radius: 1rem; /* pill shape */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow */
+            transition: all 0.2s ease-in-out;
+            opacity: 0; /* Start hidden */
+            transform: translateY(10px); /* Start slightly below */
+            pointer-events: none; /* Prevent interaction when hidden */
+        }
+
+        .subtask-item:hover .subtask-reactions-container {
+            opacity: 1; /* Fully visible on hover */
+            transform: translateY(0); /* Slide up to position */
+            pointer-events: auto; /* Enable interaction on hover */
+        }
+
+        .subtask-reactions-container .reaction-button {
+            font-size: 0.875rem; /* text-sm */
+            padding: 4px 8px; /* py-1 px-2 */
+            border-radius: 9999px; /* rounded-full */
+            cursor: pointer;
+            transition: background-color 0.1s ease-in-out, transform 0.1s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap; /* Keep text on one line */
+        }
+
+        .subtask-reactions-container .reaction-button:hover {
+            transform: translateY(-1px); /* Little lift on hover */
+        }
+
+        /* Styles for active/inactive reactions */
+        .subtask-reactions-container .reaction-button.reacted {
+            background-color: #bfdbfe; /* blue-200 */
+            border: 1px solid #93c5fd; /* blue-300 */
+            color: #1e40af; /* blue-800 */
+        }
+
+        .subtask-reactions-container .reaction-button.not-reacted {
+            background-color: #e5e7eb; /* gray-200 */
+            border: 1px solid #d1d5db; /* gray-300 */
+            color: #4b5563; /* gray-700 */
         }
 
     </style>
@@ -650,7 +703,7 @@
         // Variable to store the Burndown chart instance
         let burndownChartInstance = null;
 
-        // NEW: Mock nickname map
+        // NEW: Mock nickname map - Users in this map can react
         const userNicknames = {
             "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
             "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung",
@@ -801,9 +854,9 @@
 
 
         /**
-         * Lấy biệt danh cho một User ID.
+         * L\u1EA5y bi\u1EC7t danh cho m\u1ED9t User ID.
          * @param {string} id - User ID.
-         * @returns {string} Biệt danh hoặc User ID đã cắt ngắn nếu không tìm thấy biệt danh.
+         * @returns {string} Bi\u1EC7t danh ho\u1EB7c User ID \u0111\u00E3 c\u1EAFt ng\u1EAFn n\u1EBFu kh\u00F4ng t\u00ECm th\u1EA5y bi\u1EC7t danh.
          */
         function getNickname(id) {
             return userNicknames[id] || `${id.substring(0, 8)}...`;
@@ -1055,6 +1108,15 @@
             const project = projectsData[currentProjectId];
             if (!project || !project.members) return false;
             return project.members.includes(userId);
+        }
+
+        /**
+         * Checks if the current user is allowed to react to subtasks.
+         * Only users with a defined nickname can react.
+         * @returns {boolean} True if the user can react, otherwise false.
+         */
+        function isUserAllowedToReact() {
+            return userId && userNicknames.hasOwnProperty(userId);
         }
 
         /**
@@ -1386,7 +1448,8 @@
 
                 sortedSubtasks.forEach((subtask, index) => {
                     const subtaskItem = document.createElement('div');
-                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; 
+                    // Added 'group' class for hover effects
+                    subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded relative group ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; 
                     subtaskItem.setAttribute('data-task-id', task.id); 
                     subtaskItem.setAttribute('data-subtask-index', index); 
                     // No need to set data-subtask-position here as handleSubtaskDragStart now copies the object
@@ -1456,44 +1519,40 @@
                         subtasksContainer.appendChild(subtaskNoteDisplay);
                     }
 
-                    // NEW: Subtask Reactions
-                    const subtaskReactionsDiv = document.createElement('div');
-                    subtaskReactionsDiv.className = 'flex items-center gap-2 mt-1 text-gray-500 pl-6'; // Added padding-left for alignment
+                    // NEW: Subtask Reactions - Single button with hover for options
+                    if (isUserAllowedToReact()) {
+                        const subtaskReactionsContainer = document.createElement('div');
+                        subtaskReactionsContainer.className = 'subtask-reactions-container'; 
 
-                    const reactionTypes = [
-                        { type: 'like', emoji: '👍', name: 'Like' },
-                        { type: 'handling', emoji: '🤝', name: 'Tôi sẽ xử lí' },
-                        { type: 'note', emoji: '📌', name: 'Lưu ý về tab này' }
-                    ];
+                        const reactionTypes = [
+                            { type: 'like', emoji: '👍', name: 'Thích' },
+                            { type: 'handling', emoji: '🤝', name: 'Tôi sẽ xử lí' },
+                            { type: 'note', emoji: '📌', name: 'Lưu ý' }
+                        ];
 
-                    reactionTypes.forEach(reactionDef => {
-                        const reactionsForType = (subtask.reactions || []).filter(
-                            r => r.type === reactionDef.type
-                        );
-                        const reactionCount = reactionsForType.length;
-                        const hasReacted = reactionsForType.some(
-                            r => r.reactorId === userId
-                        );
+                        reactionTypes.forEach(reactionDef => {
+                            const reactionsForType = (subtask.reactions || []).filter(
+                                r => r.type === reactionDef.type
+                            );
+                            const reactionCount = reactionsForType.length;
+                            const hasReacted = reactionsForType.some(
+                                r => r.reactorId === userId
+                            );
 
-                        const reactionButton = document.createElement('button');
-                        reactionButton.className = `flex items-center text-sm px-2 py-1 rounded-full border ${hasReacted ? 'bg-blue-200 border-blue-400 text-blue-800' : 'bg-gray-100 border-gray-300 text-gray-600'} hover:bg-blue-100 hover:border-blue-300 transition-colors duration-200`;
-                        reactionButton.title = reactionDef.name;
+                            const reactionButton = document.createElement('button');
+                            reactionButton.className = `reaction-button ${hasReacted ? 'reacted' : 'not-reacted'}`;
+                            reactionButton.title = reactionDef.name;
 
-                        reactionButton.innerHTML = `<span>${reactionDef.emoji}</span> <span class="ml-1 font-semibold">${reactionCount > 0 ? reactionCount : ''}</span>`;
+                            reactionButton.innerHTML = `<span>${reactionDef.emoji}</span> <span class="text-xs font-medium">${reactionCount > 0 ? reactionCount : ''}</span>`;
 
-                        if (canModifyTask) { // Only allow reaction if user is a member
                             reactionButton.onclick = async (e) => {
-                                e.stopPropagation(); // Prevent opening task details modal
+                                e.stopPropagation(); 
                                 await toggleSubtaskReaction(task.id, index, reactionDef.type);
                             };
-                        } else {
-                            reactionButton.disabled = true;
-                            reactionButton.classList.add('cursor-not-allowed', 'opacity-70');
-                        }
-
-                        subtaskReactionsDiv.appendChild(reactionButton);
-                    });
-                    subtasksContainer.appendChild(subtaskReactionsDiv); // Append reactions below subtasks
+                            subtaskReactionsContainer.appendChild(reactionButton);
+                        });
+                        subtaskItem.appendChild(subtaskReactionsContainer);
+                    }
                 });
             }
 
@@ -2184,7 +2243,7 @@
                 showModal("You must be logged in to react.");
                 return;
             }
-            if (!isCurrentUserProjectMember()) { // Only project members can add reactions
+            if (!isUserAllowedToReact()) { // Only users with defined nicknames can react
                 showModal("You do not have permission to react to subtasks.");
                 return;
             }
@@ -2207,7 +2266,6 @@
                         if (existingReactionIndex > -1) {
                             // User already reacted with this type, remove it
                             currentReactions.splice(existingReactionIndex, 1);
-                            // showModal(`Removed ${reactionType} reaction.`); // Removed for smoother UX
                         } else {
                             // User has not reacted with this type, add it
                             currentReactions.push({
@@ -2215,7 +2273,6 @@
                                 reactorId: userId,
                                 timestamp: new Date().toISOString()
                             });
-                            // showModal(`Added ${reactionType} reaction!`); // Removed for smoother UX
                         }
                         
                         subtask.reactions = currentReactions;
