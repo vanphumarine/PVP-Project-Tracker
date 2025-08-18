@@ -255,7 +255,7 @@
         .subtask-reactions-container {
             position: absolute; /* Positioned relative to .subtask-item */
             bottom: 2px; /* Adjust as needed */
-            right: 2px; /* Adjust as needed */
+            left: 2px; /* Adjusted from right to left */
             display: flex; /* Always flex for layout */
             align-items: center;
             gap: 4px;
@@ -700,7 +700,7 @@
     <!-- NEW: Modal for Recent Events List -->
     <div id="recent-events-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-lg">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Recent Events (Last 10)</h3>
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Recent Events (Last 100)</h3>
             <div id="recent-events-list" class="bg-gray-100 p-3 rounded-md min-h-[150px] max-h-[400px] overflow-y-auto border border-gray-200 mb-4">
                 <!-- Recent events will be loaded here -->
             </div>
@@ -763,7 +763,6 @@
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Ytterdal_Rune",
 	    "OTBxGbC5JZbh1bIRdhuMnq4i1CF3": "Tran_Chinh",
             "uoQxAubtyqbRhwHcBPzD7h3geKg1": "Ringstad_Thomas",
-            "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung", // Added the second admin ID
             // Add more user IDs and their desired nicknames here
         };
 
@@ -914,7 +913,7 @@
 
         // NEW: Array to store recent events (comments and reactions)
         let recentEvents = [];
-        const MAX_RECENT_EVENTS = 10;
+        const MAX_RECENT_EVENTS = 100; // Increased limit from 10 to 100
 
 
         /**
@@ -1010,7 +1009,7 @@
                     }
                     
                     // NEW: Clear recent events on logout
-                    recentEvents = [];
+                    recentEvents = []; // This should be cleared on logout
                     recentEventsList.innerHTML = '';
                     recentEventsModal.classList.add('hidden');
 
@@ -1312,7 +1311,7 @@
                     }
 
                     // Check for new reactions on subtasks
-                    if (newTask.subtasks) { // No need to check oldTask for this loop, we just need to compare new with old if old exists
+                    if (newTask.subtasks) { 
                         newTask.subtasks.forEach((newSubtask, subtaskIndex) => {
                             const oldSubtask = oldTask && oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null;
 
@@ -1323,7 +1322,8 @@
                                 // Check if this specific reaction (type + reactorId) was NOT present in the old state
                                 if (!oldReactions.has(`${reaction.type}-${reaction.reactorId}`)) {
                                     // It's a new reaction
-                                    if (reaction.reactorId !== userId) { // Only notify if not self-reaction
+                                    // Only show toast if not self-reaction, but add to recent events always
+                                    if (reaction.reactorId !== userId) { 
                                         const projectName = projectsData[currentProjectId]?.name || 'Unknown Project';
                                         showReactionToast(
                                             projectName,
@@ -1332,18 +1332,19 @@
                                             getNickname(reaction.reactorId),
                                             reaction.type
                                         );
-                                        addEventToRecentEvents({
-                                            type: 'reaction',
-                                            timestamp: reaction.timestamp,
-                                            projectId: currentProjectId,
-                                            projectName: projectName,
-                                            taskId: newTask.id,
-                                            taskText: newTask.text,
-                                            subtaskText: newSubtask.text,
-                                            reactorId: reaction.reactorId,
-                                            reactionType: reaction.type
-                                        });
                                     }
+                                    // Always add to recent events, regardless of who reacted
+                                    addEventToRecentEvents({
+                                        type: 'reaction',
+                                        timestamp: reaction.timestamp,
+                                        projectId: currentProjectId,
+                                        projectName: projectsData[currentProjectId]?.name || 'Unknown Project',
+                                        taskId: newTask.id,
+                                        taskText: newTask.text,
+                                        subtaskText: newSubtask.text,
+                                        reactorId: reaction.reactorId,
+                                        reactionType: reaction.type
+                                    });
                                 }
                             });
                         });
