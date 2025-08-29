@@ -501,10 +501,11 @@
         </div>
     </div>
 
-    <!-- NEW: Modal for project deletion confirmation -->
+    <!-- NEW: Modal for project deletion confirmation (Modified for OTP) -->
     <div id="delete-project-confirm-modal" class="modal-backdrop hidden">
         <div class="modal-content">
             <p id="delete-confirm-message" class="mb-4"></p>
+            <input type="text" id="delete-otp-input" placeholder="Enter OTP to confirm deletion" class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
             <div class="flex justify-center gap-4">
                 <button id="confirm-delete-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Yes, Delete</button>
                 <button id="confirm-delete-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">No, Cancel</button>
@@ -884,9 +885,11 @@
 
         const deleteProjectConfirmModal = document.getElementById('delete-project-confirm-modal');
         const deleteConfirmMessage = document.getElementById('delete-confirm-message');
+        const deleteOtpInput = document.getElementById('delete-otp-input'); // NEW: OTP Input
         const confirmDeleteYesBtn = document.getElementById('confirm-delete-yes-btn');
         const confirmDeleteNoBtn = document.getElementById('confirm-delete-no-btn');
         let projectIdToDelete = null;
+        let currentOTP = null; // NEW: Variable to store the generated OTP
 
         let tasks = [];
         let draggedTaskId = null;
@@ -3193,6 +3196,7 @@
             }
             const project = projectsData[currentProjectId];
             if (project) {
+                // Modified: Now prompts for OTP instead of direct confirmation
                 promptDeleteConfirmation(currentProjectId, project.name);
             } else {
                 showModal("Error: Project data not found for deletion.");
@@ -3200,27 +3204,42 @@
         });
 
         /**
-         * Displays a custom confirmation modal for project deletion.
+         * Displays a custom confirmation modal for project deletion with OTP.
          * @param {string} projectId - The ID of the project to delete.
          * @param {string} projectName - The name of the project to display in the message.
          */
         function promptDeleteConfirmation(projectId, projectName) {
             projectIdToDelete = projectId;
-            deleteConfirmMessage.textContent = `Are you sure you want to delete project "${projectName}"? This action will delete all its tasks and cannot be undone.`;
+            // Generate a random 6-digit OTP
+            currentOTP = Math.floor(100000 + Math.random() * 900000).toString(); 
+            deleteConfirmMessage.innerHTML = `Are you sure you want to delete project "<span class="font-bold">${projectName}</span>"? <br>This action will delete all its tasks and cannot be undone.<br><br>
+                                            For security, please enter the following OTP: <span class="font-bold text-red-600">${currentOTP}</span> (Tạm thời hiển thị ở đây thay vì gửi mail).`; // Message updated for OTP
+            deleteOtpInput.value = ''; // Clear previous input
             deleteProjectConfirmModal.classList.remove('hidden');
+            deleteOtpInput.focus(); // Focus the OTP input
         }
 
         confirmDeleteYesBtn.addEventListener('click', async () => {
-            deleteProjectConfirmModal.classList.add('hidden');
-            if (projectIdToDelete) {
-                await executeProjectDeletion(projectIdToDelete);
-                projectIdToDelete = null;
+            const enteredOTP = deleteOtpInput.value.trim();
+
+            if (enteredOTP === currentOTP) {
+                deleteProjectConfirmModal.classList.add('hidden');
+                if (projectIdToDelete) {
+                    await executeProjectDeletion(projectIdToDelete);
+                    projectIdToDelete = null;
+                }
+                currentOTP = null; // Reset OTP after successful deletion
+            } else {
+                showModal("Incorrect OTP. Project deletion cancelled.");
+                deleteOtpInput.value = ''; // Clear input for another try
+                deleteOtpInput.focus();
             }
         });
 
         confirmDeleteNoBtn.addEventListener('click', () => {
             deleteProjectConfirmModal.classList.add('hidden');
             projectIdToDelete = null;
+            currentOTP = null; // Reset OTP if cancellation occurs
         });
 
         /**
