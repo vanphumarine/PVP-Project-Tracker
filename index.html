@@ -2460,7 +2460,7 @@
                         
                         subtask.reactions = currentReactions;
                         currentSubtasks[subtaskIndex] = subtask; 
-
+                        // Update the entire subtasks array in the document
                         await updateDoc(taskRef, { subtasks: currentSubtasks });
                     }
                 }
@@ -3328,7 +3328,10 @@
                 if (taskDoc.exists()) {
                     const originalTaskData = taskDoc.data();
                     // Check if crypto.randomUUID is available, otherwise use fallback
-                    const newSubtaskGen = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID : generateUUID;
+                    // WRAP crypto.randomUUID IN AN ARROW FUNCTION TO PRESERVE ITS 'THIS' CONTEXT
+                    const newSubtaskGen = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' 
+                        ? () => crypto.randomUUID() 
+                        : generateUUID;
 
                     const copiedTaskData = {
                         text: `Copy of ${originalTaskData.text}`,
@@ -3372,7 +3375,10 @@
                 const sourceTasksSnapshot = await getDocs(sourceTasksCollectionRef);
                 
                 // Check if crypto.randomUUID is available, otherwise use fallback
-                const newSubtaskGen = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID : generateUUID;
+                // WRAP crypto.randomUUID IN AN ARROW FUNCTION TO PRESERVE ITS 'THIS' CONTEXT
+                const newSubtaskGen = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' 
+                    ? () => crypto.randomUUID() 
+                    : generateUUID;
 
                 const todoTasksToCopy = sourceTasksSnapshot.docs
                     .filter(doc => doc.data().status === 'todo')
