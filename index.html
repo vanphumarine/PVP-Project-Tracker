@@ -248,7 +248,7 @@
             font-size: 3rem; /* text-5xl */
             font-weight: 300; /* font-light */
             color: #374151; /* gray-800 */
-            margin-top: 1rem; /* mt-4 */
+            margin-top: 1.5rem; /* mt-4 */
         }
 
         /* NEW: Styles for subtask reaction buttons on hover */
@@ -715,7 +715,8 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // NEW: arrayRemove and arrayUnion for Firestore updates
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         // NEW: sendPasswordResetEmail imported
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -1288,10 +1289,42 @@
             const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
 
             // Set up new listener
-            unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
-                const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            unsubscribeFromTasks = onSnapshot(tasksQuery, async (snapshot) => { // Made async to use await for batch update
+                const newTasks = [];
+                const tasksToUpdate = []; // Collect tasks that need subtaskId migration
+                const batch = writeBatch(db); // Firestore batch for atomic updates
 
-                // Check for new comments and trigger toast
+                snapshot.docs.forEach(doc => {
+                    const task = { id: doc.id, ...doc.data() };
+                    let taskModified = false;
+
+                    if (task.subtasks) {
+                        task.subtasks = task.subtasks.map(subtask => {
+                            if (!subtask.subtaskId) {
+                                subtask.subtaskId = crypto.randomUUID(); // Assign unique ID if missing
+                                taskModified = true;
+                            }
+                            return subtask;
+                        });
+                    }
+
+                    if (taskModified) {
+                        tasksToUpdate.push(task);
+                        // Add to batch for later update
+                        const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`, task.id);
+                        batch.update(taskRef, { subtasks: task.subtasks });
+                    }
+                    newTasks.push(task);
+                });
+
+                // Commit batch updates if any tasks were modified
+                if (tasksToUpdate.length > 0) {
+                    console.log(`[Data Migration] Migrating ${tasksToUpdate.length} tasks with missing subtask IDs.`);
+                    await batch.commit(); // Wait for batch update to complete
+                    console.log("[Data Migration] Subtask ID migration complete.");
+                }
+
+                // --- Original logic for comment and reaction toasts ---
                 newTasks.forEach(newTask => {
                     const oldTask = tasks.find(t => t.id === newTask.id);
                     const oldCommentCount = oldTask ? (oldTask.comments ? oldTask.comments.length : 0) : 0;
@@ -1317,8 +1350,8 @@
 
                     // Check for new reactions on subtasks
                     if (newTask.subtasks) { 
-                        newTask.subtasks.forEach((newSubtask, subtaskIndex) => {
-                            const oldSubtask = oldTask && oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null;
+                        newTask.subtasks.forEach((newSubtask, subtaskIndex) => { // subtaskIndex here is just for iteration, not for identifying subtask
+                            const oldSubtask = oldTask && oldTask.subtasks ? oldTask.subtasks.find(s => s.subtaskId === newSubtask.subtaskId) : null; // Find old subtask by its ID
 
                             const oldReactions = new Set((oldSubtask?.reactions || []).map(r => `${r.type}-${r.reactorId}`));
                             const currentReactions = newSubtask.reactions || [];
@@ -1356,7 +1389,7 @@
                     }
                 });
 
-                tasks = newTasks;
+                tasks = newTasks; // Update global tasks array
                 renderTasks();
                 const project = projectsData[currentProjectId];
                 if (project && project.startDate && project.endDate) {
@@ -1566,12 +1599,10 @@
                     subtaskCheckbox.checked = subtask.isCompleted;
                     subtaskCheckbox.className = 'mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500';
                     subtaskCheckbox.disabled = !canModifyTask;
-                    // --- FIX START ---
                     subtaskCheckbox.addEventListener('change', (e) => {
                         e.stopPropagation(); 
                         handleToggleSubtask(task.id, subtask.subtaskId); // Pass subtaskId directly
                     });
-                    // --- FIX END ---
 
                     const subtaskTextSpan = document.createElement('span');
                     subtaskTextSpan.textContent = subtask.text;
@@ -2215,7 +2246,7 @@
          * @param {string} taskId - The ID of the parent task.
          * @param {string} subtaskId - The unique ID of the subtask.
          */
-        async function handleToggleSubtask(taskId, subtaskId) { // Changed subtaskIndex to subtaskId
+        async function handleToggleSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to change subtask status.");
                 return;
@@ -2245,7 +2276,7 @@
          * @param {string} taskId - The ID of the parent task.
          * @param {string} subtaskId - The unique ID of the subtask to delete.
          */
-        async function handleDeleteSubtask(taskId, subtaskId) { // Changed subtaskIndex to subtaskId
+        async function handleDeleteSubtask(taskId, subtaskId) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to delete subtasks.");
                 return;
@@ -2277,7 +2308,7 @@
          * @param {string} currentNote - The current subtask note.
          * @param {string} currentColor - The current subtask color.
          */
-        function openSubtaskEditTextModal(taskId, subtaskId, currentText, currentNote, currentColor) { // Changed subtaskIndex to subtaskId
+        function openSubtaskEditTextModal(taskId, subtaskId, currentText, currentNote, currentColor) {
             if (!isCurrentUserProjectMember()) {
                 showModal("You do not have permission to edit subtasks.");
                 return;
@@ -2359,7 +2390,7 @@
          * @param {string} subtaskId - The unique ID of the subtask.
          * @param {string} reactionType - The type of reaction ('like', 'handling', 'note').
          */
-        async function toggleSubtaskReaction(taskId, subtaskId, reactionType) { // Changed subtaskIndex to subtaskId
+        async function toggleSubtaskReaction(taskId, subtaskId, reactionType) {
             if (!userId || !currentProjectId) {
                 showModal("You must be logged in to react.");
                 return;
