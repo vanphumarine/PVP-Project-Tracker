@@ -1315,6 +1315,14 @@
                     const task = { id: doc.id, ...JSON.parse(JSON.stringify(doc.data())) };
                     let taskModified = false;
 
+                    // NEW: Convert subtasks from object to array if it's an object
+                    if (task.subtasks && typeof task.subtasks === 'object' && !Array.isArray(task.subtasks)) {
+                        task.subtasks = Object.values(task.subtasks);
+                        taskModified = true;
+                    } else if (!task.subtasks) {
+                        task.subtasks = []; // Ensure it's an array even if empty
+                    }
+
                     if (task.subtasks) {
                         task.subtasks = task.subtasks.map(subtask => {
                             // Check if crypto.randomUUID is available, otherwise use fallback
@@ -1336,9 +1344,9 @@
 
                 // Commit batch updates if any tasks were modified
                 if (tasksToUpdateBatch.length > 0) {
-                    console.log(`[Data Migration] Migrating ${tasksToUpdateBatch.length} tasks with missing subtask IDs.`);
+                    console.log(`[Data Migration] Migrating ${tasksToUpdateBatch.length} tasks with missing subtask IDs or incorrect subtask format.`);
                     await batch.commit(); // Wait for batch update to complete
-                    console.log("[Data Migration] Subtask ID migration complete.");
+                    console.log("[Data Migration] Subtask ID and format migration complete.");
                     // After committing the batch, the onSnapshot listener will fire again with the updated data,
                     // so we don't need to manually re-render or do anything further with `tasksToUpdateBatch` here.
                     // The `newTasks` array is already constructed with the *local* updated subtasks for the current render cycle.
@@ -3042,7 +3050,9 @@
 
                         // Add reactions
                         if (taskData.subtasks) {
-                            taskData.subtasks.forEach(subtask => {
+                            // Ensure subtasks is an array before iterating
+                            const subtasksArray = Array.isArray(taskData.subtasks) ? taskData.subtasks : Object.values(taskData.subtasks || {});
+                            subtasksArray.forEach(subtask => {
                                 if (subtask.reactions) {
                                     subtask.reactions.forEach(reaction => {
                                         allEvents.push({
@@ -3328,7 +3338,8 @@
                         createdAt: new Date().toISOString(),
                         position: Date.now(),
                         deadline: originalTaskData.deadline || null,
-                        subtasks: originalTaskData.subtasks.map(sub => ({
+                        // Ensure subtasks is an array before mapping
+                        subtasks: (Array.isArray(originalTaskData.subtasks) ? originalTaskData.subtasks : Object.values(originalTaskData.subtasks || {})).map(sub => ({
                             subtaskId: newSubtaskGen(), // Generate new subtaskId for copied subtasks
                             text: sub.text,
                             isCompleted: false,
@@ -3375,7 +3386,8 @@
                             createdAt: new Date().toISOString(),
                             position: Date.now() + Math.random(),
                             deadline: taskData.deadline || null,
-                            subtasks: taskData.subtasks.map(sub => ({
+                             // Ensure subtasks is an array before mapping
+                            subtasks: (Array.isArray(taskData.subtasks) ? taskData.subtasks : Object.values(taskData.subtasks || {})).map(sub => ({
                                 subtaskId: newSubtaskGen(), // Generate new subtaskId for copied subtasks
                                 text: sub.text,
                                 isCompleted: false,
