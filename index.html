@@ -1566,10 +1566,12 @@
                     subtaskCheckbox.checked = subtask.isCompleted;
                     subtaskCheckbox.className = 'mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500';
                     subtaskCheckbox.disabled = !canModifyTask;
+                    // --- FIX START ---
                     subtaskCheckbox.addEventListener('change', (e) => {
                         e.stopPropagation(); 
-                        handleToggleSubtask(task.id, subtask.subtaskId); // Changed to subtaskId
+                        handleToggleSubtask(task.id, subtask.subtaskId); // Pass subtaskId directly
                     });
+                    // --- FIX END ---
 
                     const subtaskTextSpan = document.createElement('span');
                     subtaskTextSpan.textContent = subtask.text;
