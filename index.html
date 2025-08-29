@@ -248,7 +248,7 @@
             font-size: 3rem; /* text-5xl */
             font-weight: 300; /* font-light */
             color: #374151; /* gray-800 */
-            margin-top: 1.5rem; /* mt-4 */
+            margin-top: 1rem; /* mt-4 */
         }
 
         /* NEW: Styles for subtask reaction buttons on hover */
@@ -574,10 +574,6 @@
             <label for="subtask-edit-text-input" class="block text-sm font-medium text-gray-700 mb-1">Subtask Content</label>
             <input type="text" id="subtask-edit-text-input" placeholder="Enter subtask content..." class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4">
             
-            <!-- NEW: Input for subtask note in the edit subtask modal -->
-            <label for="subtask-note-on-edit-modal" class="block text-sm font-medium text-gray-700 mb-1">Subtask Note (Optional)</label>
-            <textarea id="subtask-note-on-edit-modal" placeholder="Add a note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
-
             <label class="block text-sm font-medium text-gray-700 mb-2">Highlight Color</label>
             <div class="flex gap-4 mb-4 justify-center">
                 <label class="flex items-center cursor-pointer">
@@ -598,8 +594,11 @@
                 </label>
             </div>
 
+            <label for="subtask-note-on-edit-modal" class="block text-sm font-medium text-gray-700 mb-1">Subtask Note (Optional)</label>
+            <textarea id="subtask-note-on-edit-modal" placeholder="Enter note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+
             <input type="hidden" id="editing-task-id-subtext">
-            <input type="hidden" id="editing-subtask-id-subtext"> <!-- Changed from subtask-index to subtask-id -->
+            <input type="hidden" id="editing-subtask-index-subtext">
             <div class="flex justify-end gap-2">
                 <button id="save-subtask-text-btn" class="modal-button bg-indigo-600 hover:bg-indigo-700">Save Changes</button>
                 <button id="cancel-subtask-text-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Cancel</button>
@@ -715,8 +714,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // NEW: arrayRemove and arrayUnion for Firestore updates
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         // NEW: sendPasswordResetEmail imported
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -767,6 +765,7 @@
             "uoQxAubtyqbRhwHcBPzD7h3geKg1": "Ringstad_Thomas",
 	    "Pb9H404x2agmlwBkkKWnNrRAAK43": "Cuong_Nguyen",
 	    "wWXOpMlKUpdGzOUL7upvbbf27My2": "kristian_yksnoy",
+	    "zewcR96F2vgXdM6Zn4kud3YQ5iE2": "Pham_Phu",
             // Add more user IDs and their desired nicknames here
         };
 
@@ -833,7 +832,7 @@
         const subtaskColorRadios = document.querySelectorAll('input[name="subtask-color"]'); // NEW for subtask color
         const subtaskNoteOnEditModal = document.getElementById('subtask-note-on-edit-modal'); // NEW for subtask note on edit modal
         const editingTaskIdSubtext = document.getElementById('editing-task-id-subtext');
-        const editingSubtaskIdSubtext = document.getElementById('editing-subtask-id-subtext'); // Renamed from editingSubtaskIndexSubtext
+        const editingSubtaskIndexSubtext = document.getElementById('editing-subtask-index-subtext');
         const saveSubtaskTextBtn = document.getElementById('save-subtask-text-btn');
         const cancelSubtaskTextBtn = document.getElementById('cancel-subtask-text-btn');
 
@@ -892,8 +891,8 @@
         let draggedTaskStatus = null;
         let draggedTaskOriginalPosition = null;
 
-        // Adjusted for subtask object and its original index (now subtask ID)
-        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, subtaskId: null }; // Changed originalIndex to subtaskId
+        // Adjusted for subtask object and its original index
+        let draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null }; 
 
         // Helper map for subtask colors
         const subtaskColorMap = {
@@ -1288,42 +1287,10 @@
             const tasksQuery = query(tasksCollectionRef, orderBy('position', 'asc'));
 
             // Set up new listener
-            unsubscribeFromTasks = onSnapshot(tasksQuery, async (snapshot) => { // Made async to use await for batch update
-                const newTasks = [];
-                const tasksToUpdate = []; // Collect tasks that need subtaskId migration
-                const batch = writeBatch(db); // Firestore batch for atomic updates
+            unsubscribeFromTasks = onSnapshot(tasksQuery, (snapshot) => {
+                const newTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                snapshot.docs.forEach(doc => {
-                    const task = { id: doc.id, ...doc.data() };
-                    let taskModified = false;
-
-                    if (task.subtasks) {
-                        task.subtasks = task.subtasks.map(subtask => {
-                            if (!subtask.subtaskId) {
-                                subtask.subtaskId = crypto.randomUUID(); // Assign unique ID if missing
-                                taskModified = true;
-                            }
-                            return subtask;
-                        });
-                    }
-
-                    if (taskModified) {
-                        tasksToUpdate.push(task);
-                        // Add to batch for later update
-                        const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`, task.id);
-                        batch.update(taskRef, { subtasks: task.subtasks });
-                    }
-                    newTasks.push(task);
-                });
-
-                // Commit batch updates if any tasks were modified
-                if (tasksToUpdate.length > 0) {
-                    console.log(`[Data Migration] Migrating ${tasksToUpdate.length} tasks with missing subtask IDs.`);
-                    await batch.commit(); // Wait for batch update to complete
-                    console.log("[Data Migration] Subtask ID migration complete.");
-                }
-
-                // --- Original logic for comment and reaction toasts ---
+                // Check for new comments and trigger toast
                 newTasks.forEach(newTask => {
                     const oldTask = tasks.find(t => t.id === newTask.id);
                     const oldCommentCount = oldTask ? (oldTask.comments ? oldTask.comments.length : 0) : 0;
@@ -1349,8 +1316,8 @@
 
                     // Check for new reactions on subtasks
                     if (newTask.subtasks) { 
-                        newTask.subtasks.forEach((newSubtask, subtaskIndex) => { // subtaskIndex here is just for iteration, not for identifying subtask
-                            const oldSubtask = oldTask && oldTask.subtasks ? oldTask.subtasks.find(s => s.subtaskId === newSubtask.subtaskId) : null; // Find old subtask by its ID
+                        newTask.subtasks.forEach((newSubtask, subtaskIndex) => {
+                            const oldSubtask = oldTask && oldTask.subtasks ? oldTask.subtasks[subtaskIndex] : null;
 
                             const oldReactions = new Set((oldSubtask?.reactions || []).map(r => `${r.type}-${r.reactorId}`));
                             const currentReactions = newSubtask.reactions || [];
@@ -1388,24 +1355,15 @@
                     }
                 });
 
-                tasks = newTasks; // Update global tasks array
+                tasks = newTasks;
                 renderTasks();
                 const project = projectsData[currentProjectId];
                 if (project && project.startDate && project.endDate) {
-                    console.log(`[Burndown Chart] Updating chart for project: "${project.name}" (ID: ${currentProjectId})`);
                     const burndownData = calculateBurndownData(tasks, project.startDate, project.endDate);
                     renderBurndownChart(burndownData);
                     burndownChartSection.classList.remove('hidden');
                     startCountdown(project.endDate); // Start or update countdown
                 } else {
-                    console.warn(`[Burndown Chart] Hiding chart for project: "${project?.name || 'Not selected/not found'}" (ID: ${currentProjectId}). Reason:`);
-                    if (!project) {
-                        console.warn("  - Project object does not exist.");
-                    } else {
-                        if (!project.startDate) console.warn("  - Project start date is missing.");
-                        if (!project.endDate) console.warn("  - Project end date is missing.");
-                        console.warn("  - Project data:", project);
-                    }
                     burndownChartSection.classList.add('hidden');
                     if (countdownInterval) {
                         clearInterval(countdownInterval);
@@ -1572,12 +1530,12 @@
                 subtasksHeader.textContent = 'Subtasks:';
                 subtasksContainer.appendChild(subtasksHeader);
 
-                sortedSubtasks.forEach((subtask) => { // Removed index here
+                sortedSubtasks.forEach((subtask, index) => {
                     const subtaskItem = document.createElement('div');
                     // Added 'group' class for hover effects
                     subtaskItem.className = `subtask-item flex items-center justify-between text-sm mb-1 p-1 rounded relative group ${subtaskColorMap[subtask.color] || subtaskColorMap['default']}`; 
                     subtaskItem.setAttribute('data-task-id', task.id); 
-                    subtaskItem.setAttribute('data-subtask-id', subtask.subtaskId); // Changed to subtaskId
+                    subtaskItem.setAttribute('data-subtask-index', index); 
                     // No need to set data-subtask-position here as handleSubtaskDragStart now copies the object
 
                     if (canModifyTask) {
@@ -1600,7 +1558,7 @@
                     subtaskCheckbox.disabled = !canModifyTask;
                     subtaskCheckbox.addEventListener('change', (e) => {
                         e.stopPropagation(); 
-                        handleToggleSubtask(task.id, subtask.subtaskId); // Pass subtaskId directly
+                        handleToggleSubtask(task.id, index);
                     });
 
                     const subtaskTextSpan = document.createElement('span');
@@ -1621,8 +1579,7 @@
                         editSubtaskTextButton.title = 'Edit Subtask';
                         editSubtaskTextButton.onclick = (e) => {
                             e.stopPropagation();
-                            // Changed to subtaskId
-                            openSubtaskEditTextModal(task.id, subtask.subtaskId, subtask.text, subtask.note || '', subtask.color || 'default');
+                            openSubtaskEditTextModal(task.id, index, subtask.text, subtask.note || '', subtask.color || 'default');
                         };
                         subtaskActionsDiv.appendChild(editSubtaskTextButton);
 
@@ -1632,7 +1589,7 @@
                         deleteSubtaskButton.title = 'Delete Subtask';
                         deleteSubtaskButton.onclick = (e) => {
                             e.stopPropagation();
-                            handleDeleteSubtask(task.id, subtask.subtaskId); // Changed to subtaskId
+                            handleDeleteSubtask(task.id, index);
                         };
                         subtaskActionsDiv.appendChild(deleteSubtaskButton); 
 
@@ -1690,7 +1647,7 @@
 
                             reactionButton.onclick = async (e) => {
                                 e.stopPropagation(); 
-                                await toggleSubtaskReaction(task.id, subtask.subtaskId, reactionDef.type); // Changed to subtaskId
+                                await toggleSubtaskReaction(task.id, index, reactionDef.type);
                             };
                             subtaskReactionsContainer.appendChild(reactionButton);
                         });
@@ -2230,8 +2187,7 @@
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     const newSubtaskPosition = Date.now(); 
-                    // Add subtaskId when creating new subtasks
-                    const updatedSubtasks = [...currentSubtasks, { subtaskId: crypto.randomUUID(), text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition, reactions: [] }]; 
+                    const updatedSubtasks = [...currentSubtasks, { text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition, reactions: [] }]; // Initialize reactions array
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
@@ -2243,9 +2199,9 @@
         /**
          * Handles toggling the completion status of a subtask.
          * @param {string} taskId - The ID of the parent task.
-         * @param {string} subtaskId - The unique ID of the subtask.
+         * @param {number} subtaskIndex - The index of the subtask in the array.
          */
-        async function handleToggleSubtask(taskId, subtaskId) {
+        async function handleToggleSubtask(taskId, subtaskIndex) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to change subtask status.");
                 return;
@@ -2256,13 +2212,10 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    // Create a new array reference and modify the specific subtask within it
-                    const updatedSubtasks = currentSubtasks.map(sub => 
-                        sub.subtaskId === subtaskId 
-                            ? { ...sub, isCompleted: !sub.isCompleted } 
-                            : sub
-                    );
-                    await updateDoc(taskRef, { subtasks: updatedSubtasks });
+                    if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
+                        currentSubtasks[subtaskIndex].isCompleted = !currentSubtasks[subtaskIndex].isCompleted;
+                        await updateDoc(taskRef, { subtasks: currentSubtasks });
+                    }
                 }
             } catch (error) {
                 console.error("Error toggling subtask:", error);
@@ -2273,9 +2226,9 @@
         /**
          * Handles deleting a subtask from a task.
          * @param {string} taskId - The ID of the parent task.
-         * @param {string} subtaskId - The unique ID of the subtask to delete.
+         * @param {number} subtaskIndex - The index of the subtask to delete.
          */
-        async function handleDeleteSubtask(taskId, subtaskId) {
+        async function handleDeleteSubtask(taskId, subtaskIndex) {
             if (!isCurrentUserProjectMember() || !currentProjectId) {
                 showModal("You do not have permission to delete subtasks.");
                 return;
@@ -2286,8 +2239,6 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    // Find the subtask by its unique ID
-                    const subtaskIndex = currentSubtasks.findIndex(s => s.subtaskId === subtaskId);
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         const updatedSubtasks = currentSubtasks.filter((_, i) => i !== subtaskIndex);
                         await updateDoc(taskRef, { subtasks: updatedSubtasks });
@@ -2302,18 +2253,18 @@
         /**
          * NEW: Handles opening the subtask edit modal (text, note, color).
          * @param {string} taskId - The ID of the parent task.
-         * @param {string} subtaskId - The unique ID of the subtask.
+         * @param {number} subtaskIndex - The index of the subtask.
          * @param {string} currentText - The current subtask text.
          * @param {string} currentNote - The current subtask note.
          * @param {string} currentColor - The current subtask color.
          */
-        function openSubtaskEditTextModal(taskId, subtaskId, currentText, currentNote, currentColor) {
+        function openSubtaskEditTextModal(taskId, subtaskIndex, currentText, currentNote, currentColor) {
             if (!isCurrentUserProjectMember()) {
                 showModal("You do not have permission to edit subtasks.");
                 return;
             }
             editingTaskIdSubtext.value = taskId;
-            editingSubtaskIdSubtext.value = subtaskId; // Store subtaskId
+            editingSubtaskIndexSubtext.value = subtaskIndex;
             subtaskEditTextInput.value = currentText;
             subtaskNoteOnEditModal.value = currentNote; 
             
@@ -2335,12 +2286,12 @@
          */
         saveSubtaskTextBtn.addEventListener('click', async () => {
             const taskId = editingTaskIdSubtext.value;
-            const subtaskId = editingSubtaskIdSubtext.value; // Get subtaskId
+            const subtaskIndex = parseInt(editingSubtaskIndexSubtext.value);
             const newSubtaskText = subtaskEditTextInput.value.trim();
             const newSubtaskNote = subtaskNoteOnEditModal.value.trim(); 
             const newSubtaskColor = document.querySelector('input[name="subtask-color"]:checked').value; 
 
-            if (!taskId || !subtaskId || !currentProjectId || !newSubtaskText) { // Check for subtaskId
+            if (!taskId || isNaN(subtaskIndex) || !currentProjectId || !newSubtaskText) {
                 showModal("Error: Subtask information missing or content is empty.");
                 return;
             }
@@ -2356,8 +2307,6 @@
                 const taskDoc = await getDoc(taskRef);
                 if (taskDoc.exists()) {
                     const currentSubtasks = taskDoc.data().subtasks || [];
-                    // Find the subtask by its unique ID
-                    const subtaskIndex = currentSubtasks.findIndex(s => s.subtaskId === subtaskId);
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         currentSubtasks[subtaskIndex].text = newSubtaskText;
                         currentSubtasks[subtaskIndex].note = newSubtaskNote; 
@@ -2366,7 +2315,7 @@
                         subtaskEditTextModal.classList.add('hidden');
                         showModal("Subtask changes saved successfully!");
                     } else {
-                        showModal("Error: Invalid subtask ID or subtask not found."); // Updated error message
+                        showModal("Error: Invalid subtask index.");
                     }
                 } else {
                     showModal("Error: Task not found.");
@@ -2386,10 +2335,10 @@
          * If the user has already reacted with this type, it removes their reaction.
          * Otherwise, it adds their reaction.
          * @param {string} taskId - The ID of the parent task.
-         * @param {string} subtaskId - The unique ID of the subtask.
+         * @param {number} subtaskIndex - The index of the subtask in the array.
          * @param {string} reactionType - The type of reaction ('like', 'handling', 'note').
          */
-        async function toggleSubtaskReaction(taskId, subtaskId, reactionType) {
+        async function toggleSubtaskReaction(taskId, subtaskIndex, reactionType) {
             if (!userId || !currentProjectId) {
                 showModal("You must be logged in to react.");
                 return;
@@ -2405,9 +2354,6 @@
                 if (taskDoc.exists()) {
                     const taskData = taskDoc.data();
                     const currentSubtasks = [...(taskData.subtasks || [])];
-
-                    // Find the subtask by its unique ID
-                    const subtaskIndex = currentSubtasks.findIndex(s => s.subtaskId === subtaskId);
 
                     if (subtaskIndex >= 0 && subtaskIndex < currentSubtasks.length) {
                         const subtask = { ...currentSubtasks[subtaskIndex] }; 
@@ -2686,20 +2632,15 @@
             }
             const subtaskItem = e.target.closest('.subtask-item');
             const taskId = subtaskItem.getAttribute('data-task-id');
-            const subtaskId = subtaskItem.getAttribute('data-subtask-id'); // Get subtaskId
+            const subtaskIndex = parseInt(subtaskItem.getAttribute('data-subtask-index'));
 
             const task = tasks.find(t => t.id === taskId);
-            if (task && task.subtasks) {
-                const subtaskObject = task.subtasks.find(s => s.subtaskId === subtaskId); // Find by ID
-                if (subtaskObject) {
-                    draggedSubtaskInfo.taskId = taskId;
-                    draggedSubtaskInfo.subtaskObject = { ...subtaskObject }; 
-                    draggedSubtaskInfo.subtaskId = subtaskId; // Store subtaskId
-                    subtaskItem.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                } else {
-                    e.preventDefault();
-                }
+            if (task && task.subtasks && task.subtasks[subtaskIndex]) {
+                draggedSubtaskInfo.taskId = taskId;
+                draggedSubtaskInfo.subtaskObject = { ...task.subtasks[subtaskIndex] }; 
+                draggedSubtaskInfo.originalIndex = subtaskIndex;
+                subtaskItem.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
             } else {
                 e.preventDefault(); 
             }
@@ -2712,7 +2653,7 @@
         function handleSubtaskDragEnd(e) {
             e.target.classList.remove('dragging');
             document.querySelectorAll('.subtask-item.drag-over-subtask').forEach(el => el.classList.remove('drag-over-subtask'));
-            draggedSubtaskInfo = { taskId: null, subtaskObject: null, subtaskId: null }; // Reset subtaskId
+            draggedSubtaskInfo = { taskId: null, subtaskObject: null, originalIndex: null };
         }
 
         /**
@@ -2722,7 +2663,7 @@
         function handleSubtaskDragEnter(e) {
             e.preventDefault();
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-id') === draggedSubtaskInfo.subtaskId) return; // Compare by subtaskId
+            if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
 
             // Ensure it's the same parent task
             if (targetSubtaskItem.getAttribute('data-task-id') === draggedSubtaskInfo.taskId) {
@@ -2736,7 +2677,7 @@
          */
         function handleSubtaskDragLeave(e) {
             const targetSubtaskItem = e.target.closest('.subtask-item');
-            if (targetSubtaskItem && targetSubtaskItem.getAttribute('data-subtask-id') === draggedSubtaskInfo.subtaskId) return; // Compare by subtaskId
+            if (targetSubtaskItem && targetSubtaskItem.getAttribute('data-subtask-index') === String(draggedSubtaskInfo.originalIndex)) return;
             targetSubtaskItem?.classList.remove('drag-over-subtask');
         }
 
@@ -2755,8 +2696,7 @@
          */
         async function handleSubtaskDrop(e) {
             e.preventDefault();
-            // Check for subtaskId instead of originalIndex
-            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskObject === null || !draggedSubtaskInfo.subtaskId || !currentProjectId) return; 
+            if (!isCurrentUserProjectMember() || !draggedSubtaskInfo.taskId || draggedSubtaskInfo.subtaskObject === null || !currentProjectId) return;
 
             const targetSubtaskItem = e.target.closest('.subtask-item');
             if (!targetSubtaskItem || targetSubtaskItem.getAttribute('data-task-id') !== draggedSubtaskInfo.taskId) {
@@ -2765,7 +2705,7 @@
                 return;
             }
 
-            const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id'); // Get target subtaskId
+            const targetSubtaskIndex = parseInt(targetSubtaskItem.getAttribute('data-subtask-index'));
             
             const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, draggedSubtaskInfo.taskId);
             try {
@@ -2777,34 +2717,25 @@
                 }
                 let currentSubtasks = taskDoc.data().subtasks || [];
                 
-                // Find original and target indices by subtaskId
-                const originalIndex = currentSubtasks.findIndex(s => s.subtaskId === draggedSubtaskInfo.subtaskId);
-                const targetIndex = currentSubtasks.findIndex(s => s.subtaskId === targetSubtaskId);
-
-                if (originalIndex === -1 || targetIndex === -1) {
-                    showModal("Error: Subtask not found for reordering.");
-                    targetSubtaskItem?.classList.remove('drag-over-subtask');
-                    return;
-                }
-
                 // Prevent dropping onto itself
-                if (originalIndex === targetIndex) {
+                if (draggedSubtaskInfo.originalIndex === targetSubtaskIndex) {
                     targetSubtaskItem.classList.remove('drag-over-subtask');
                     return;
                 }
 
                 // 1. Remove the dragged subtask from its original position
-                const [removedSubtask] = currentSubtasks.splice(originalIndex, 1);
+                const [removedSubtask] = currentSubtasks.splice(draggedSubtaskInfo.originalIndex, 1);
 
                 // 2. Insert the dragged subtask at the new calculated position
-                let newIndex = targetIndex;
+                let newIndex = targetSubtaskIndex;
                 // Adjust index if we removed an item from an earlier position
-                if (originalIndex < targetIndex) {
-                    newIndex = targetIndex - 1; 
+                if (draggedSubtaskInfo.originalIndex < targetSubtaskIndex) {
+                    newIndex = targetSubtaskIndex - 1; 
                 }
                 currentSubtasks.splice(newIndex, 0, removedSubtask);
 
                 // 3. Re-assign positions based on the new order
+                // This is crucial to keep the client-side sorting in sync with Firestore's (conceptual) order
                 currentSubtasks = currentSubtasks.map((sub, idx) => ({ ...sub, position: idx * 1000 }));
 
                 await updateDoc(taskRef, { subtasks: currentSubtasks });
@@ -3303,7 +3234,6 @@
                         position: Date.now(),
                         deadline: originalTaskData.deadline || null,
                         subtasks: originalTaskData.subtasks.map(sub => ({
-                            subtaskId: crypto.randomUUID(), // Generate new subtaskId for copied subtasks
                             text: sub.text,
                             isCompleted: false,
                             note: sub.note || '',
@@ -3347,7 +3277,6 @@
                             position: Date.now() + Math.random(),
                             deadline: taskData.deadline || null,
                             subtasks: taskData.subtasks.map(sub => ({
-                                subtaskId: crypto.randomUUID(), // Generate new subtaskId for copied subtasks
                                 text: sub.text,
                                 isCompleted: false,
                                 note: sub.note || '',
