@@ -776,7 +776,7 @@
         const adminEmailInput = document.getElementById('admin-email');
         const adminPasswordInput = document.getElementById('admin-password');
         const adminLoginBtn = document.getElementById('admin-login-btn');
-        const guestLoginBtn = document.getElementById('guest-login-btn'); // This element will be removed but kept in JS for clarity
+        // const guestLoginBtn = document.getElementById('guest-login-btn'); // This element will be removed but kept in JS for clarity
         const mainApp = document.getElementById('app');
         const logoutBtn = document.getElementById('logout-btn');
         const changePasswordBtn = document.getElementById('change-password-btn'); // NEW: Change Password Button
@@ -1073,25 +1073,22 @@
          * This function is now effectively removed as the "Continue as Guest" button is gone.
          * However, keeping the function definition in case it's called elsewhere or for future use.
          */
-        async function handleGuestLogin() {
-            try {
-                // Since the guest login button is removed, this function might not be called.
-                // If you intend to disable guest login, you might want to remove this function entirely
-                // or ensure it's not reachable. For now, it remains.
-                const userCredential = await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Guest login failed:", error);
-                let errorMessage = "Could not log in as guest. Please refresh the page or try again.";
-                if (error.code === 'auth/network-request-failed') {
-                    errorMessage = "Network error. Please check your internet connection.";
-                } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
-                } else {
-                    errorMessage = `Guest login failed: ${error.message}`;
-                }
-                showModal(errorMessage);
-            }
-        }
+        // async function handleGuestLogin() {
+        //     try {
+        //         const userCredential = await signInAnonymously(auth);
+        //     } catch (error) {
+        //         console.error("Guest login failed:", error);
+        //         let errorMessage = "Could not log in as guest. Please refresh the page or try again.";
+        //         if (error.code === 'auth/network-request-failed') {
+        //             errorMessage = "Network error. Please check your internet connection.";
+        //         } else if (error.code === 'auth/operation-not-allowed') {
+        //             errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
+        //         } else {
+        //             errorMessage = `Guest login failed: ${error.message}`;
+        //         }
+        //         showModal(errorMessage);
+        //     }
+        // }
 
         /**
          * Handles logout.
@@ -1309,13 +1306,14 @@
                 const tasksToUpdateBatch = []; // Collect tasks that need subtaskId migration for batch update
                 const batch = writeBatch(db); // Firestore batch for atomic updates
 
-                snapshot.docs.forEach(doc => {
+                snapshot.docs.forEach(docSnapshot => { // Renamed 'doc' to 'docSnapshot'
                     // Create a deep copy of the task data to avoid modifying the original
                     // Ensure all properties are copied to avoid data loss.
-                    const task = { id: doc.id, ...JSON.parse(JSON.stringify(doc.data())) };
+                    const task = { id: docSnapshot.id, ...JSON.parse(JSON.stringify(docSnapshot.data())) };
                     let taskModified = false;
 
                     // NEW: Convert subtasks from object to array if it's an object
+                    // This is the critical part to fix the "doc is not a function" error when subtasks is an object.
                     if (task.subtasks && typeof task.subtasks === 'object' && !Array.isArray(task.subtasks)) {
                         task.subtasks = Object.values(task.subtasks);
                         taskModified = true;
