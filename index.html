@@ -931,6 +931,20 @@
         }
 
         /**
+         * Generates a simple, non-cryptographically secure UUID.
+         * Fallback for environments where crypto.randomUUID is not available.
+         * @returns {string} A v4 UUID-like string.
+         */
+        function generateUUID() {
+            // A simple UUID generator as fallback
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+
+        /**
          * Displays the login screen.
          */
         function showLoginScreen() {
@@ -1303,8 +1317,9 @@
 
                     if (task.subtasks) {
                         task.subtasks = task.subtasks.map(subtask => {
+                            // Check if crypto.randomUUID is available, otherwise use fallback
                             if (!subtask.subtaskId) {
-                                subtask.subtaskId = crypto.randomUUID(); // Assign unique ID if missing
+                                subtask.subtaskId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : generateUUID(); // Assign unique ID if missing
                                 taskModified = true;
                             }
                             return subtask;
@@ -2237,7 +2252,9 @@
                     const currentSubtasks = taskDoc.data().subtasks || [];
                     const newSubtaskPosition = Date.now(); 
                     // Add subtaskId when creating new subtasks
-                    const updatedSubtasks = [...currentSubtasks, { subtaskId: crypto.randomUUID(), text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition, reactions: [] }]; 
+                    // Check if crypto.randomUUID is available, otherwise use fallback
+                    const newSubtaskId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : generateUUID();
+                    const updatedSubtasks = [...currentSubtasks, { subtaskId: newSubtaskId, text: subtaskText.trim(), isCompleted: false, note: '', color: 'default', position: newSubtaskPosition, reactions: [] }]; 
                     await updateDoc(taskRef, { subtasks: updatedSubtasks });
                 }
             } catch (error) {
@@ -3302,6 +3319,9 @@
 
                 if (taskDoc.exists()) {
                     const originalTaskData = taskDoc.data();
+                    // Check if crypto.randomUUID is available, otherwise use fallback
+                    const newSubtaskGen = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID : generateUUID;
+
                     const copiedTaskData = {
                         text: `Copy of ${originalTaskData.text}`,
                         status: 'todo',
@@ -3309,7 +3329,7 @@
                         position: Date.now(),
                         deadline: originalTaskData.deadline || null,
                         subtasks: originalTaskData.subtasks.map(sub => ({
-                            subtaskId: crypto.randomUUID(), // Generate new subtaskId for copied subtasks
+                            subtaskId: newSubtaskGen(), // Generate new subtaskId for copied subtasks
                             text: sub.text,
                             isCompleted: false,
                             note: sub.note || '',
@@ -3342,6 +3362,9 @@
                 const sourceTasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${sourceProjectId}/tasks`);
                 const sourceTasksSnapshot = await getDocs(sourceTasksCollectionRef);
                 
+                // Check if crypto.randomUUID is available, otherwise use fallback
+                const newSubtaskGen = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID : generateUUID;
+
                 const todoTasksToCopy = sourceTasksSnapshot.docs
                     .filter(doc => doc.data().status === 'todo')
                     .map(doc => {
@@ -3353,7 +3376,7 @@
                             position: Date.now() + Math.random(),
                             deadline: taskData.deadline || null,
                             subtasks: taskData.subtasks.map(sub => ({
-                                subtaskId: crypto.randomUUID(), // Generate new subtaskId for copied subtasks
+                                subtaskId: newSubtaskGen(), // Generate new subtaskId for copied subtasks
                                 text: sub.text,
                                 isCompleted: false,
                                 note: sub.note || '',
