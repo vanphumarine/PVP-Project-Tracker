@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN to use utility classes -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter for modern interface -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -574,6 +574,10 @@
             <label for="subtask-edit-text-input" class="block text-sm font-medium text-gray-700 mb-1">Subtask Content</label>
             <input type="text" id="subtask-edit-text-input" placeholder="Enter subtask content..." class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4">
             
+            <!-- NEW: Input for subtask note in the edit subtask modal -->
+            <label for="subtask-note-on-edit-modal" class="block text-sm font-medium text-gray-700 mb-1">Subtask Note (Optional)</label>
+            <textarea id="subtask-note-on-edit-modal" placeholder="Add a note for this subtask..." rows="3" class="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition w-full mb-4"></textarea>
+
             <label class="block text-sm font-medium text-gray-700 mb-2">Highlight Color</label>
             <div class="flex gap-4 mb-4 justify-center">
                 <label class="flex items-center cursor-pointer">
@@ -1356,19 +1360,19 @@
                 renderTasks();
                 const project = projectsData[currentProjectId];
                 if (project && project.startDate && project.endDate) {
-                    console.log(`[Biểu đồ Burndown] Đang cập nhật biểu đồ cho dự án: "${project.name}" (ID: ${currentProjectId})`);
+                    console.log(`[Burndown Chart] Updating chart for project: "${project.name}" (ID: ${currentProjectId})`);
                     const burndownData = calculateBurndownData(tasks, project.startDate, project.endDate);
                     renderBurndownChart(burndownData);
                     burndownChartSection.classList.remove('hidden');
                     startCountdown(project.endDate); // Start or update countdown
                 } else {
-                    console.warn(`[Biểu đồ Burndown] Đang ẩn biểu đồ cho dự án: "${project?.name || 'Chưa chọn/không tìm thấy'}" (ID: ${currentProjectId}). Lý do:`);
+                    console.warn(`[Burndown Chart] Hiding chart for project: "${project?.name || 'Not selected/not found'}" (ID: ${currentProjectId}). Reason:`);
                     if (!project) {
-                        console.warn("  - Đối tượng dự án không tồn tại.");
+                        console.warn("  - Project object does not exist.");
                     } else {
-                        if (!project.startDate) console.warn("  - Ngày bắt đầu dự án bị thiếu.");
-                        if (!project.endDate) console.warn("  - Ngày kết thúc dự án bị thiếu.");
-                        console.warn("  - Dữ liệu dự án:", project);
+                        if (!project.startDate) console.warn("  - Project start date is missing.");
+                        if (!project.endDate) console.warn("  - Project end date is missing.");
+                        console.warn("  - Project data:", project);
                     }
                     burndownChartSection.classList.add('hidden');
                     if (countdownInterval) {
