@@ -10,6 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for plotting charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF CDN for exporting to PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF AutoTable plugin for better tables -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         /* Basic CSS for font and background color */
         body {
@@ -342,6 +346,17 @@
             visibility: visible;
         }
 
+        /* NEW: Styles for hover-to-show action buttons */
+        .task-actions, .subtask-actions {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .task-card:hover .task-actions,
+        .subtask-item:hover .subtask-actions {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body class="antialiased text-gray-800">
@@ -439,6 +454,7 @@
 
                 <!-- Action buttons for project, displayed based on permissions -->
                 <div class="w-full text-right mt-3 flex justify-end gap-2">
+                    <button id="export-pdf-btn" class="bg-green-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-green-700 transition-colors duration-300">Export to PDF</button> <!-- NEW: Export PDF Button -->
                     <button id="edit-project-btn" class="bg-blue-500 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-600 transition-colors duration-300">Edit Project</button>
                     <button id="manage-members-btn" class="bg-purple-500 text-white font-semibold py-2 px-3 rounded-md hover:bg-purple-600 transition-colors duration-300">Manage Members</button>
                     <button id="delete-project-btn" class="bg-red-500 text-white font-semibold py-2 px-3 rounded-md hover:bg-red-600 transition-colors duration-300">Delete Project</button>
@@ -498,6 +514,17 @@
         <div class="modal-content">
             <p id="modal-message"></p>
             <button id="modal-close-btn" class="modal-button">OK</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal for Deletion -->
+    <div id="confirmation-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <p id="confirmation-message" class="mb-4"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Có</button>
+                <button id="confirm-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Không</button>
+            </div>
         </div>
     </div>
 
@@ -782,6 +809,7 @@
         const logoutBtn = document.getElementById('logout-btn');
         const changePasswordBtn = document.getElementById('change-password-btn'); // NEW: Change Password Button
         const recentEventsBtn = document.getElementById('recent-events-btn'); // NEW: Recent Events Button
+        const exportPdfBtn = document.getElementById('export-pdf-btn'); // NEW: Export PDF Button
 
 
         const displayUserId = document.getElementById('display-user-id');
@@ -891,6 +919,13 @@
         let projectIdToDelete = null;
         let currentOTP = null; // NEW: Variable to store the generated OTP
 
+        // NEW: Confirmation Modal DOM elements
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmationMessage = document.getElementById('confirmation-message');
+        const confirmYesBtn = document.getElementById('confirm-yes-btn');
+        const confirmNoBtn = document.getElementById('confirm-no-btn');
+        let confirmationCallback = null;
+
         let tasks = [];
         let draggedTaskId = null;
         let draggedTaskStatus = null;
@@ -922,6 +957,9 @@
         // NEW: Array to store recent events (comments and reactions)
         let recentEvents = [];
         const MAX_RECENT_EVENTS = 100; // Increased limit from 10 to 100
+
+        // jsPDF global instance
+        let jsPdfDoc = null;
 
 
         /**
@@ -958,6 +996,7 @@
             logoutBtn.classList.add('hidden');
             changePasswordBtn.classList.add('hidden'); 
             recentEventsBtn.classList.add('hidden'); // NEW: Hide recent events button
+            exportPdfBtn.classList.add('hidden'); // NEW: Hide Export PDF button
         }
 
         /**
@@ -1172,6 +1211,7 @@
             logoutBtn.classList.remove('hidden');
             changePasswordBtn.classList.toggle('hidden', auth.currentUser.isAnonymous);
             recentEventsBtn.classList.remove('hidden'); // NEW: Show recent events button
+            exportPdfBtn.classList.remove('hidden'); // NEW: Show Export PDF button
 
             const canManageProjects = isCurrentUserAdmin;
             createProjectBtn.disabled = !canManageProjects;
@@ -1534,7 +1574,7 @@
 
             // Task Actions (Edit, Delete, Copy) - Placed at top right
             const taskActionsDiv = document.createElement('div');
-            taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1';
+            taskActionsDiv.className = 'absolute top-2 right-2 flex gap-1 task-actions';
             div.style.position = 'relative';
 
             if (canModifyTask) { 
@@ -1562,10 +1602,12 @@
 
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = '×';
-                    deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-1 rounded-full';
+                deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-1 rounded-full';
                 deleteButton.onclick = (e) => {
                     e.stopPropagation();
-                    handleDeleteTask(task.id);
+                    showConfirmationModal(`Bạn có chắc chắn muốn xóa công việc "${task.text}" không?`, () => {
+                        handleDeleteTask(task.id);
+                    });
                 };
                 taskActionsDiv.appendChild(deleteButton);
             }
@@ -1643,7 +1685,7 @@
 
                     if (canModifyTask) {
                         const subtaskActionsDiv = document.createElement('div'); 
-                        subtaskActionsDiv.className = 'flex items-center gap-1';
+                        subtaskActionsDiv.className = 'flex items-center gap-1 subtask-actions';
 
                         const editSubtaskTextButton = document.createElement('button');
                         editSubtaskTextButton.textContent = '📝';
@@ -1662,7 +1704,9 @@
                         deleteSubtaskButton.title = 'Delete Subtask';
                         deleteSubtaskButton.onclick = (e) => {
                             e.stopPropagation();
-                            handleDeleteSubtask(task.id, subtask.subtaskId); // Changed to subtaskId
+                            showConfirmationModal(`Bạn có chắc chắn muốn xóa công việc phụ "${subtask.text}" không?`, () => {
+                                handleDeleteSubtask(task.id, subtask.subtaskId);
+                            });
                         };
                         subtaskActionsDiv.appendChild(deleteSubtaskButton); 
 
@@ -2799,7 +2843,7 @@
 
             const targetSubtaskId = targetSubtaskItem.getAttribute('data-subtask-id'); // Get target subtaskId
             
-            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${currentProjectId}/tasks`, draggedSubtaskInfo.taskId);
+            const taskRef = doc(db, `artifacts/${appId}/public/data/projects/${draggedSubtaskInfo.taskId}/tasks`, draggedSubtaskInfo.taskId);
             try {
                 const taskDoc = await getDoc(taskRef);
                 if (!taskDoc.exists()) {
@@ -2886,6 +2930,30 @@
         }
 
         modalCloseBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+        /**
+         * NEW: Shows a confirmation modal before executing an action.
+         * @param {string} message - The confirmation message.
+         * @param {function} callback - The function to execute on confirmation.
+         */
+        function showConfirmationModal(message, callback) {
+            confirmationMessage.textContent = message;
+            confirmationCallback = callback;
+            confirmationModal.classList.remove('hidden');
+        }
+
+        confirmYesBtn.addEventListener('click', () => {
+            if (typeof confirmationCallback === 'function') {
+                confirmationCallback();
+            }
+            confirmationModal.classList.add('hidden');
+            confirmationCallback = null;
+        });
+
+        confirmNoBtn.addEventListener('click', () => {
+            confirmationModal.classList.add('hidden');
+            confirmationCallback = null;
+        });
 
         // --- Comment Notification Toast ---
         let toastTimeout;
@@ -3475,6 +3543,7 @@
                 editProjectBtn.classList.toggle('hidden', !canModifyProject);
                 manageMembersBtn.classList.toggle('hidden', !canModifyProject);
                 deleteProjectBtn.classList.toggle('hidden', !canModifyProject);
+                exportPdfBtn.classList.remove('hidden'); // Ensure PDF button is visible if project is selected
 
                 // Start countdown if end date is available
                 if (project.endDate) {
@@ -3494,6 +3563,7 @@
                 editProjectBtn.classList.add('hidden');
                 manageMembersBtn.classList.add('hidden');
                 deleteProjectBtn.classList.add('hidden');
+                exportPdfBtn.classList.add('hidden'); // Hide PDF button if no project selected
                 if (countdownInterval) {
                     clearInterval(countdownInterval);
                     countdownInterval = null;
@@ -3797,6 +3867,14 @@
 
         logoutBtn.addEventListener('click', handleLogout);
         changePasswordBtn.addEventListener('click', handleChangePassword); 
+        exportPdfBtn.addEventListener('click', () => {
+            if (currentProjectId) {
+                exportProjectToPdf(currentProjectId);
+            } else {
+                showModal("Please select a project to export.");
+            }
+        });
+
 
         projectSelect.addEventListener('change', (e) => {
             currentProjectId = e.target.value;
@@ -3811,6 +3889,132 @@
         });
 
         initializeFirebase();
+
+
+        /**
+         * Exports all project details and tasks to a PDF document using jsPDF and autoTable.
+         * @param {string} projectId - The ID of the project to export.
+         */
+        async function exportProjectToPdf(projectId) {
+            showModal("Generating PDF report... Please wait.");
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const project = projectsData[projectId];
+            if (!project) {
+                showModal("Error: Project data not found for PDF export.");
+                return;
+            }
+
+            try {
+                // Fetch all tasks for the current project
+                const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
+                const tasksSnapshot = await getDocs(tasksCollectionRef);
+                const projectTasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // --- PDF Header ---
+                doc.setFillColor(79, 70, 229); // indigo-600
+                doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(22);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Project Report`, 14, 16);
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'normal');
+                doc.text(project.name, doc.internal.pageSize.width - 14, 16, { align: 'right' });
+
+                // --- Project Details ---
+                doc.setFontSize(16);
+                doc.setTextColor(49, 46, 129); // indigo-900
+                doc.text('Project Details', 14, 40);
+                doc.autoTable({
+                    startY: 45,
+                    theme: 'grid',
+                    body: [
+                        ['Description', project.description || 'N/A'],
+                        ['Start Date', project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'N/A'],
+                        ['End Date', project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'N/A'],
+                        ['Status', project.status || 'N/A'],
+                        ['Members', project.members && project.members.length > 0 ? project.members.map(getNickname).join(', ') : 'No members'],
+                    ],
+                    columnStyles: {
+                        0: { fontStyle: 'bold', fillColor: [243, 244, 246] },
+                    },
+                });
+
+                // --- Task Sections ---
+                const statuses = [
+                    { id: 'todo', title: 'To Do Tasks', color: [252, 165, 165] }, // red-300
+                    { id: 'inprogress', title: 'In Progress Tasks', color: [253, 224, 71] }, // yellow-300
+                    { id: 'done', title: 'Done Tasks', color: [134, 239, 172] } // green-300
+                ];
+                
+                const tableHeaders = ['Task', 'Deadline', 'Subtasks', 'Notes & Comments'];
+
+                for (const status of statuses) {
+                    const filteredTasks = projectTasks.filter(t => t.status === status.id).sort((a, b) => a.position - b.position);
+                    
+                    if (filteredTasks.length > 0) {
+                        const tableBody = filteredTasks.map(task => {
+                            const subtasksText = (task.subtasks || [])
+                                .map(sub => `${sub.isCompleted ? '[x]' : '[ ]'} ${sub.text}`)
+                                .join('\n');
+
+                            const notesText = (task.notes || [])
+                                .map(note => `Note by ${getNickname(note.authorId)}: ${note.text}`)
+                                .join('\n');
+
+                            const commentsText = (task.comments || [])
+                                .map(comment => `Comment by ${getNickname(comment.commenterId)}: ${comment.text}`)
+                                .join('\n');
+                            
+                            const combinedNotesComments = [notesText, commentsText].filter(Boolean).join('\n---\n');
+
+                            return [
+                                task.text,
+                                task.deadline ? new Date(task.deadline).toLocaleDateString('en-US') : 'N/A',
+                                subtasksText,
+                                combinedNotesComments
+                            ];
+                        });
+
+                        doc.autoTable({
+                            head: [tableHeaders],
+                            body: tableBody,
+                            didDrawPage: (data) => {
+                                // You can add headers/footers to each page if needed
+                            },
+                            startY: doc.autoTable.previous.finalY + 15, // Add space between tables
+                            headStyles: {
+                                fillColor: status.color,
+                                textColor: [49, 46, 129], // indigo-900
+                                fontStyle: 'bold',
+                            },
+                            styles: {
+                                cellPadding: 2,
+                                fontSize: 9,
+                                valign: 'middle',
+                            },
+                            columnStyles: {
+                                0: { cellWidth: 40 },
+                                1: { cellWidth: 25 },
+                                2: { cellWidth: 'auto' },
+                                3: { cellWidth: 'auto' },
+                            },
+                        });
+                    }
+                }
+
+                doc.save(`${project.name.replace(/\s/g, '_')}_Report.pdf`);
+                showModal("PDF report generated successfully!");
+
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                showModal("Failed to generate PDF report.");
+            }
+        }
     </script>
 </body>
 </html>
+
