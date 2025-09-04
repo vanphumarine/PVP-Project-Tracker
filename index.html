@@ -1029,6 +1029,63 @@
         }
 
         /**
+         * Displays details of the currently selected project.
+         * @param {Object} project - The project object to display. If null, details will be hidden.
+         */
+        function displayProjectDetails(project) {
+            if (project) {
+                displayProjectName.textContent = project.name;
+                displayProjectDescription.textContent = project.description || 'No description.';
+                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set';
+                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set';
+                displayProjectStatus.textContent = project.status || 'Active';
+
+                currentProjectMembers = project.members || [];
+                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(getNickname).join(', ') : 'No members yet.'; 
+                displayProjectMembers.textContent = membersDisplay;
+
+                currentProjectDetailsDiv.classList.remove('hidden');
+                chartSection.classList.remove('hidden');
+
+                // Reset to default view (progress chart) when project changes
+                if (!isProgressChartVisible) {
+                    toggleChartBtn.click();
+                }
+
+                const canModifyProject = isCurrentUserAdmin;
+                editProjectBtn.classList.toggle('hidden', !canModifyProject);
+                manageMembersBtn.classList.toggle('hidden', !canModifyProject);
+                deleteProjectBtn.classList.toggle('hidden', !canModifyProject);
+                exportPdfBtn.classList.remove('hidden'); // Ensure PDF button is visible if project is selected
+
+                // Start countdown if end date is available
+                if (project.endDate) {
+                    startCountdown(project.endDate);
+                } else {
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                    countdownTimer.classList.add('hidden');
+                }
+
+            } else {
+                currentProjectDetailsDiv.classList.add('hidden');
+                currentProjectMembers = [];
+                chartSection.classList.add('hidden');
+                editProjectBtn.classList.add('hidden');
+                manageMembersBtn.classList.add('hidden');
+                deleteProjectBtn.classList.add('hidden');
+                exportPdfBtn.classList.add('hidden'); // Hide PDF button if no project selected
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                countdownTimer.classList.add('hidden');
+            }
+        }
+
+        /**
          * Initializes the application and Firebase services.
          * Handles potential errors during initialization.
          */
@@ -3520,64 +3577,7 @@
         });
 
         /**
-         * Displays details of the currently selected project.
-         * @param {Object} project - The project object to display. If null, details will be hidden.
-         */
-        function displayProjectDetails(project) {
-            if (project) {
-                displayProjectName.textContent = project.name;
-                displayProjectDescription.textContent = project.description || 'No description.';
-                displayProjectStartDate.textContent = project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'Not set';
-                displayProjectEndDate.textContent = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'Not set';
-                displayProjectStatus.textContent = project.status || 'Active';
-
-                currentProjectMembers = project.members || [];
-                const membersDisplay = currentProjectMembers.length > 0 ? currentProjectMembers.map(getNickname).join(', ') : 'No members yet.'; 
-                displayProjectMembers.textContent = membersDisplay;
-
-                currentProjectDetailsDiv.classList.remove('hidden');
-                chartSection.classList.remove('hidden');
-
-                // Reset to default view (progress chart) when project changes
-                if (!isProgressChartVisible) {
-                    toggleChartBtn.click();
-                }
-
-                const canModifyProject = isCurrentUserAdmin;
-                editProjectBtn.classList.toggle('hidden', !canModifyProject);
-                manageMembersBtn.classList.toggle('hidden', !canModifyProject);
-                deleteProjectBtn.classList.toggle('hidden', !canModifyProject);
-                exportPdfBtn.classList.remove('hidden'); // Ensure PDF button is visible if project is selected
-
-                // Start countdown if end date is available
-                if (project.endDate) {
-                    startCountdown(project.endDate);
-                } else {
-                    if (countdownInterval) {
-                        clearInterval(countdownInterval);
-                        countdownInterval = null;
-                    }
-                    countdownTimer.classList.add('hidden');
-                }
-
-            } else {
-                currentProjectDetailsDiv.classList.add('hidden');
-                currentProjectMembers = [];
-                chartSection.classList.add('hidden');
-                editProjectBtn.classList.add('hidden');
-                manageMembersBtn.classList.add('hidden');
-                deleteProjectBtn.classList.add('hidden');
-                exportPdfBtn.classList.add('hidden'); // Hide PDF button if no project selected
-                if (countdownInterval) {
-                    clearInterval(countdownInterval);
-                    countdownInterval = null;
-                }
-                countdownTimer.classList.add('hidden');
-            }
-        }
-
-        /**
-         * NEW: Calculates data for the Progress Chart.
+         * Calculates data for the Progress Chart.
          * @param {Array<Object>} tasks - Array of project tasks.
          * @returns {Object} Chart data with labels, counts, and completion percentage.
          */
@@ -3993,130 +3993,6 @@
 
         initializeFirebase();
 
-
-        /**
-         * Exports all project details and tasks to a PDF document using jsPDF and autoTable.
-         * @param {string} projectId - The ID of the project to export.
-         */
-        async function exportProjectToPdf(projectId) {
-            showModal("Generating PDF report... Please wait.");
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            const project = projectsData[projectId];
-            if (!project) {
-                showModal("Error: Project data not found for PDF export.");
-                return;
-            }
-
-            try {
-                // Fetch all tasks for the current project
-                const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
-                const tasksSnapshot = await getDocs(tasksCollectionRef);
-                const projectTasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                // --- PDF Header ---
-                doc.setFillColor(79, 70, 229); // indigo-600
-                doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(22);
-                doc.setFont(undefined, 'bold');
-                doc.text(`Project Report`, 14, 16);
-                doc.setFontSize(12);
-                doc.setFont(undefined, 'normal');
-                doc.text(project.name, doc.internal.pageSize.width - 14, 16, { align: 'right' });
-
-                // --- Project Details ---
-                doc.setFontSize(16);
-                doc.setTextColor(49, 46, 129); // indigo-900
-                doc.text('Project Details', 14, 40);
-                doc.autoTable({
-                    startY: 45,
-                    theme: 'grid',
-                    body: [
-                        ['Description', project.description || 'N/A'],
-                        ['Start Date', project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'N/A'],
-                        ['End Date', project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'N/A'],
-                        ['Status', project.status || 'N/A'],
-                        ['Members', project.members && project.members.length > 0 ? project.members.map(getNickname).join(', ') : 'No members'],
-                    ],
-                    columnStyles: {
-                        0: { fontStyle: 'bold', fillColor: [243, 244, 246] },
-                    },
-                });
-
-                // --- Task Sections ---
-                const statuses = [
-                    { id: 'todo', title: 'To Do Tasks', color: [252, 165, 165] }, // red-300
-                    { id: 'inprogress', title: 'In Progress Tasks', color: [253, 224, 71] }, // yellow-300
-                    { id: 'done', title: 'Done Tasks', color: [134, 239, 172] } // green-300
-                ];
-                
-                const tableHeaders = ['Task', 'Deadline', 'Subtasks', 'Notes & Comments'];
-
-                for (const status of statuses) {
-                    const filteredTasks = projectTasks.filter(t => t.status === status.id).sort((a, b) => a.position - b.position);
-                    
-                    if (filteredTasks.length > 0) {
-                        const tableBody = filteredTasks.map(task => {
-                            const subtasksText = (task.subtasks || [])
-                                .map(sub => `${sub.isCompleted ? '[x]' : '[ ]'} ${sub.text}`)
-                                .join('\n');
-
-                            const notesText = (task.notes || [])
-                                .map(note => `Note by ${getNickname(note.authorId)}: ${note.text}`)
-                                .join('\n');
-
-                            const commentsText = (task.comments || [])
-                                .map(comment => `Comment by ${getNickname(comment.commenterId)}: ${comment.text}`)
-                                .join('\n');
-                            
-                            const combinedNotesComments = [notesText, commentsText].filter(Boolean).join('\n---\n');
-
-                            return [
-                                task.text,
-                                task.deadline ? new Date(task.deadline).toLocaleDateString('en-US') : 'N/A',
-                                subtasksText,
-                                combinedNotesComments
-                            ];
-                        });
-
-                        doc.autoTable({
-                            head: [tableHeaders],
-                            body: tableBody,
-                            didDrawPage: (data) => {
-                                // You can add headers/footers to each page if needed
-                            },
-                            startY: doc.autoTable.previous.finalY + 15, // Add space between tables
-                            headStyles: {
-                                fillColor: status.color,
-                                textColor: [49, 46, 129], // indigo-900
-                                fontStyle: 'bold',
-                            },
-                            styles: {
-                                cellPadding: 2,
-                                fontSize: 9,
-                                valign: 'middle',
-                            },
-                            columnStyles: {
-                                0: { cellWidth: 40 },
-                                1: { cellWidth: 25 },
-                                2: { cellWidth: 'auto' },
-                                3: { cellWidth: 'auto' },
-                            },
-                        });
-                    }
-                }
-
-                doc.save(`${project.name.replace(/\s/g, '_')}_Report.pdf`);
-                showModal("PDF report generated successfully!");
-
-            } catch (error) {
-                console.error("Error generating PDF:", error);
-                showModal("Failed to generate PDF report.");
-            }
-        }
     </script>
 </body>
 </html>
