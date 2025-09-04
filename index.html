@@ -544,7 +544,7 @@
         <div class="modal-content">
             <p id="delete-confirm-message" class="mb-4"></p>
             <input type="text" id="delete-otp-input" placeholder="Enter OTP to confirm deletion" class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
-            <div class="flex justify-center gap-4">
+            <div class="flex justify-end gap-4">
                 <button id="confirm-delete-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Yes, Delete</button>
                 <button id="confirm-delete-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">No, Cancel</button>
             </div>
@@ -1029,6 +1029,39 @@
         }
 
         /**
+         * Starts the countdown timer to the specified end date.
+         * @param {string} endDateStr - The end date string (YYYY-MM-DD).
+         */
+        function startCountdown(endDateStr) {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            const endDate = new Date(endDateStr);
+            endDate.setHours(0, 0, 0, 0); // Set to start of the end date
+
+            function updateCountdown() {
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Set to start of today
+
+                const timeLeft = endDate.getTime() - now.getTime(); // Milliseconds difference
+
+                if (timeLeft <= 0) {
+                    countdownDaysValue.textContent = "0";
+                    countdownTimer.classList.remove('hidden');
+                    clearInterval(countdownInterval);
+                } else {
+                    const days = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+                    countdownDaysValue.textContent = days;
+                    countdownTimer.classList.remove('hidden');
+                }
+            }
+
+            updateCountdown(); // Initial call
+            countdownInterval = setInterval(updateCountdown, 1000 * 60 * 60); // Update every hour
+        }
+
+        /**
          * Displays details of the currently selected project.
          * @param {Object} project - The project object to display. If null, details will be hidden.
          */
@@ -1084,7 +1117,170 @@
                 countdownTimer.classList.add('hidden');
             }
         }
+        
+        /**
+         * Exports all project details and tasks to a PDF document using jsPDF and autoTable.
+         * @param {string} projectId - The ID of the project to export.
+         */
+        async function exportProjectToPdf(projectId) {
+            showModal("Generating PDF report... Please wait.");
 
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'pt', 'a4');
+            const totalPagesExp = '{total_pages_count_string}';
+
+            const project = projectsData[projectId];
+            if (!project) {
+                showModal("Error: Project data not found for PDF export.");
+                return;
+            }
+            
+            try {
+                // --- PAGE 1: COVER PAGE ---
+                doc.setFontSize(26);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Project Status Report', doc.internal.pageSize.width / 2, 100, { align: 'center' });
+                doc.setFontSize(18);
+                doc.setFont('helvetica', 'normal');
+                doc.text(project.name, doc.internal.pageSize.width / 2, 130, { align: 'center' });
+                doc.setFontSize(12);
+                doc.text(`Date: ${new Date().toLocaleDateString('en-US')}`, doc.internal.pageSize.width / 2, 150, { align: 'center' });
+
+                // --- PAGE 2: OVERVIEW & CHARTS ---
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('1. Project Overview', 40, 60);
+
+                const detailsBody = [
+                    { title: 'Project Name:', content: project.name || 'N/A' },
+                    { title: 'Description:', content: project.description || 'N/A' },
+                    { title: 'Timeline:', content: `${project.startDate ? new Date(project.startDate).toLocaleDateString('en-US') : 'N/A'} - ${project.endDate ? new Date(project.endDate).toLocaleDateString('en-US') : 'N/A'}` },
+                    { title: 'Status:', content: project.status || 'N/A' },
+                    { title: 'Team Members:', content: project.members && project.members.length > 0 ? project.members.map(getNickname).join(', ') : 'No members' },
+                ];
+                doc.autoTable({
+                    startY: 70,
+                    theme: 'grid',
+                    body: detailsBody,
+                    columns: [
+                        { header: 'Item', dataKey: 'title' },
+                        { header: 'Details', dataKey: 'content' },
+                    ],
+                    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120 } },
+                });
+
+                let lastY = doc.autoTable.previous.finalY;
+
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('2. Project Analytics', 40, lastY + 30);
+                
+                // Temporarily show both charts to render them
+                const burndownWasHidden = burndownChartContainer.classList.contains('hidden');
+                burndownChartContainer.classList.remove('hidden');
+
+                const progressCanvas = document.getElementById('progressChart');
+                const burndownCanvas = document.getElementById('burndownChart');
+                const progressImgData = progressCanvas.toDataURL('image/png', 1.0);
+                const burndownImgData = burndownCanvas.toDataURL('image/png', 1.0);
+                
+                // Restore original visibility
+                if(burndownWasHidden) burndownChartContainer.classList.add('hidden');
+                
+                doc.addImage(progressImgData, 'PNG', 40, lastY + 40, 250, 150);
+                doc.addImage(burndownImgData, 'PNG', 310, lastY + 40, 250, 150);
+
+
+                // --- TASK TABLES (Starts on a new page) ---
+                const tasksCollectionRef = collection(db, `artifacts/${appId}/public/data/projects/${projectId}/tasks`);
+                const tasksSnapshot = await getDocs(tasksCollectionRef);
+                const projectTasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const statuses = [
+                    { id: 'todo', title: 'To Do Tasks', color: [239, 68, 68] }, // red-500
+                    { id: 'inprogress', title: 'In Progress Tasks', color: [245, 158, 11] }, // amber-500
+                    { id: 'done', title: 'Done Tasks', color: [34, 197, 94] } // green-500
+                ];
+
+                let sectionCounter = 3;
+
+                for (const status of statuses) {
+                    const filteredTasks = projectTasks.filter(t => t.status === status.id).sort((a, b) => a.position - b.position);
+                    if (filteredTasks.length > 0) {
+                        doc.addPage();
+                        doc.setFontSize(14);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text(`${sectionCounter}. ${status.title}`, 40, 60);
+
+                        const tableBody = filteredTasks.map(task => {
+                            const subtasksText = (task.subtasks || [])
+                                .map(sub => `• ${sub.isCompleted ? '[x]' : '[ ]'} ${sub.text}`)
+                                .join('\n');
+                            const notesAndComments = [
+                                ...(task.notes || []).map(note => `[Note by ${getNickname(note.authorId)}]: ${note.text}`),
+                                ...(task.comments || []).map(comment => `[Comment by ${getNickname(comment.commenterId)}]: ${comment.text}`)
+                            ].join('\n\n');
+                            
+                            return [
+                                task.text,
+                                task.deadline ? new Date(task.deadline).toLocaleDateString('en-US') : 'N/A',
+                                subtasksText,
+                                notesAndComments
+                            ];
+                        });
+
+                        doc.autoTable({
+                            startY: 70,
+                            head: [['Task', 'Deadline', 'Subtasks', 'Notes & Comments']],
+                            body: tableBody,
+                            theme: 'striped',
+                            headStyles: { fillColor: status.color, textColor: 255 },
+                            styles: { cellPadding: 3, fontSize: 8, valign: 'top' },
+                            columnStyles: {
+                                0: { cellWidth: 100 },
+                                1: { cellWidth: 60 },
+                                2: { cellWidth: 150 },
+                                3: { cellWidth: 'auto' }
+                            },
+                        });
+                        sectionCounter++;
+                    }
+                }
+                
+                // --- Finalize with Headers, Footers, and Page Numbers ---
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    // Header
+                    doc.setFontSize(14);
+                    doc.setTextColor(40);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('PROJECT STATUS REPORT', 40, 30);
+                    // Logo
+                    doc.setDrawColor(0, 87, 184); // Blue
+                    doc.setLineWidth(1.5);
+                    doc.rect(doc.internal.pageSize.width - 50, 20, 15, 15);
+                    doc.line(doc.internal.pageSize.width - 50, 27.5, doc.internal.pageSize.width - 42.5, 35);
+                    doc.line(doc.internal.pageSize.width - 42.5, 35, doc.internal.pageSize.width - 35, 27.5);
+
+                    // Footer
+                    doc.setFontSize(8);
+                    doc.setTextColor(128);
+                    const pageHeight = doc.internal.pageSize.height;
+                    doc.text(`Page ${i} of ${pageCount}`, 40, pageHeight - 10);
+                    doc.text(`Report Generated: ${new Date().toLocaleDateString('en-US')}`, doc.internal.pageSize.width - 40, pageHeight - 10, { align: 'right' });
+                }
+
+
+                doc.save(`${project.name.replace(/\s/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                showModal("PDF report generated successfully!");
+
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                showModal("Failed to generate PDF report.");
+            }
+        }
         /**
          * Initializes the application and Firebase services.
          * Handles potential errors during initialization.
@@ -3786,158 +3982,7 @@
             });
         }
 
-        /**
-         * Starts the countdown timer to the specified end date.
-         * @param {string} endDateStr - The end date string (YYYY-MM-DD).
-         */
-        function startCountdown(endDateStr) {
-            if (countdownInterval) {
-                clearInterval(countdownInterval);
-            }
-
-            const endDate = new Date(endDateStr);
-            endDate.setHours(0, 0, 0, 0); // Set to start of the end date
-
-            function updateCountdown() {
-                const now = new Date();
-                now.setHours(0, 0, 0, 0); // Set to start of today
-
-                const timeLeft = endDate.getTime() - now.getTime(); // Milliseconds difference
-
-                if (timeLeft <= 0) {
-                    countdownDaysValue.textContent = "0";
-                    countdownTimer.classList.remove('hidden');
-                    clearInterval(countdownInterval);
-                } else {
-                    const days = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-                    countdownDaysValue.textContent = days;
-                    countdownTimer.classList.remove('hidden');
-                }
-            }
-
-            updateCountdown(); // Initial call
-            countdownInterval = setInterval(updateCountdown, 1000 * 60 * 60); // Update every hour
-        }
-
-        // --- Project Member Management Logic ---
-        manageMembersBtn.addEventListener('click', () => {
-            if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to manage members.");
-                return;
-            }
-            if (!currentProjectId) {
-                showModal("Please select a project to manage members.");
-                return;
-            }
-            displayMembersInModal();
-            manageMembersModal.classList.remove('hidden');
-            newMemberIdInput.focus();
-        });
-
-        closeMembersModalBtn.addEventListener('click', () => {
-            manageMembersModal.classList.add('hidden');
-        });
-
-        addMemberBtn.addEventListener('click', async () => {
-            const newMemberId = newMemberIdInput.value.trim();
-            if (!newMemberId) {
-                showModal("Please enter a user ID.");
-                return;
-            }
-            if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to add members.");
-                return;
-            }
-            if (!currentProjectId) {
-                showModal("Please select a project to add members to.");
-                return;
-            }
-
-            try {
-                const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, currentProjectId);
-                const projectDoc = await getDoc(projectRef);
-                if (projectDoc.exists()) {
-                    const projectData = projectDoc.data();
-                    if (projectData.members && projectData.members.includes(newMemberId)) {
-                        showModal("This user is already a member of the project.");
-                        return;
-                    }
-                    await updateDoc(projectRef, {
-                        members: arrayUnion(newMemberId)
-                    });
-                    newMemberIdInput.value = '';
-                    showModal(`User ${getNickname(newMemberId)} added to project.`); 
-                }
-            } catch (error) {
-                console.error("Error adding member:", error);
-                showModal("Failed to add member.");
-            }
-        });
-
-        /**
-         * Displays the list of members in the manage members modal.
-         */
-        function displayMembersInModal() {
-            currentMembersList.innerHTML = '';
-            const project = projectsData[currentProjectId];
-            const projectMembers = (project && project.members) ? project.members : [];
-
-            if (projectMembers.length === 0) {
-                currentMembersList.textContent = 'No members in this project yet.';
-                return;
-            }
-            projectMembers.forEach(memberId => {
-                const memberItem = document.createElement('div');
-                memberItem.className = 'flex items-center justify-between p-2 bg-white rounded-md shadow-sm mb-2';
-                
-                const memberIdSpan = document.createElement('span');
-                memberIdSpan.className = 'font-mono text-gray-700 break-all';
-                memberIdSpan.textContent = getNickname(memberId); 
-                memberItem.appendChild(memberIdSpan);
-
-                if (isCurrentUserAdmin && memberId !== userId) {
-                    const removeButton = document.createElement('button');
-                    removeButton.textContent = 'Remove';
-                    removeButton.className = 'ml-4 bg-red-500 text-white text-xs px-3 py-1 rounded hover:bg-red-600 transition';
-                    removeButton.onclick = () => removeProjectMember(currentProjectId, memberId);
-                    memberItem.appendChild(removeButton);
-                } else if (memberId === userId) {
-                    const selfTag = document.createElement('span');
-                    selfTag.textContent = '(You)';
-                    selfTag.className = 'ml-2 text-gray-400 text-xs italic';
-                    memberIdSpan.appendChild(selfTag);
-                }
-                currentMembersList.appendChild(memberItem);
-            });
-        }
-
-        /**
-         * Removes a member from the project.
-         * @param {string} projectId - The ID of the project.
-         * @param {string} memberIdToRemove - The ID of the member to remove.
-         */
-        async function removeProjectMember(projectId, memberIdToRemove) {
-            if (!isCurrentUserAdmin) {
-                showModal("You do not have permission to remove members.");
-                return;
-            }
-            if (memberIdToRemove === userId) {
-                showModal("You cannot remove yourself from the project through this interface.");
-                return;
-            }
-            try {
-                const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, projectId);
-                await updateDoc(projectRef, {
-                    members: arrayRemove(memberIdToRemove)
-                });
-                showModal(`User ${getNickname(memberIdToRemove)} removed from project.`); 
-            } catch (error) {
-                console.error("Error removing member:", error);
-                showModal("Failed to remove member.");
-            }
-        }
-
-
+        // Event Listeners for UI
         taskForm.addEventListener('submit', handleAddTask);
         
         adminLoginBtn.addEventListener('click', () => {
