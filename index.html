@@ -1060,7 +1060,216 @@
             updateCountdown(); // Initial call
             countdownInterval = setInterval(updateCountdown, 1000 * 60 * 60); // Update every hour
         }
+        
+        /**
+         * Calculates data for the Progress Chart.
+         * @param {Array<Object>} tasks - Array of project tasks.
+         * @returns {Object} Chart data with labels, counts, and completion percentage.
+         */
+        function calculateProgressData(tasks) {
+            const totalTasks = tasks.length;
+            if (totalTasks === 0) {
+                return {
+                    labels: ['To Do', 'In Progress', 'Done'],
+                    counts: [0, 0, 0],
+                    completionPercentage: 0
+                };
+            }
 
+            const todoCount = tasks.filter(t => t.status === 'todo').length;
+            const inprogressCount = tasks.filter(t => t.status === 'inprogress').length;
+            const doneCount = tasks.filter(t => t.status === 'done').length;
+
+            const completionPercentage = Math.round((doneCount / totalTasks) * 100);
+
+            return {
+                labels: ['To Do', 'In Progress', 'Done'],
+                counts: [todoCount, inprogressCount, doneCount],
+                completionPercentage: completionPercentage
+            };
+        }
+
+        /**
+         * Calculates data for the Burndown Chart.
+         * @param {Array<Object>} tasks - Array of project tasks.
+         * @param {string} startDateStr - Project start date (ISO string YYYY-MM-DD).
+         * @param {string} endDateStr - Project end date (ISO string YYYY-MM-DD).
+         * @returns {Object} Chart data with labels, idealData, actualData.
+         */
+        function calculateBurndownData(tasks, startDateStr, endDateStr) {
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(endDateStr);
+
+            endDate.setHours(23, 59, 59, 999); 
+
+            const labels = [];
+            const idealBurndown = [];
+            const actualBurndown = [];
+
+            let currentDate = new Date(startDate);
+            currentDate.setHours(0, 0, 0, 0);
+
+            const initialTotalTasks = tasks.filter(task => 
+                task.createdAt && new Date(task.createdAt) <= endDate
+            ).length;
+
+            const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            for (let i = 0; currentDate <= endDate; i++) {
+                labels.push(currentDate.toLocaleDateString('en-US'));
+
+                const idealRemaining = initialTotalTasks - (initialTotalTasks / (totalDays - 1)) * i;
+                idealBurndown.push(Math.max(0, idealRemaining));
+
+                let tasksRemainingActual = initialTotalTasks;
+                tasks.forEach(task => {
+                    const taskCreatedAt = new Date(task.createdAt);
+                    taskCreatedAt.setHours(0, 0, 0, 0);
+
+                    if (taskCreatedAt <= currentDate) {
+                        if (task.status === 'done' && task.completedAt) {
+                            const taskCompletedAt = new Date(task.completedAt);
+                            taskCompletedAt.setHours(23, 59, 59, 999);
+
+                            if (taskCompletedAt <= currentDate) {
+                                tasksRemainingActual--;
+                            }
+                        }
+                    }
+                });
+                actualBurndown.push(Math.max(0, tasksRemainingActual));
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            if (idealBurndown.length > 0) {
+                idealBurndown[idealBurndown.length - 1] = 0;
+            }
+
+            return { labels, idealBurndown, actualBurndown };
+        }
+
+        /**
+         * NEW: Renders or updates the Progress Chart (Bar Chart).
+         * @param {Object} progressData - The calculated data for the chart.
+         */
+        function renderProgressChart(progressData) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (progressChartInstance) {
+                progressChartInstance.destroy();
+            }
+            progressChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: progressData.labels,
+                    datasets: [{
+                        label: 'Number of Tasks',
+                        data: progressData.counts,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)', // red-500
+                            'rgba(245, 158, 11, 0.7)', // amber-500
+                            'rgba(34, 197, 94, 0.7)'  // green-500
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(34, 197, 94, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * NEW: Updates the completion progress bar.
+         * @param {number} percentage - The completion percentage (0-100).
+         */
+        function updateProgressBar(percentage) {
+            progressBarPercentage.textContent = `${percentage}%`;
+            progressBarFill.style.width = `${percentage}%`;
+        }
+
+        /**
+         * Renders or updates the Burndown Chart.
+         * @param {Object} burndownData - The calculated data for the chart.
+         */
+        function renderBurndownChart(burndownData) {
+            const ctx = document.getElementById('burndownChart').getContext('2d');
+
+            if (burndownChartInstance) {
+                burndownChartInstance.destroy();
+            }
+
+            burndownChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: burndownData.labels,
+                    datasets: [
+                        {
+                            label: 'Ideal Burndown',
+                            data: burndownData.idealBurndown,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1,
+                            fill: false,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'Actual Burndown',
+                            data: burndownData.actualBurndown,
+                            borderColor: 'rgb(255, 99, 132)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Tasks Remaining'
+                            }
+                        }
+                    }
+                }
+            });
+        }
         /**
          * Displays details of the currently selected project.
          * @param {Object} project - The project object to display. If null, details will be hidden.
@@ -1127,7 +1336,6 @@
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'pt', 'a4');
-            const totalPagesExp = '{total_pages_count_string}';
 
             const project = projectsData[projectId];
             if (!project) {
@@ -1167,14 +1375,17 @@
                         { header: 'Item', dataKey: 'title' },
                         { header: 'Details', dataKey: 'content' },
                     ],
-                    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 120 } },
+                    columnStyles: { 
+                        0: { fontStyle: 'bold', cellWidth: 100 },
+                        1: { cellWidth: 'auto' }
+                    },
                 });
 
                 let lastY = doc.autoTable.previous.finalY;
 
                 doc.setFontSize(14);
                 doc.setFont('helvetica', 'bold');
-                doc.text('2. Project Analytics', 40, lastY + 30);
+                doc.text('2. Project Analytics', 40, lastY + 40);
                 
                 // Temporarily show both charts to render them
                 const burndownWasHidden = burndownChartContainer.classList.contains('hidden');
@@ -1182,14 +1393,36 @@
 
                 const progressCanvas = document.getElementById('progressChart');
                 const burndownCanvas = document.getElementById('burndownChart');
+                
+                // Add a small delay to ensure charts are fully rendered before capturing
+                await new Promise(resolve => setTimeout(resolve, 500));
+
                 const progressImgData = progressCanvas.toDataURL('image/png', 1.0);
                 const burndownImgData = burndownCanvas.toDataURL('image/png', 1.0);
                 
                 // Restore original visibility
                 if(burndownWasHidden) burndownChartContainer.classList.add('hidden');
                 
-                doc.addImage(progressImgData, 'PNG', 40, lastY + 40, 250, 150);
-                doc.addImage(burndownImgData, 'PNG', 310, lastY + 40, 250, 150);
+                const margin = 40;
+                const pageWidth = doc.internal.pageSize.width;
+                const chartWidth = pageWidth - (margin * 2);
+                
+                const canvasAspectRatio = progressCanvas.width / progressCanvas.height;
+                let chartHeight = chartWidth / canvasAspectRatio;
+
+                const chartSpacing = 30;
+                let chartY = lastY + 50;
+
+                // Check if both charts fit on the page, if not, scale them down
+                const totalChartHeight = (chartHeight * 2) + chartSpacing;
+                if (chartY + totalChartHeight > doc.internal.pageSize.height - 40) {
+                    const availableHeight = doc.internal.pageSize.height - chartY - 40;
+                    chartHeight = (availableHeight - chartSpacing) / 2;
+                }
+                
+                doc.addImage(progressImgData, 'PNG', margin, chartY, chartWidth, chartHeight);
+                chartY += chartHeight + chartSpacing;
+                doc.addImage(burndownImgData, 'PNG', margin, chartY, chartWidth, chartHeight);
 
 
                 // --- TASK TABLES (Starts on a new page) ---
@@ -3771,216 +4004,6 @@
                 displayProjectDetails(null);
             }
         });
-
-        /**
-         * Calculates data for the Progress Chart.
-         * @param {Array<Object>} tasks - Array of project tasks.
-         * @returns {Object} Chart data with labels, counts, and completion percentage.
-         */
-        function calculateProgressData(tasks) {
-            const totalTasks = tasks.length;
-            if (totalTasks === 0) {
-                return {
-                    labels: ['To Do', 'In Progress', 'Done'],
-                    counts: [0, 0, 0],
-                    completionPercentage: 0
-                };
-            }
-
-            const todoCount = tasks.filter(t => t.status === 'todo').length;
-            const inprogressCount = tasks.filter(t => t.status === 'inprogress').length;
-            const doneCount = tasks.filter(t => t.status === 'done').length;
-
-            const completionPercentage = Math.round((doneCount / totalTasks) * 100);
-
-            return {
-                labels: ['To Do', 'In Progress', 'Done'],
-                counts: [todoCount, inprogressCount, doneCount],
-                completionPercentage: completionPercentage
-            };
-        }
-
-        /**
-         * Calculates data for the Burndown Chart.
-         * @param {Array<Object>} tasks - Array of project tasks.
-         * @param {string} startDateStr - Project start date (ISO string YYYY-MM-DD).
-         * @param {string} endDateStr - Project end date (ISO string YYYY-MM-DD).
-         * @returns {Object} Chart data with labels, idealData, actualData.
-         */
-        function calculateBurndownData(tasks, startDateStr, endDateStr) {
-            const startDate = new Date(startDateStr);
-            const endDate = new Date(endDateStr);
-
-            endDate.setHours(23, 59, 59, 999); 
-
-            const labels = [];
-            const idealBurndown = [];
-            const actualBurndown = [];
-
-            let currentDate = new Date(startDate);
-            currentDate.setHours(0, 0, 0, 0);
-
-            const initialTotalTasks = tasks.filter(task => 
-                task.createdAt && new Date(task.createdAt) <= endDate
-            ).length;
-
-            const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-            for (let i = 0; currentDate <= endDate; i++) {
-                labels.push(currentDate.toLocaleDateString('en-US'));
-
-                const idealRemaining = initialTotalTasks - (initialTotalTasks / (totalDays - 1)) * i;
-                idealBurndown.push(Math.max(0, idealRemaining));
-
-                let tasksRemainingActual = initialTotalTasks;
-                tasks.forEach(task => {
-                    const taskCreatedAt = new Date(task.createdAt);
-                    taskCreatedAt.setHours(0, 0, 0, 0);
-
-                    if (taskCreatedAt <= currentDate) {
-                        if (task.status === 'done' && task.completedAt) {
-                            const taskCompletedAt = new Date(task.completedAt);
-                            taskCompletedAt.setHours(23, 59, 59, 999);
-
-                            if (taskCompletedAt <= currentDate) {
-                                tasksRemainingActual--;
-                            }
-                        }
-                    }
-                });
-                actualBurndown.push(Math.max(0, tasksRemainingActual));
-
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            
-            if (idealBurndown.length > 0) {
-                idealBurndown[idealBurndown.length - 1] = 0;
-            }
-
-            return { labels, idealBurndown, actualBurndown };
-        }
-
-        /**
-         * NEW: Renders or updates the Progress Chart (Bar Chart).
-         * @param {Object} progressData - The calculated data for the chart.
-         */
-        function renderProgressChart(progressData) {
-            const ctx = document.getElementById('progressChart').getContext('2d');
-            if (progressChartInstance) {
-                progressChartInstance.destroy();
-            }
-            progressChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: progressData.labels,
-                    datasets: [{
-                        label: 'Number of Tasks',
-                        data: progressData.counts,
-                        backgroundColor: [
-                            'rgba(239, 68, 68, 0.7)', // red-500
-                            'rgba(245, 158, 11, 0.7)', // amber-500
-                            'rgba(34, 197, 94, 0.7)'  // green-500
-                        ],
-                        borderColor: [
-                            'rgba(239, 68, 68, 1)',
-                            'rgba(245, 158, 11, 1)',
-                            'rgba(34, 197, 94, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
-            });
-        }
-
-        /**
-         * NEW: Updates the completion progress bar.
-         * @param {number} percentage - The completion percentage (0-100).
-         */
-        function updateProgressBar(percentage) {
-            progressBarPercentage.textContent = `${percentage}%`;
-            progressBarFill.style.width = `${percentage}%`;
-        }
-
-        /**
-         * Renders or updates the Burndown Chart.
-         * @param {Object} burndownData - The calculated data for the chart.
-         */
-        function renderBurndownChart(burndownData) {
-            const ctx = document.getElementById('burndownChart').getContext('2d');
-
-            if (burndownChartInstance) {
-                burndownChartInstance.destroy();
-            }
-
-            burndownChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: burndownData.labels,
-                    datasets: [
-                        {
-                            label: 'Ideal Burndown',
-                            data: burndownData.idealBurndown,
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1,
-                            fill: false,
-                            borderDash: [5, 5]
-                        },
-                        {
-                            label: 'Actual Burndown',
-                            data: burndownData.actualBurndown,
-                            borderColor: 'rgb(255, 99, 132)',
-                            tension: 0.1,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: false,
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'category',
-                            title: {
-                                display: true,
-                                text: 'Date'
-                            },
-                            grid: {
-                                display: false
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Tasks Remaining'
-                            }
-                        }
-                    }
-                }
-            });
-        }
 
         // Event Listeners for UI
         taskForm.addEventListener('submit', handleAddTask);
