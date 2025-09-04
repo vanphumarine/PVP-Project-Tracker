@@ -365,7 +365,7 @@
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
         <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
             <h2 class="text-3xl font-bold mb-6 text-gray-900">Welcome to Project Tracker Realtime</h2>
-            <p class="text-gray-600 mb-6">Choose how you want to access the application.</p>
+            <p class="text-gray-600 mb-6">Please log in to access the application.</p>
             
             <div class="mb-6">
                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Login</h3>
@@ -373,14 +373,6 @@
                 <input type="password" id="admin-password" placeholder="Password" class="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <button id="admin-login-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-indigo-700 transition-colors duration-300">Login</button>
             </div>
-
-            <!-- Removed Viewer Access section -->
-            <!--
-            <div class="border-t border-gray-200 pt-6">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Viewer Access</h3>
-                <button id="guest-login-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-green-700 transition-colors duration-300">Continue as Guest</button>
-            </div>
-            -->
         </div>
     </div>
 
@@ -498,10 +490,29 @@
             </div>
         </main>
 
-        <!-- Burndown Chart Section -->
-        <div id="burndown-chart-section" class="w-full mx-auto my-6 bg-white p-6 rounded-lg shadow-md hidden">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Project Burndown Chart</h2>
-            <div class="relative h-96">
+        <!-- Chart Section -->
+        <div id="chart-section" class="w-full mx-auto my-6 bg-white p-6 rounded-lg shadow-md hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="chart-title" class="text-2xl font-semibold text-gray-800">Project Progress</h2>
+                <button id="toggle-chart-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 transition-colors duration-300">Show Burndown Chart</button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="progress-bar-container" class="mb-4">
+                <div class="flex justify-between mb-1">
+                    <span class="text-base font-medium text-blue-700">Completion Progress</span>
+                    <span id="progress-bar-percentage" class="text-sm font-medium text-blue-700">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div id="progress-bar-fill" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Chart Canvases -->
+            <div id="progress-chart-container" class="relative h-96">
+                <canvas id="progressChart"></canvas>
+            </div>
+            <div id="burndown-chart-container" class="relative h-96 hidden">
                 <canvas id="burndownChart"></canvas>
             </div>
         </div>
@@ -522,8 +533,8 @@
         <div class="modal-content">
             <p id="confirmation-message" class="mb-4"></p>
             <div class="flex justify-center gap-4">
-                <button id="confirm-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Có</button>
-                <button id="confirm-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Không</button>
+                <button id="confirm-yes-btn" class="modal-button bg-red-600 hover:bg-red-700">Yes</button>
+                <button id="confirm-no-btn" class="modal-button bg-gray-500 hover:bg-gray-600">No</button>
             </div>
         </div>
     </div>
@@ -783,8 +794,11 @@
         let currentOpenTaskDetailsId = null; // To track which task detail modal is open
         let countdownInterval = null; // Variable to store the countdown interval
 
-        // Variable to store the Burndown chart instance
+        // Variables to store the Chart instances
         let burndownChartInstance = null;
+        let progressChartInstance = null;
+        let isProgressChartVisible = true; // Progress chart is visible by default
+
 
         // NEW: Mock nickname map - Users in this map can react
         const userNicknames = {
@@ -804,7 +818,6 @@
         const adminEmailInput = document.getElementById('admin-email');
         const adminPasswordInput = document.getElementById('admin-password');
         const adminLoginBtn = document.getElementById('admin-login-btn');
-        // const guestLoginBtn = document.getElementById('guest-login-btn'); // This element will be removed but kept in JS for clarity
         const mainApp = document.getElementById('app');
         const logoutBtn = document.getElementById('logout-btn');
         const changePasswordBtn = document.getElementById('change-password-btn'); // NEW: Change Password Button
@@ -817,13 +830,22 @@
         const taskFormContainer = document.getElementById('add-task-container');
         const taskForm = document.getElementById('add-task-form');
         const taskInput = document.getElementById('task-input');
-        // const taskColorInput = document.getElementById('task-color-input'); // REMOVED: Manual color input
         const taskDeadlineInput = document.getElementById('task-deadline-input'); 
         const columns = document.querySelectorAll('.kanban-column');
         const projectSelect = document.getElementById('project-select');
         const createProjectBtn = document.getElementById('create-project-btn');
         const currentProjectDetailsDiv = document.getElementById('current-project-details');
-        const burndownChartSection = document.getElementById('burndown-chart-section');
+        
+        // Chart and Progress Bar elements
+        const chartSection = document.getElementById('chart-section');
+        const chartTitle = document.getElementById('chart-title');
+        const toggleChartBtn = document.getElementById('toggle-chart-btn');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const progressBarPercentage = document.getElementById('progress-bar-percentage');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const progressChartContainer = document.getElementById('progress-chart-container');
+        const burndownChartContainer = document.getElementById('burndown-chart-container');
+
         const editProjectBtn = document.getElementById('edit-project-btn');
         const manageMembersBtn = document.getElementById('manage-members-btn');
         const deleteProjectBtn = document.getElementById('delete-project-btn'); // Corrected line
@@ -875,7 +897,6 @@
 
         const taskDetailsModal = document.getElementById('task-details-modal');
         const taskDetailsTextInput = document.getElementById('task-details-text-input');
-        // const taskDetailsColorInput = document.getElementById('task-details-color-input'); // REMOVED: Manual color input
         const taskDetailsDeadlineInput = document.getElementById('task-details-deadline-input');
         const saveTaskDetailsBtn = document.getElementById('save-task-details-btn'); // Corrected line
         const commentsList = document.getElementById('comments-list');
@@ -1063,7 +1084,7 @@
                     tasks = []; // Clear tasks array
                     renderTasks(); // Clear displayed tasks
                     displayProjectDetails(null); // Clear project details display
-                    burndownChartSection.classList.add('hidden'); // Hide chart
+                    chartSection.classList.add('hidden'); // Hide chart section
                     
                     // Stop the countdown timer if it's running
                     if (countdownInterval) {
@@ -1109,28 +1130,6 @@
                 showModal(errorMessage);
             }
         }
-
-        /**
-         * Handles anonymous guest login.
-         * This function is now effectively removed as the "Continue as Guest" button is gone.
-         * However, keeping the function definition in case it's called elsewhere or for future use.
-         */
-        // async function handleGuestLogin() {
-        //     try {
-        //         const userCredential = await signInAnonymously(auth);
-        //     } catch (error) {
-        //         console.error("Guest login failed:", error);
-        //         let errorMessage = "Could not log in as guest. Please refresh the page or try again.";
-        //         if (error.code === 'auth/network-request-failed') {
-        //             errorMessage = "Network error. Please check your internet connection.";
-        //         } else if (error.code === 'auth/operation-not-allowed') {
-        //             errorMessage = "Anonymous authentication is not enabled in Firebase. Please enable it in your Firebase project settings.";
-        //         } else {
-        //             errorMessage = `Guest login failed: ${error.message}`;
-        //         }
-        //         showModal(errorMessage);
-        //     }
-        // }
 
         /**
          * Handles logout.
@@ -1223,7 +1222,6 @@
             taskFormContainer.classList.toggle('hidden', !canManageProjects);
 
             document.querySelector('main').classList.remove('hidden');
-            burndownChartSection.classList.remove('hidden');
         }
 
         /**
@@ -1317,7 +1315,7 @@
                 const mainContent = document.querySelector('main');
                 if (snapshot.empty) {
                     mainContent.classList.add('hidden');
-                    burndownChartSection.classList.add('hidden');
+                    chartSection.classList.add('hidden');
                 } else {
                     mainContent.classList.remove('hidden');
                 }
@@ -1462,21 +1460,22 @@
                 renderTasks();
                 const project = projectsData[currentProjectId];
                 if (project && project.startDate && project.endDate) {
-                    console.log(`[Burndown Chart] Updating chart for project: "${project.name}" (ID: ${currentProjectId})`);
+                    console.log(`[Charts] Updating charts for project: "${project.name}" (ID: ${currentProjectId})`);
+                    
+                    // New Progress Chart and Bar Logic
+                    const progressData = calculateProgressData(tasks);
+                    renderProgressChart(progressData);
+                    updateProgressBar(progressData.completionPercentage);
+
+                    // Existing Burndown Chart Logic
                     const burndownData = calculateBurndownData(tasks, project.startDate, project.endDate);
                     renderBurndownChart(burndownData);
-                    burndownChartSection.classList.remove('hidden');
+
+                    chartSection.classList.remove('hidden');
                     startCountdown(project.endDate); // Start or update countdown
                 } else {
-                    console.warn(`[Burndown Chart] Hiding chart for project: "${project?.name || 'Not selected/not found'}" (ID: ${currentProjectId}). Reason:`);
-                    if (!project) {
-                        console.warn("  - Project object does not exist.");
-                    } else {
-                        if (!project.startDate) console.warn("  - Project start date is missing.");
-                        if (!project.endDate) console.warn("  - Project end date is missing.");
-                        console.warn("  - Project data:", project);
-                    }
-                    burndownChartSection.classList.add('hidden');
+                    console.warn(`[Charts] Hiding charts for project: "${project?.name || 'Not selected/not found'}" (ID: ${currentProjectId}). Reason: Missing start or end date.`);
+                    chartSection.classList.add('hidden');
                     if (countdownInterval) {
                         clearInterval(countdownInterval);
                         countdownInterval = null;
@@ -1605,7 +1604,7 @@
                 deleteButton.className = 'font-bold text-red-500 hover:text-red-700 text-xl leading-none px-1 rounded-full';
                 deleteButton.onclick = (e) => {
                     e.stopPropagation();
-                    showConfirmationModal(`Bạn có chắc chắn muốn xóa công việc "${task.text}" không?`, () => {
+                    showConfirmationModal(`Are you sure you want to delete the task "${task.text}"?`, () => {
                         handleDeleteTask(task.id);
                     });
                 };
@@ -1704,7 +1703,7 @@
                         deleteSubtaskButton.title = 'Delete Subtask';
                         deleteSubtaskButton.onclick = (e) => {
                             e.stopPropagation();
-                            showConfirmationModal(`Bạn có chắc chắn muốn xóa công việc phụ "${subtask.text}" không?`, () => {
+                            showConfirmationModal(`Are you sure you want to delete the subtask "${subtask.text}"?`, () => {
                                 handleDeleteSubtask(task.id, subtask.subtaskId);
                             });
                         };
@@ -3281,7 +3280,7 @@
             // Generate a random 6-digit OTP
             currentOTP = Math.floor(100000 + Math.random() * 900000).toString(); 
             deleteConfirmMessage.innerHTML = `Are you sure you want to delete project "<span class="font-bold">${projectName}</span>"? <br>This action will delete all its tasks and cannot be undone.<br><br>
-                                            For security, please enter the following OTP: <span class="font-bold text-red-600">${currentOTP}</span> (Tạm thời hiển thị ở đây thay vì gửi mail).`; // Message updated for OTP
+                                            For security, please enter the following OTP: <span class="font-bold text-red-600">${currentOTP}</span> (Temporarily displayed here).`; // Message updated for OTP
             deleteOtpInput.value = ''; // Clear previous input
             deleteProjectConfirmModal.classList.remove('hidden');
             deleteOtpInput.focus(); // Focus the OTP input
@@ -3537,7 +3536,12 @@
                 displayProjectMembers.textContent = membersDisplay;
 
                 currentProjectDetailsDiv.classList.remove('hidden');
-                burndownChartSection.classList.remove('hidden');
+                chartSection.classList.remove('hidden');
+
+                // Reset to default view (progress chart) when project changes
+                if (!isProgressChartVisible) {
+                    toggleChartBtn.click();
+                }
 
                 const canModifyProject = isCurrentUserAdmin;
                 editProjectBtn.classList.toggle('hidden', !canModifyProject);
@@ -3559,7 +3563,7 @@
             } else {
                 currentProjectDetailsDiv.classList.add('hidden');
                 currentProjectMembers = [];
-                burndownChartSection.classList.add('hidden');
+                chartSection.classList.add('hidden');
                 editProjectBtn.classList.add('hidden');
                 manageMembersBtn.classList.add('hidden');
                 deleteProjectBtn.classList.add('hidden');
@@ -3570,6 +3574,34 @@
                 }
                 countdownTimer.classList.add('hidden');
             }
+        }
+
+        /**
+         * NEW: Calculates data for the Progress Chart.
+         * @param {Array<Object>} tasks - Array of project tasks.
+         * @returns {Object} Chart data with labels, counts, and completion percentage.
+         */
+        function calculateProgressData(tasks) {
+            const totalTasks = tasks.length;
+            if (totalTasks === 0) {
+                return {
+                    labels: ['To Do', 'In Progress', 'Done'],
+                    counts: [0, 0, 0],
+                    completionPercentage: 0
+                };
+            }
+
+            const todoCount = tasks.filter(t => t.status === 'todo').length;
+            const inprogressCount = tasks.filter(t => t.status === 'inprogress').length;
+            const doneCount = tasks.filter(t => t.status === 'done').length;
+
+            const completionPercentage = Math.round((doneCount / totalTasks) * 100);
+
+            return {
+                labels: ['To Do', 'In Progress', 'Done'],
+                counts: [todoCount, inprogressCount, doneCount],
+                completionPercentage: completionPercentage
+            };
         }
 
         /**
@@ -3632,6 +3664,63 @@
             return { labels, idealBurndown, actualBurndown };
         }
 
+        /**
+         * NEW: Renders or updates the Progress Chart (Bar Chart).
+         * @param {Object} progressData - The calculated data for the chart.
+         */
+        function renderProgressChart(progressData) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (progressChartInstance) {
+                progressChartInstance.destroy();
+            }
+            progressChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: progressData.labels,
+                    datasets: [{
+                        label: 'Number of Tasks',
+                        data: progressData.counts,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)', // red-500
+                            'rgba(245, 158, 11, 0.7)', // amber-500
+                            'rgba(34, 197, 94, 0.7)'  // green-500
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(34, 197, 94, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * NEW: Updates the completion progress bar.
+         * @param {number} percentage - The completion percentage (0-100).
+         */
+        function updateProgressBar(percentage) {
+            progressBarPercentage.textContent = `${percentage}%`;
+            progressBarFill.style.width = `${percentage}%`;
+        }
 
         /**
          * Renders or updates the Burndown Chart.
@@ -3672,7 +3761,6 @@
                     plugins: {
                         title: {
                             display: false,
-                            text: 'Project Burndown Chart'
                         }
                     },
                     scales: {
@@ -3862,11 +3950,26 @@
             }
         });
 
-        // Removed the event listener for guest login button as the button itself is removed
-        // guestLoginBtn.addEventListener('click', handleGuestLogin); 
-
         logoutBtn.addEventListener('click', handleLogout);
         changePasswordBtn.addEventListener('click', handleChangePassword); 
+        
+        toggleChartBtn.addEventListener('click', () => {
+            isProgressChartVisible = !isProgressChartVisible;
+            if (isProgressChartVisible) {
+                progressChartContainer.classList.remove('hidden');
+                progressBarContainer.classList.remove('hidden');
+                burndownChartContainer.classList.add('hidden');
+                chartTitle.textContent = 'Project Progress';
+                toggleChartBtn.textContent = 'Show Burndown Chart';
+            } else {
+                progressChartContainer.classList.add('hidden');
+                progressBarContainer.classList.add('hidden');
+                burndownChartContainer.classList.remove('hidden');
+                chartTitle.textContent = 'Project Burndown Chart';
+                toggleChartBtn.textContent = 'Show Progress Chart';
+            }
+        });
+
         exportPdfBtn.addEventListener('click', () => {
             if (currentProjectId) {
                 exportProjectToPdf(currentProjectId);
