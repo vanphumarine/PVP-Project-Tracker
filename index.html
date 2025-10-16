@@ -4007,6 +4007,120 @@
                 displayProjectDetails(null);
             }
         });
+        
+        // =====================================================================================
+        // NEWLY ADDED/FIXED: Manage Members Logic
+        // =====================================================================================
+        
+        /**
+         * Opens the modal to manage project members.
+         */
+        function openManageMembersModal() {
+            if (!currentProjectId || !isCurrentUserAdmin) {
+                showModal("You don't have permission or no project is selected.");
+                return;
+            }
+            renderCurrentMembers();
+            manageMembersModal.classList.remove('hidden');
+            newMemberIdInput.focus();
+        }
+
+        /**
+         * Renders the list of current members in the modal with remove buttons.
+         */
+        function renderCurrentMembers() {
+            currentMembersList.innerHTML = '';
+            const project = projectsData[currentProjectId];
+            if (project && project.members && project.members.length > 0) {
+                project.members.forEach(memberId => {
+                    const memberDiv = document.createElement('div');
+                    memberDiv.className = 'flex justify-between items-center bg-gray-200 p-2 rounded mb-1';
+                    
+                    const memberNameSpan = document.createElement('span');
+                    memberNameSpan.textContent = getNickname(memberId);
+                    memberDiv.appendChild(memberNameSpan);
+
+                    // Add remove button, but don't allow removing the project creator
+                    if (memberId !== project.createdBy) {
+                        const removeBtn = document.createElement('button');
+                        removeBtn.textContent = 'Remove';
+                        removeBtn.className = 'text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600';
+                        removeBtn.onclick = () => handleRemoveMember(memberId);
+                        memberDiv.appendChild(removeBtn);
+                    } else {
+                        const creatorSpan = document.createElement('span');
+                        creatorSpan.textContent = '(Creator)';
+                        creatorSpan.className = 'text-xs text-gray-500 ml-2';
+                        memberDiv.appendChild(creatorSpan);
+                    }
+                    
+                    currentMembersList.appendChild(memberDiv);
+                });
+            } else {
+                currentMembersList.textContent = 'No members in this project yet.';
+            }
+        }
+
+        /**
+         * Handles adding a new member to the current project.
+         */
+        async function handleAddMember() {
+            const newMemberId = newMemberIdInput.value.trim();
+            if (!newMemberId || !currentProjectId) {
+                showModal("Please enter a User ID to add.");
+                return;
+            }
+            
+            const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, currentProjectId);
+            try {
+                await updateDoc(projectRef, {
+                    members: arrayUnion(newMemberId)
+                });
+                showModal(`User ${newMemberId} added to the project.`);
+                newMemberIdInput.value = '';
+
+                // Manually update local data and re-render for immediate feedback
+                const project = projectsData[currentProjectId];
+                if (project && !project.members.includes(newMemberId)) {
+                    project.members.push(newMemberId);
+                }
+                renderCurrentMembers(); 
+                displayProjectDetails(project); // Update the main project details view as well
+
+            } catch (error) {
+                console.error("Error adding member:", error);
+                showModal("Failed to add member.");
+            }
+        }
+
+        /**
+         * Handles removing a member from the current project.
+         * @param {string} memberIdToRemove - The ID of the member to remove.
+         */
+        async function handleRemoveMember(memberIdToRemove) {
+            if (!memberIdToRemove || !currentProjectId) return;
+
+            const projectRef = doc(db, `artifacts/${appId}/public/data/projects`, currentProjectId);
+            try {
+                await updateDoc(projectRef, {
+                    members: arrayRemove(memberIdToRemove)
+                });
+                showModal(`User ${getNickname(memberIdToRemove)} removed from the project.`);
+                
+                // Manually update local data and re-render for immediate feedback
+                const project = projectsData[currentProjectId];
+                if (project) {
+                    project.members = project.members.filter(id => id !== memberIdToRemove);
+                }
+                renderCurrentMembers();
+                displayProjectDetails(project); // Update the main project details view
+
+            } catch (error) {
+                console.error("Error removing member:", error);
+                showModal("Failed to remove member.");
+            }
+        }
+
 
         // Event Listeners for UI
         taskForm.addEventListener('submit', handleAddTask);
@@ -4062,9 +4176,17 @@
             }
         });
 
+        // =====================================================================================
+        // NEW/FIXED Event Listeners for Manage Members Modal
+        // =====================================================================================
+        manageMembersBtn.addEventListener('click', openManageMembersModal);
+        addMemberBtn.addEventListener('click', handleAddMember);
+        closeMembersModalBtn.addEventListener('click', () => {
+            manageMembersModal.classList.add('hidden');
+        });
+
         initializeFirebase();
 
     </script>
 </body>
 </html>
-
