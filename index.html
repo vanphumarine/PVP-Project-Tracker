@@ -552,14 +552,35 @@
     <!-- NEW: Modal to view task details and add comments / edit tasks -->
     <!-- Modal to manage users (nicknames) - Admin only. Placed before #custom-modal so messages/confirmations show on top -->
     <div id="manage-users-modal" class="modal-backdrop hidden">
-        <div class="modal-content text-left w-full max-w-xl">
+        <div class="modal-content text-left w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-semibold mb-1 text-gray-800">Manage Users</h3>
-            <p class="text-xs text-gray-500 mb-3">Users listed here have a nickname, can react, and can be ticked as project members. Find a user's ID in Firebase Console &rarr; Authentication, or hover over the name in the top bar after they log in.</p>
+            <p class="text-xs text-gray-500 mb-3">Only admins can create or change users. Registered users can log in, react, and be ticked as project members. Accounts that are not listed here cannot read any data.</p>
             <div id="users-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-72 overflow-y-auto border border-gray-200 mb-4"></div>
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
-                <input type="text" id="new-user-uid-input" placeholder="User ID (UID)" class="md:col-span-2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-                <input type="text" id="new-user-nickname-input" placeholder="Nickname" maxlength="40" class="md:col-span-2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-                <button id="add-user-btn" class="bg-purple-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-purple-700 transition-colors duration-300">Add</button>
+            <div class="border border-purple-200 rounded-md p-3 mb-3">
+                <p class="text-sm font-semibold text-gray-700 mb-2">Create new account</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                    <input type="email" id="create-user-email-input" placeholder="Email" autocomplete="off" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                    <input type="text" id="create-user-password-input" placeholder="Initial password (min 6 chars)" autocomplete="off" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                    <input type="text" id="create-user-nickname-input" placeholder="Nickname" maxlength="40" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                    <select id="create-user-role-select" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                        <option value="viewer">Viewer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button id="create-user-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-purple-700 transition-colors duration-300">Create account</button>
+                <p class="text-xs text-gray-500 mt-2"><b>Admin</b>: full control (projects, members, users). <b>Viewer</b>: can view everything and edit tasks only in projects where they are ticked as a member.</p>
+            </div>
+            <div class="border border-gray-200 rounded-md p-3 mb-2">
+                <p class="text-sm font-semibold text-gray-700 mb-2">Add existing account by User ID</p>
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
+                    <input type="text" id="new-user-uid-input" placeholder="User ID (UID)" class="md:col-span-2 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                    <input type="text" id="new-user-nickname-input" placeholder="Nickname" maxlength="40" class="md:col-span-2 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                    <select id="new-user-role-select" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                        <option value="viewer">Viewer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <button id="add-user-btn" class="bg-gray-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-gray-700 transition-colors duration-300">Add</button>
+                </div>
             </div>
             <p id="users-status" class="text-sm text-gray-600 min-h-[1.25rem] mb-4"></p>
             <div class="flex justify-end gap-2">
@@ -779,11 +800,11 @@
 
     <script type="module">
         // Import Firebase modules
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         // NEW: arrayRemove and arrayUnion for Firestore updates
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, arrayUnion, arrayRemove, setLogLevel, query, orderBy, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         // NEW: sendPasswordResetEmail imported
-        import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =====================================================================================
         // IMPORTANT: REPLACE THE FOLLOWING PLACEHOLDER VALUES WITH YOUR ACTUAL FIREBASE PROJECT CONFIGURATION.
@@ -847,6 +868,13 @@
 		"hPjWLiqmlUSFqTILfxgZgnYSXIo2": "Silviu",
             // Add more user IDs and their desired nicknames here
         };
+        // Built-in admins (cannot be locked out). Must match isAdmin() in firestore.rules.
+        // Additional admins are managed in-app via Manage Users (field "role" = "admin" in users/{uid}).
+        const PREDEFINED_ADMIN_IDS = [
+            "37GhB7vKrvdNVQKIfsVEnHaLmHO2",
+            "cTstHQAc8JhHuh6DRXi1A3t0J5r2"
+        ];
+        let usersRoles = {}; // { uid: 'admin' | 'viewer' | 'engineer' } from Firestore
         // Live nickname map (mutated in place by the users listener so all existing references keep working)
         const userNicknames = { ...DEFAULT_USER_NICKNAMES };
 
@@ -937,6 +965,12 @@
         const addUserBtn = document.getElementById('add-user-btn');
         const closeUsersModalBtn = document.getElementById('close-users-modal-btn');
         const usersStatus = document.getElementById('users-status');
+        const newUserRoleSelect = document.getElementById('new-user-role-select');
+        const createUserEmailInput = document.getElementById('create-user-email-input');
+        const createUserPasswordInput = document.getElementById('create-user-password-input');
+        const createUserNicknameInput = document.getElementById('create-user-nickname-input');
+        const createUserRoleSelect = document.getElementById('create-user-role-select');
+        const createUserBtn = document.getElementById('create-user-btn');
         const currentMembersList = document.getElementById('current-members-list');
         const newMemberIdInput = document.getElementById('new-member-id-input');
         const addMemberBtn = document.getElementById('add-member-btn');
@@ -1727,15 +1761,15 @@
          * This version hardcodes specific admin User IDs.
          */
         async function checkAdminStatus() {
-            const predefinedAdminIds = [
-                "37GhB7vKrvdNVQKIfsVEnHaLmHO2",
-                "cTstHQAc8JhHuh6DRXi1A3t0J5r2"
-            ];
-
-            if (userId && predefinedAdminIds.includes(userId)) {
-                isCurrentUserAdmin = true;
-            } else {
-                isCurrentUserAdmin = false;
+            isCurrentUserAdmin = !!userId && (PREDEFINED_ADMIN_IDS.includes(userId) || usersRoles[userId] === 'admin');
+            if (userId && !isCurrentUserAdmin) {
+                // Admin role granted in-app: read it directly so the first render is already correct
+                try {
+                    const snap = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, userId));
+                    if (snap.exists() && snap.data().role === 'admin') isCurrentUserAdmin = true;
+                } catch (err) {
+                    console.warn("Could not read own user profile for role check:", err);
+                }
             }
         }
         
@@ -1840,13 +1874,25 @@
             if (unsubscribeFromUsers) unsubscribeFromUsers();
             unsubscribeFromUsers = onSnapshot(usersCollectionRef(), (snapshot) => {
                 usersData = {};
+                usersRoles = {};
                 snapshot.docs.forEach(d => {
-                    const nickname = d.data().nickname;
+                    const data = d.data();
+                    const nickname = data.nickname;
                     if (typeof nickname === 'string' && nickname.trim()) usersData[d.id] = nickname.trim();
+                    if (typeof data.role === 'string') usersRoles[d.id] = data.role;
                 });
                 const source = Object.keys(usersData).length > 0 ? usersData : DEFAULT_USER_NICKNAMES;
                 Object.keys(userNicknames).forEach(k => delete userNicknames[k]);
                 Object.assign(userNicknames, source);
+
+                // Re-evaluate this user's admin status live (role may have been granted/revoked in Manage Users)
+                if (!snapshot.metadata.fromCache && userId) {
+                    const nowAdmin = PREDEFINED_ADMIN_IDS.includes(userId) || usersRoles[userId] === 'admin';
+                    if (nowAdmin !== isCurrentUserAdmin) {
+                        isCurrentUserAdmin = nowAdmin;
+                        updateUIAfterAuth();
+                    }
+                }
 
                 // First admin login after migration: copy defaults into Firestore automatically
                 if (Object.keys(usersData).length === 0 && isCurrentUserAdmin && !usersSeedAttempted) {
@@ -1856,6 +1902,9 @@
                 refreshNicknameDependentUI();
             }, (error) => {
                 console.warn("Could not read users collection, using default nicknames:", error);
+                if (error && error.code === 'permission-denied' && !isCurrentUserAdmin) {
+                    showModal("Your account is not registered in this app yet. Please ask an administrator to add you in Manage Users.");
+                }
                 Object.keys(userNicknames).forEach(k => delete userNicknames[k]);
                 Object.assign(userNicknames, DEFAULT_USER_NICKNAMES);
                 refreshNicknameDependentUI();
@@ -4195,6 +4244,11 @@
             newUserUidInput.focus();
         }
 
+        function getEffectiveRole(uid) {
+            if (PREDEFINED_ADMIN_IDS.includes(uid)) return 'admin';
+            return usersRoles[uid] || 'viewer';
+        }
+
         function renderUsersList() {
             usersList.innerHTML = '';
             const ids = Object.keys(userNicknames).sort((a, b) => userNicknames[a].localeCompare(userNicknames[b]));
@@ -4203,6 +4257,10 @@
                 return;
             }
             ids.forEach(uid => {
+                const isBuiltIn = PREDEFINED_ADMIN_IDS.includes(uid);
+                const isSelf = uid === userId;
+                const currentRole = getEffectiveRole(uid);
+
                 const row = document.createElement('div');
                 row.className = 'flex flex-col md:flex-row md:items-center gap-2 bg-gray-200 p-2 rounded mb-1';
 
@@ -4215,23 +4273,44 @@
                 nameInput.className = 'w-full p-1 border border-gray-300 rounded text-sm';
                 const uidLine = document.createElement('div');
                 uidLine.className = 'text-xs text-gray-500 truncate';
-                uidLine.textContent = uid + (uid === userId ? '  (you)' : '');
+                uidLine.textContent = uid + (isSelf ? '  (you)' : '') + (isBuiltIn ? '  (built-in admin)' : '');
                 info.appendChild(nameInput);
                 info.appendChild(uidLine);
                 row.appendChild(info);
 
+                const roleSelect = document.createElement('select');
+                roleSelect.className = 'text-xs p-1 border border-gray-300 rounded';
+                [['admin', 'Admin'], ['viewer', 'Viewer']].forEach(([value, label]) => {
+                    const opt = document.createElement('option');
+                    opt.value = value; opt.textContent = label;
+                    roleSelect.appendChild(opt);
+                });
+                if (currentRole !== 'admin' && currentRole !== 'viewer') {
+                    // Keep unknown/legacy roles (e.g. "engineer") visible and unchanged unless the admin picks another
+                    const opt = document.createElement('option');
+                    opt.value = currentRole; opt.textContent = `${currentRole} (legacy)`;
+                    roleSelect.appendChild(opt);
+                }
+                roleSelect.value = currentRole;
+                if (isBuiltIn || isSelf) {
+                    roleSelect.disabled = true;
+                    roleSelect.title = isBuiltIn ? 'Built-in admin (set in code)' : 'You cannot change your own role';
+                }
+                row.appendChild(roleSelect);
+
                 const saveBtn = document.createElement('button');
                 saveBtn.textContent = 'Save';
                 saveBtn.className = 'text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600';
-                saveBtn.onclick = () => handleSaveUser(uid, nameInput.value, saveBtn);
+                saveBtn.onclick = () => handleSaveUser(uid, nameInput.value, roleSelect.value, saveBtn);
                 row.appendChild(saveBtn);
 
                 const delBtn = document.createElement('button');
                 delBtn.textContent = 'Delete';
-                delBtn.className = 'text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600';
+                delBtn.className = 'text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed';
+                if (isSelf) { delBtn.disabled = true; delBtn.title = 'You cannot delete yourself'; }
                 delBtn.onclick = () => {
                     showConfirmationModal(
-                        `Delete user "${userNicknames[uid]}"? They will disappear from the member checklist and can no longer react. Existing project memberships are NOT changed.`,
+                        `Delete user "${userNicknames[uid]}"? They will lose access to the data, disappear from the member checklist and can no longer react. Existing project memberships are NOT changed. (The login account itself stays in Firebase Authentication.)`,
                         () => handleDeleteUser(uid)
                     );
                 };
@@ -4255,36 +4334,118 @@
             }
         }
 
+        /**
+         * Creates a Firebase Auth account WITHOUT logging the current admin out,
+         * by using a separate (secondary) Firebase app instance.
+         * @returns {Promise<string>} the new user's UID
+         */
+        async function createAuthAccount(email, password) {
+            const existing = getApps().find(a => a.name === 'user-creator');
+            const secondaryApp = existing || initializeApp(firebaseConfig, 'user-creator');
+            const secondaryAuth = getAuth(secondaryApp);
+            try {
+                const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                return cred.user.uid;
+            } finally {
+                try { await signOut(secondaryAuth); } catch (e) { /* ignore */ }
+            }
+        }
+
+        async function handleCreateUser() {
+            if (!isCurrentUserAdmin) { setUsersStatus('Only admins can create users.', true); return; }
+            const email = createUserEmailInput.value.trim();
+            const password = createUserPasswordInput.value;
+            const nickname = createUserNicknameInput.value.trim();
+            const role = createUserRoleSelect.value;
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setUsersStatus('Please enter a valid email.', true); return; }
+            if (password.length < 6) { setUsersStatus('Password must be at least 6 characters.', true); return; }
+            if (!nickname || nickname.length > 40) { setUsersStatus('Please enter a nickname (max 40 characters).', true); return; }
+            if (role !== 'admin' && role !== 'viewer') { setUsersStatus('Invalid role.', true); return; }
+
+            createUserBtn.disabled = true;
+            setUsersStatus('Creating account...');
+            let newUid;
+            try {
+                newUid = await createAuthAccount(email, password);
+            } catch (err) {
+                console.error("Error creating auth account:", err);
+                const messages = {
+                    'auth/email-already-in-use': 'This email already has an account. Find its UID in Firebase Console → Authentication and use "Add existing account by User ID".',
+                    'auth/invalid-email': 'Invalid email format.',
+                    'auth/weak-password': 'Password is too weak (min 6 characters).',
+                    'auth/operation-not-allowed': 'Email/Password sign-up is not enabled in Firebase Authentication.',
+                    'auth/network-request-failed': 'Network error. Please try again.'
+                };
+                setUsersStatus(messages[err.code] || `Could not create account: ${err.message}`, true);
+                createUserBtn.disabled = false;
+                return;
+            }
+
+            try {
+                await ensureUsersSeededBeforeWrite();
+                const now = new Date().toISOString();
+                await setDoc(doc(db, `artifacts/${appId}/public/data/users`, newUid), {
+                    nickname, role, email, createdAt: now, updatedAt: now, createdBy: userId
+                }, { merge: true });
+                createUserEmailInput.value = '';
+                createUserPasswordInput.value = '';
+                createUserNicknameInput.value = '';
+                createUserRoleSelect.value = 'viewer';
+                setUsersStatus(`Account created: ${nickname} (${role}). Share the email and initial password with them; they can change it with "Change Password". UID: ${newUid}`);
+            } catch (err) {
+                console.error("Error saving new user profile:", err);
+                setUsersStatus(`The login account was created (UID: ${newUid}) but saving the profile failed. Use "Add existing account by User ID" with this UID.`, true);
+            } finally {
+                createUserBtn.disabled = false;
+            }
+        }
+
         async function handleAddUser() {
+            if (!isCurrentUserAdmin) { setUsersStatus('Only admins can add users.', true); return; }
             const uid = newUserUidInput.value.trim();
             const nickname = newUserNicknameInput.value.trim();
+            const role = newUserRoleSelect.value;
             const error = validateUserInput(uid, nickname);
             if (error) { setUsersStatus(error, true); return; }
+            if ((uid === userId || PREDEFINED_ADMIN_IDS.includes(uid)) && role !== 'admin') {
+                setUsersStatus('This account is an admin that cannot be downgraded here.', true);
+                return;
+            }
             try {
                 await ensureUsersSeededBeforeWrite();
                 const isNew = !userNicknames.hasOwnProperty(uid);
-                const data = { nickname, updatedAt: new Date().toISOString() };
-                if (isNew) data.createdAt = data.updatedAt;
+                const data = { nickname, role, updatedAt: new Date().toISOString() };
+                if (isNew) { data.createdAt = data.updatedAt; data.createdBy = userId; }
                 await setDoc(doc(db, `artifacts/${appId}/public/data/users`, uid), data, { merge: true });
                 newUserUidInput.value = '';
                 newUserNicknameInput.value = '';
-                setUsersStatus(isNew ? `Added ${nickname}.` : `Updated ${nickname}.`);
+                newUserRoleSelect.value = 'viewer';
+                setUsersStatus(isNew ? `Added ${nickname} (${role}).` : `Updated ${nickname} (${role}).`);
             } catch (err) {
                 console.error("Error adding user:", err);
                 setUsersStatus("Failed to save user (check permissions).", true);
             }
         }
 
-        async function handleSaveUser(uid, rawNickname, btn) {
+        async function handleSaveUser(uid, rawNickname, role, btn) {
+            if (!isCurrentUserAdmin) { setUsersStatus('Only admins can change users.', true); return; }
             const nickname = rawNickname.trim();
             const error = validateUserInput(uid, nickname);
             if (error) { setUsersStatus(error, true); return; }
-            if (nickname === userNicknames[uid]) { setUsersStatus('No changes to save.'); return; }
+            const roleChanged = role !== getEffectiveRole(uid);
+            if (nickname === userNicknames[uid] && !roleChanged) { setUsersStatus('No changes to save.'); return; }
+            if (roleChanged && (uid === userId || PREDEFINED_ADMIN_IDS.includes(uid))) {
+                setUsersStatus('You cannot change the role of this account.', true);
+                return;
+            }
             btn.disabled = true;
             try {
                 await ensureUsersSeededBeforeWrite();
-                await setDoc(doc(db, `artifacts/${appId}/public/data/users`, uid), { nickname, updatedAt: new Date().toISOString() }, { merge: true });
-                setUsersStatus(`Saved ${nickname}.`);
+                const data = { nickname, updatedAt: new Date().toISOString() };
+                if (roleChanged) data.role = role;
+                await setDoc(doc(db, `artifacts/${appId}/public/data/users`, uid), data, { merge: true });
+                setUsersStatus(`Saved ${nickname}${roleChanged ? ` (${role})` : ''}.`);
             } catch (err) {
                 console.error("Error saving user:", err);
                 setUsersStatus("Failed to save user (check permissions).", true);
@@ -4294,6 +4455,7 @@
         }
 
         async function handleDeleteUser(uid) {
+            if (!isCurrentUserAdmin || uid === userId) return;
             try {
                 await ensureUsersSeededBeforeWrite();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/users`, uid));
@@ -4507,6 +4669,7 @@
         // =====================================================================================
         manageUsersBtn.addEventListener('click', openManageUsersModal);
         addUserBtn.addEventListener('click', handleAddUser);
+        createUserBtn.addEventListener('click', handleCreateUser);
         closeUsersModalBtn.addEventListener('click', () => {
             manageUsersModal.classList.add('hidden');
         });
