@@ -1809,7 +1809,8 @@
             const batch = writeBatch(db);
             const now = new Date().toISOString();
             Object.entries(DEFAULT_USER_NICKNAMES).forEach(([uid, nickname]) => {
-                batch.set(doc(db, `artifacts/${appId}/public/data/users`, uid), { nickname, createdAt: now, seededFromDefaults: true });
+                // merge:true -> never overwrites other existing fields on a profile (e.g. "role")
+                batch.set(doc(db, `artifacts/${appId}/public/data/users`, uid), { nickname, seededFromDefaults: true }, { merge: true });
             });
             batch.set(seedRef, { seeded: true, at: now, by: userId });
             await batch.commit();
@@ -1848,7 +1849,7 @@
                 Object.assign(userNicknames, source);
 
                 // First admin login after migration: copy defaults into Firestore automatically
-                if (snapshot.empty && isCurrentUserAdmin && !usersSeedAttempted) {
+                if (Object.keys(usersData).length === 0 && isCurrentUserAdmin && !usersSeedAttempted) {
                     usersSeedAttempted = true;
                     seedUsersFromDefaults().catch(err => console.warn("Could not seed users:", err));
                 }
