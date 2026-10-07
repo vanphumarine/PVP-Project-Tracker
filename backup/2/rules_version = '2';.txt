@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global admin configuration (only super admin can write, all authenticated can read)
+    match /artifacts/{appId}/public/data/config/admin {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == resource.data.adminId;
+    }
+
+    // User profiles collection
+    match /artifacts/{appId}/public/data/users/{userId} {
+      // Any authenticated user can read any user profile (for display names)
+      allow read: if request.auth != null;
+      // Users can create their own profile, or update their own profile
+      allow create, update: if request.auth.uid == userId;
+      // Super admin can create or update any user profile (e.g., assign roles from admin panel)
+      allow create, update: if get(/databases/$(database)/documents/artifacts/$(appId)/public/data/config/admin).data.adminId == request.auth.uid;
+      // No deletion of user profiles from app directly
+    }
+
+    // Projects collection
+    match /artifacts/{appId}/public/data/projects/{projectId} {
+      // All authenticated users can read project details
+      allow read: if request.auth != null;
+
+      // Allow creation by any authenticated user
+      allow create: if request.auth != null;
+
+      // Update for projects: All authenticated users can update (client-side logic handles specific project members)
+      allow update: if request.auth != null;
+
+      // Delete for projects:
+      allow delete: if request.auth.uid == get(/databases/$(database)/documents/artifacts/$(appId)/public/data/config/admin).data.adminId || // Super admin can delete any project
+                       (get(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)).data.role == 'engineer' && resource.data.status != 'Completed'); // Engineer can delete if not completed
+
+      // Tasks subcollection
+      match /tasks/{taskId} {
+        // Any authenticated user can read tasks
+        allow read: if request.auth != null;
+
+        // Allow create, update, delete for any authenticated user (client-side logic will enforce project membership)
+        allow create, update, delete: if request.auth != null;
+      }
+    }
+  }
+}

@@ -406,6 +406,7 @@
                 <p>User: <span class="font-bold text-gray-800" id="display-user-id"></span></p>
                 <p>Your Role: <span class="font-bold" id="display-user-role"></span></p>
                 <!-- NEW: Change Password Button -->
+                <button id="manage-users-btn" class="hidden bg-purple-500 text-white text-sm px-3 py-1 rounded-md hover:bg-purple-600 transition-colors duration-300">Manage Users</button>
                 <button id="recent-events-btn" class="bg-indigo-500 text-white text-sm px-3 py-1 rounded-md hover:bg-indigo-600 transition-colors duration-300">Recent Events</button>
                 <button id="change-password-btn" class="bg-blue-500 text-white text-sm px-3 py-1 rounded-md hover:bg-blue-600 transition-colors duration-300">Change Password</button>
                 <button id="logout-btn" class="bg-red-500 text-white text-sm px-3 py-1 rounded-md hover:bg-red-600 transition-colors duration-300">Logout</button>
@@ -528,6 +529,45 @@
     <!-- Confetti container for completion animation -->
     <div id="confetti-container"></div>
     <!-- Custom modal for notifications/alerts -->
+    <!-- Modal to manage project members -->
+    <div id="manage-members-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Manage Project Members</h3>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Members (tick to add, untick to remove):</label>
+                <div id="current-members-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200">
+                    <!-- Members will be loaded here -->
+                </div>
+            </div>
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="new-member-id-input" placeholder="Enter user ID to add" class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                <button id="add-member-btn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-purple-700 transition-colors duration-300">Add</button>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="close-members-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Modal to view task details and add comments / edit tasks -->
+    <!-- Modal to manage users (nicknames) - Admin only. Placed before #custom-modal so messages/confirmations show on top -->
+    <div id="manage-users-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-left w-full max-w-xl">
+            <h3 class="text-xl font-semibold mb-1 text-gray-800">Manage Users</h3>
+            <p class="text-xs text-gray-500 mb-3">Users listed here have a nickname, can react, and can be ticked as project members. Find a user's ID in Firebase Console &rarr; Authentication, or hover over the name in the top bar after they log in.</p>
+            <div id="users-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-72 overflow-y-auto border border-gray-200 mb-4"></div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
+                <input type="text" id="new-user-uid-input" placeholder="User ID (UID)" class="md:col-span-2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                <input type="text" id="new-user-nickname-input" placeholder="Nickname" maxlength="40" class="md:col-span-2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                <button id="add-user-btn" class="bg-purple-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-purple-700 transition-colors duration-300">Add</button>
+            </div>
+            <p id="users-status" class="text-sm text-gray-600 min-h-[1.25rem] mb-4"></p>
+            <div class="flex justify-end gap-2">
+                <button id="close-users-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="custom-modal" class="modal-backdrop hidden">
         <div class="modal-content">
             <p id="modal-message"></p>
@@ -653,27 +693,6 @@
         </div>
     </div>
 
-    <!-- Modal to manage project members -->
-    <div id="manage-members-modal" class="modal-backdrop hidden">
-        <div class="modal-content text-left w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4 text-gray-800">Manage Project Members</h3>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Members (tick to add, untick to remove):</label>
-                <div id="current-members-list" class="bg-gray-100 p-3 rounded-md min-h-[50px] max-h-48 overflow-y-auto border border-gray-200">
-                    <!-- Members will be loaded here -->
-                </div>
-            </div>
-            <div class="flex gap-2 mb-6">
-                <input type="text" id="new-member-id-input" placeholder="Enter user ID to add" class="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-                <button id="add-member-btn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-md hover:bg-purple-700 transition-colors duration-300">Add</button>
-            </div>
-            <div class="flex justify-end gap-2">
-                <button id="close-members-modal-btn" class="modal-button bg-gray-500 hover:bg-gray-600">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NEW: Modal to view task details and add comments / edit tasks -->
     <div id="task-details-modal" class="modal-backdrop hidden">
         <div class="modal-content text-left w-full max-w-md">
             <h3 class="text-xl font-semibold mb-4 text-gray-800">Task Details</h3>
@@ -793,6 +812,9 @@
         let projectsCollectionRef, adminConfigRef;
         let unsubscribeFromTasks; // To unsubscribe from real-time task listener
         let unsubscribeFromProjects; // To unsubscribe from real-time project listener
+        let unsubscribeFromUsers; // To unsubscribe from real-time users listener
+        let usersData = {}; // Raw users from Firestore: { uid: nickname }
+        let usersSeedAttempted = false;
         let isCurrentUserAdmin = false; // Flag to determine user role (Super Admin of the application)
         let currentProjectId = null; // ID of the currently selected project
         let projectsData = {}; // Stores all fetched project data, by ID
@@ -808,7 +830,9 @@
 
 
         // NEW: Mock nickname map - Users in this map can react
-        const userNicknames = {
+        // These are now only the DEFAULTS / first-time seed. The live data comes from Firestore
+        // (artifacts/{appId}/public/data/users). If Firestore has no users, these defaults are used.
+        const DEFAULT_USER_NICKNAMES = {
             "37GhB7vKrvdNVQKIfsVEnHaLmHO2": "Phu_Pham", // Example admin ID
             "cTstHQAc8JhHuh6DRXi1A3t0J5r2": "Tien_Dung",
             "zCSNVdfpt7ULSCmLuuyOL0KyYyv1": "Ytterdal_Rune",
@@ -823,6 +847,8 @@
 		"hPjWLiqmlUSFqTILfxgZgnYSXIo2": "Silviu",
             // Add more user IDs and their desired nicknames here
         };
+        // Live nickname map (mutated in place by the users listener so all existing references keep working)
+        const userNicknames = { ...DEFAULT_USER_NICKNAMES };
 
         // DOM element references
         const loginScreen = document.getElementById('login-screen');
@@ -903,6 +929,14 @@
         const cancelSubtaskTextBtn = document.getElementById('cancel-subtask-text-btn');
 
         const manageMembersModal = document.getElementById('manage-members-modal');
+        const manageUsersBtn = document.getElementById('manage-users-btn');
+        const manageUsersModal = document.getElementById('manage-users-modal');
+        const usersList = document.getElementById('users-list');
+        const newUserUidInput = document.getElementById('new-user-uid-input');
+        const newUserNicknameInput = document.getElementById('new-user-nickname-input');
+        const addUserBtn = document.getElementById('add-user-btn');
+        const closeUsersModalBtn = document.getElementById('close-users-modal-btn');
+        const usersStatus = document.getElementById('users-status');
         const currentMembersList = document.getElementById('current-members-list');
         const newMemberIdInput = document.getElementById('new-member-id-input');
         const addMemberBtn = document.getElementById('add-member-btn');
@@ -1565,6 +1599,7 @@
                     
                     await checkAdminStatus(); 
                     updateUIAfterAuth();
+                    setupUsersListener();
                     setupProjectsListener();
                     await loadInitialRecentEvents(); // Load all historical events after auth
                     showKanbanBoard();
@@ -1578,6 +1613,12 @@
                         unsubscribeFromTasks();
                         unsubscribeFromTasks = null; // Reset to null after unsubscribing
                     }
+                    if (unsubscribeFromUsers) {
+                        unsubscribeFromUsers();
+                        unsubscribeFromUsers = null;
+                    }
+                    usersSeedAttempted = false;
+                    manageUsersModal.classList.add('hidden');
                     currentProjectId = null; // Clear the currently selected project
                     projectsData = {}; // Clear cached project data
                     tasks = []; // Clear tasks array
@@ -1704,6 +1745,8 @@
         function updateUIAfterAuth() {
             userRole = isCurrentUserAdmin ? 'Admin' : 'Viewer';
             displayUserId.textContent = getNickname(userId); // Display nickname
+            displayUserId.title = userId; // Hover to see your full User ID
+            manageUsersBtn.classList.toggle('hidden', !isCurrentUserAdmin);
             displayUserRole.textContent = userRole;
             displayUserRole.className = `font-bold ${isCurrentUserAdmin ? 'text-green-600' : 'text-blue-600'}`;
             logoutBtn.classList.remove('hidden');
@@ -1743,6 +1786,79 @@
          */
         function isUserAllowedToReact() {
             return userId && userNicknames.hasOwnProperty(userId);
+        }
+
+        // =====================================================================================
+        // Users (nicknames) stored in Firestore: artifacts/{appId}/public/data/users/{uid} -> { nickname }
+        // =====================================================================================
+        function usersCollectionRef() {
+            return collection(db, `artifacts/${appId}/public/data/users`);
+        }
+
+        /**
+         * Seeds Firestore with DEFAULT_USER_NICKNAMES (admin only, once). Safe to call repeatedly.
+         * @param {boolean} force - ignore the "already seeded" marker (used if the collection is empty before an edit).
+         */
+        async function seedUsersFromDefaults(force = false) {
+            if (!isCurrentUserAdmin) return false;
+            const seedRef = doc(db, `artifacts/${appId}/public/data/config`, 'usersSeed');
+            if (!force) {
+                const seedSnap = await getDoc(seedRef);
+                if (seedSnap.exists()) return false;
+            }
+            const batch = writeBatch(db);
+            const now = new Date().toISOString();
+            Object.entries(DEFAULT_USER_NICKNAMES).forEach(([uid, nickname]) => {
+                batch.set(doc(db, `artifacts/${appId}/public/data/users`, uid), { nickname, createdAt: now, seededFromDefaults: true });
+            });
+            batch.set(seedRef, { seeded: true, at: now, by: userId });
+            await batch.commit();
+            return true;
+        }
+
+        /**
+         * Re-renders every part of the UI that shows nicknames.
+         */
+        function refreshNicknameDependentUI() {
+            if (!userId) return;
+            displayUserId.textContent = getNickname(userId);
+            displayUserId.title = userId;
+            if (currentProjectId && projectsData[currentProjectId]) {
+                displayProjectDetails(projectsData[currentProjectId]);
+            }
+            renderTasks();
+            if (!manageMembersModal.classList.contains('hidden')) renderCurrentMembers();
+            if (!manageUsersModal.classList.contains('hidden')) renderUsersList();
+        }
+
+        /**
+         * Real-time listener for the users collection. Falls back to DEFAULT_USER_NICKNAMES when
+         * the collection is empty or cannot be read, so the app behaves exactly as before.
+         */
+        function setupUsersListener() {
+            if (unsubscribeFromUsers) unsubscribeFromUsers();
+            unsubscribeFromUsers = onSnapshot(usersCollectionRef(), (snapshot) => {
+                usersData = {};
+                snapshot.docs.forEach(d => {
+                    const nickname = d.data().nickname;
+                    if (typeof nickname === 'string' && nickname.trim()) usersData[d.id] = nickname.trim();
+                });
+                const source = Object.keys(usersData).length > 0 ? usersData : DEFAULT_USER_NICKNAMES;
+                Object.keys(userNicknames).forEach(k => delete userNicknames[k]);
+                Object.assign(userNicknames, source);
+
+                // First admin login after migration: copy defaults into Firestore automatically
+                if (snapshot.empty && isCurrentUserAdmin && !usersSeedAttempted) {
+                    usersSeedAttempted = true;
+                    seedUsersFromDefaults().catch(err => console.warn("Could not seed users:", err));
+                }
+                refreshNicknameDependentUI();
+            }, (error) => {
+                console.warn("Could not read users collection, using default nicknames:", error);
+                Object.keys(userNicknames).forEach(k => delete userNicknames[k]);
+                Object.assign(userNicknames, DEFAULT_USER_NICKNAMES);
+                refreshNicknameDependentUI();
+            });
         }
 
         /**
@@ -4060,6 +4176,134 @@
         projectSelect.addEventListener('change', syncProjectSelectors);
 
         // =====================================================================================
+        // Manage Users modal (Admin only)
+        // =====================================================================================
+        function setUsersStatus(message, isError = false) {
+            usersStatus.textContent = message;
+            usersStatus.className = `text-sm min-h-[1.25rem] mb-4 ${isError ? 'text-red-600' : 'text-green-700'}`;
+        }
+
+        function openManageUsersModal() {
+            if (!isCurrentUserAdmin) {
+                showModal("You don't have permission to manage users.");
+                return;
+            }
+            setUsersStatus('');
+            renderUsersList();
+            manageUsersModal.classList.remove('hidden');
+            newUserUidInput.focus();
+        }
+
+        function renderUsersList() {
+            usersList.innerHTML = '';
+            const ids = Object.keys(userNicknames).sort((a, b) => userNicknames[a].localeCompare(userNicknames[b]));
+            if (ids.length === 0) {
+                usersList.textContent = 'No users yet.';
+                return;
+            }
+            ids.forEach(uid => {
+                const row = document.createElement('div');
+                row.className = 'flex flex-col md:flex-row md:items-center gap-2 bg-gray-200 p-2 rounded mb-1';
+
+                const info = document.createElement('div');
+                info.className = 'flex-grow min-w-0';
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.value = userNicknames[uid];
+                nameInput.maxLength = 40;
+                nameInput.className = 'w-full p-1 border border-gray-300 rounded text-sm';
+                const uidLine = document.createElement('div');
+                uidLine.className = 'text-xs text-gray-500 truncate';
+                uidLine.textContent = uid + (uid === userId ? '  (you)' : '');
+                info.appendChild(nameInput);
+                info.appendChild(uidLine);
+                row.appendChild(info);
+
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = 'Save';
+                saveBtn.className = 'text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600';
+                saveBtn.onclick = () => handleSaveUser(uid, nameInput.value, saveBtn);
+                row.appendChild(saveBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.textContent = 'Delete';
+                delBtn.className = 'text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600';
+                delBtn.onclick = () => {
+                    showConfirmationModal(
+                        `Delete user "${userNicknames[uid]}"? They will disappear from the member checklist and can no longer react. Existing project memberships are NOT changed.`,
+                        () => handleDeleteUser(uid)
+                    );
+                };
+                row.appendChild(delBtn);
+
+                usersList.appendChild(row);
+            });
+        }
+
+        function validateUserInput(uid, nickname) {
+            if (!uid || !nickname) return "Please enter both User ID and nickname.";
+            if (/[\/\s]/.test(uid)) return "User ID must not contain spaces or '/'.";
+            if (nickname.length > 40) return "Nickname must be 40 characters or fewer.";
+            return null;
+        }
+
+        // If the collection is still empty (defaults in use), seed first so an edit never hides the other defaults.
+        async function ensureUsersSeededBeforeWrite() {
+            if (Object.keys(usersData).length === 0) {
+                await seedUsersFromDefaults(true);
+            }
+        }
+
+        async function handleAddUser() {
+            const uid = newUserUidInput.value.trim();
+            const nickname = newUserNicknameInput.value.trim();
+            const error = validateUserInput(uid, nickname);
+            if (error) { setUsersStatus(error, true); return; }
+            try {
+                await ensureUsersSeededBeforeWrite();
+                const isNew = !userNicknames.hasOwnProperty(uid);
+                const data = { nickname, updatedAt: new Date().toISOString() };
+                if (isNew) data.createdAt = data.updatedAt;
+                await setDoc(doc(db, `artifacts/${appId}/public/data/users`, uid), data, { merge: true });
+                newUserUidInput.value = '';
+                newUserNicknameInput.value = '';
+                setUsersStatus(isNew ? `Added ${nickname}.` : `Updated ${nickname}.`);
+            } catch (err) {
+                console.error("Error adding user:", err);
+                setUsersStatus("Failed to save user (check permissions).", true);
+            }
+        }
+
+        async function handleSaveUser(uid, rawNickname, btn) {
+            const nickname = rawNickname.trim();
+            const error = validateUserInput(uid, nickname);
+            if (error) { setUsersStatus(error, true); return; }
+            if (nickname === userNicknames[uid]) { setUsersStatus('No changes to save.'); return; }
+            btn.disabled = true;
+            try {
+                await ensureUsersSeededBeforeWrite();
+                await setDoc(doc(db, `artifacts/${appId}/public/data/users`, uid), { nickname, updatedAt: new Date().toISOString() }, { merge: true });
+                setUsersStatus(`Saved ${nickname}.`);
+            } catch (err) {
+                console.error("Error saving user:", err);
+                setUsersStatus("Failed to save user (check permissions).", true);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function handleDeleteUser(uid) {
+            try {
+                await ensureUsersSeededBeforeWrite();
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/users`, uid));
+                setUsersStatus('User deleted.');
+            } catch (err) {
+                console.error("Error deleting user:", err);
+                setUsersStatus("Failed to delete user (check permissions).", true);
+            }
+        }
+
+        // =====================================================================================
         // NEWLY ADDED/FIXED: Manage Members Logic
         // =====================================================================================
         
@@ -4260,6 +4504,11 @@
         // =====================================================================================
         // NEW/FIXED Event Listeners for Manage Members Modal
         // =====================================================================================
+        manageUsersBtn.addEventListener('click', openManageUsersModal);
+        addUserBtn.addEventListener('click', handleAddUser);
+        closeUsersModalBtn.addEventListener('click', () => {
+            manageUsersModal.classList.add('hidden');
+        });
         manageMembersBtn.addEventListener('click', openManageMembersModal);
         addMemberBtn.addEventListener('click', handleAddMember);
         closeMembersModalBtn.addEventListener('click', () => {
